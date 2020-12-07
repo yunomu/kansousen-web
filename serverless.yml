@@ -78,7 +78,7 @@ functions:
           path: auth
           method: post
           cors: true
-  hello:
+  kifu:
     handler: bin/kifu
     events:
       - http:
