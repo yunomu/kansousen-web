@@ -1,0 +1,28 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Kifu conv</title>
+  <script src="main.js"></script>
+</head>
+<body>
+  <main id="app"></main>
+  <script>
+  const app = Elm.Main.init({
+      node: document.getElementById("app"),
+      flags: {
+          "token": localStorage.getItem('token'),
+          "refreshToken": localStorage.getItem('refresh_token')
+      }
+  });
+  app.ports.storeToken.subscribe((req)=>{
+      localStorage.setItem('token',req);
+  });
+  app.ports.storeTokens.subscribe((req)=>{
+      localStorage.setItem('token',req[0]);
+      localStorage.setItem('refresh_token',req[1]);
+  });
+  </script>
+  </script>
+</body>
+</html>

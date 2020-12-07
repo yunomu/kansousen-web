@@ -1,0 +1,23 @@
+TableName: kansousen
+BillingMode: PAY_PER_REQUEST
+AttributeDefinitions:
+  - AttributeName: PK
+    AttributeType: S
+  - AttributeName: SK
+    AttributeType: S
+  - AttributeName: InversedVersion
+    AttributeType: N
+KeySchema:
+  - AttributeName: PK
+    KeyType: HASH
+  - AttributeName: SK
+    KeyType: RANGE
+LocalSecondaryIndexes:
+  - IndexName: InversedVersionIndex
+    KeySchema:
+      - AttributeName: PK
+        KeyType: HASH
+      - AttributeName: InversedVersion
+        KeyType: RANGE
+    Projection:
+      ProjectionType: KEYS_ONLY

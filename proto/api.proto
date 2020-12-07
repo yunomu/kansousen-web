@@ -1,0 +1,244 @@
+syntax = "proto3";
+
+package api;
+
+option go_package = "proto/api";
+
+// Auth
+
+message SignUpRequest {
+  string username = 1;
+  string email = 2;
+  string password = 3;
+}
+
+message ConfirmSignUpRequest {
+  string username = 1;
+  string confirmation_code = 2;
+}
+
+message ResendConfirmationCodeRequest {
+  string username = 1;
+}
+
+message ForgotPasswordRequest {
+  string username = 1;
+}
+
+message ConfirmForgotPasswordRequest {
+  string username = 1;
+  string password = 2;
+  string confirmation_code = 3;
+}
+
+message SignInRequest {
+  string username = 1;
+  string password = 2;
+}
+
+message TokenRefreshRequest {
+  string refresh_token = 1;
+}
+
+message AuthRequest{
+  oneof auth_request_select {
+    SignUpRequest request_sign_up = 1;
+    ConfirmSignUpRequest request_confirm_sign_up = 2;
+    ResendConfirmationCodeRequest request_resend_confirmation_code = 3;
+    ForgotPasswordRequest request_forgot_password = 4;
+    ConfirmForgotPasswordRequest request_confirm_forgot_password = 5;
+    SignInRequest request_sign_in = 6;
+    TokenRefreshRequest request_token_refresh = 7;
+  }
+}
+
+message SignUpResponse {
+  string code_delivery_type = 1;
+  string code_delivery_destination = 2;
+}
+
+message ConfirmSignUpResponse {
+}
+
+message ForgotPasswordResponse {
+  string code_delivery_type = 1;
+  string code_delivery_destination = 2;
+}
+
+message ConfirmForgotPasswordResponse {
+}
+
+message SignInResponse {
+  string token = 1;
+  string refresh_token = 2;
+}
+
+message TokenRefreshResponse {
+  string token = 1;
+}
+
+message AuthResponse {
+  oneof auth_response_select {
+    SignUpResponse response_sign_up = 1;
+    ConfirmSignUpResponse response_confirm_sign_up = 2;
+    ForgotPasswordResponse response_forgot_password = 4;
+    ConfirmForgotPasswordResponse response_confirm_forgot_password = 5;
+    SignInResponse response_sign_in = 6;
+    TokenRefreshResponse response_token_refresh = 7;
+  }
+}
+
+// Kifu
+
+message RecentKifuRequest {
+  int32 limit = 1;
+}
+
+message RecentKifuResponse {
+}
+
+message PostKifuRequest {
+  // required.
+  string payload = 1;
+
+  // valid values: KIF
+  // required.
+  string format = 2;
+
+  // valid values: UTF-8 | Shift_JIS
+  // required.
+  string encoding = 3;
+}
+
+message PostKifuResponse {
+  string kifu_id = 1;
+  message Kifu {
+    string user_id = 1;
+    string kifu_id = 2;
+  }
+  repeated Kifu duplicated = 2;
+}
+
+message DeleteKifuRequest {
+  string kifu_id = 1;
+}
+
+message DeleteKifuResponse {
+}
+
+message GetKifuRequest {
+  string kifu_id = 1;
+}
+
+message Pos {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message Piece {
+  enum Id {
+    NULL = 0;
+    GYOKU = 1;
+    HISHA = 2;
+    RYU = 3;
+    KAKU = 4;
+    UMA = 5;
+    KIN = 6;
+    GIN = 7;
+    NARI_GIN = 8;
+    KEI = 9;
+    NARI_KEI = 10;
+    KYOU = 11;
+    NARI_KYOU = 12;
+    FU = 13;
+    TO = 14;
+  }
+}
+
+message FinishedStatus {
+  enum Id {
+    NOT_FINISHED = 0;
+    SUSPEND = 1;
+    SURRENDER = 2;
+    DRAW = 3;
+    REPETITION_DRAW = 4;
+    CHECKMATE = 5;
+    OVER_TIME_LIMIT = 6;
+    FOUL_LOSS = 7;
+    FOUL_WIN = 8;
+    NYUGYOKU_WIN = 9;
+  }
+}
+
+message GetKifuResponse {
+  string user_id = 1;
+  string kifu_id = 2;
+
+  int64 start_ts = 3;
+  int64 end_ts = 4;
+  string handicap = 5;
+  string game_name = 6;
+  message Player {
+    string name = 1;
+    string note = 2;
+  }
+  repeated Player first_players = 7;
+  repeated Player second_players = 8;
+  map<string, string> other_fields = 9;
+  string sfen = 10;
+  int64 created_ts = 11;
+  message Move {
+    Pos src = 1;
+    Pos dst = 2;
+    Piece.Id piece = 3;
+  }
+  message Drop {
+    Pos dst = 1;
+    Piece.Id piece = 2;
+  }
+  message Step {
+    int32 seq = 1;
+    string position = 2;
+    oneof op {
+      Move move = 3;
+      Drop drop = 4;
+      FinishedStatus.Id finish = 5;
+    }
+    bool promoted = 6;
+    Piece.Id captured = 7;
+    int32 timestamp_sec = 8;
+    int32 thinking_sec = 9;
+    repeated string notes = 10;
+  }
+  repeated Step steps = 12;
+  string note = 13;
+}
+
+message KifuRequest {
+  oneof kifu_request_select {
+    RecentKifuRequest request_recent_kifu = 1;
+    PostKifuRequest request_post_kifu = 2;
+    DeleteKifuRequest request_delete_kifu = 3;
+    GetKifuRequest request_get_kifu = 4;
+  }
+}
+
+
+message KifuResponse {
+  oneof kifu_response_select {
+    RecentKifuResponse response_recent_kifu = 1;
+    PostKifuResponse response_post_kifu = 2;
+    DeleteKifuResponse response_delete_kifu = 3;
+    GetKifuResponse response_get_kifu = 4;
+  }
+}
+
+// Hello 
+
+message HelloRequest {
+}
+
+message HelloResponse {
+  string message = 1;
+  string name = 2;
+}

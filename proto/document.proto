@@ -1,0 +1,157 @@
+syntax = "proto3";
+
+package document;
+
+option go_package = "proto/document";
+
+message Player {
+  enum Order {
+    BLACK = 0;
+    WHITE = 1;
+  }
+  Order order = 1;
+  string name = 2;
+  string note = 3;
+}
+
+message FinishedStatus {
+  enum Id {
+    NOT_FINISHED = 0;
+    SUSPEND = 1;
+    SURRENDER = 2;
+    DRAW = 3;
+    REPETITION_DRAW = 4;
+    CHECKMATE = 5;
+    OVER_TIME_LIMIT = 6;
+    FOUL_LOSS = 7;
+    FOUL_WIN = 8;
+    NYUGYOKU_WIN = 9;
+  }
+}
+
+message Handicap {
+  enum Id {
+    NONE = 0;
+	DROP_L = 1;
+	DROP_L_R = 2;
+	DROP_B = 3;
+	DROP_R = 4;
+	DROP_RL = 5;
+	DROP_TWO = 6;
+	DROP_THREE = 7;
+	DROP_FOUR = 8;
+	DROP_FIVE = 9;
+	DROP_FIVE_L = 10;
+	DROP_SIX = 11;
+	DROP_EIGHT = 12;
+	DROP_TEN = 13;
+	OTHER = 14;
+  }
+}
+
+message Date {
+  int32 year = 1;
+  int32 month = 2;
+  int32 day = 3;
+}
+
+message DateTime {
+  Date date = 1;
+  int32 time_sec = 2; // -1 is null
+}
+
+message Piece {
+  enum Id {
+    NULL = 0;
+    GYOKU = 1;
+    HISHA = 2;
+    RYU = 3;
+    KAKU = 4;
+    UMA = 5;
+    KIN = 6;
+    GIN = 7;
+    NARI_GIN = 8;
+    KEI = 9;
+    NARI_KEI = 10;
+    KYOU = 11;
+    NARI_KYOU = 12;
+    FU = 13;
+    TO = 14;
+  }
+}
+
+message Pos {
+  int32 x = 1;
+  int32 y = 2;
+}
+
+message Move {
+  Pos src = 1;
+  Pos dst = 2;
+  Piece.Id piece = 3;
+  bool promote = 4;
+  bool drop = 5;
+  Piece.Id captured = 6;
+  string sfen = 7;
+}
+
+message Kifu {
+  string user_id = 1;
+  string kifu_id = 2;
+  int64 version = 3;
+
+  DateTime start = 4;
+  DateTime end = 5;
+  Handicap.Id handicap = 6;
+  string game_name = 7;
+  repeated Player players = 8;
+  map<string, string> other_fields = 9;
+
+  string sfen = 10;
+  repeated string aliases = 11;
+  int64 created_ts = 12;
+  string note = 13;
+}
+
+message Step {
+  string user_id = 1;
+  string kifu_id = 2;
+  int32 seq = 3;
+  int64 version = 4;
+
+  string position = 5;
+  Move move = 6;
+  int32 timestamp_sec = 7;
+  int32 thinking_sec = 8;
+  FinishedStatus.Id finished = 9;
+  repeated string notes = 10;
+}
+
+message Position {
+  string user_id = 1;
+  string position = 2;
+  string kifu_id = 3;
+  int32 seq = 4;
+  int64 version = 5;
+
+  repeated Move moves = 6;
+  repeated string notes = 7;
+}
+
+message KifuSignature {
+  string sfen = 1;
+  string user_id = 2;
+  string kifu_id = 3;
+  int64 version = 4;
+
+  int64 created_ts = 5;
+}
+
+message Document {
+  oneof select {
+    Kifu kifu = 1;
+    Step step = 2;
+    Position position = 3;
+    KifuSignature kifu_signature = 4;
+  }
+}
