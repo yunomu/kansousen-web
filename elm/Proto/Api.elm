@@ -9,7 +9,6 @@ import Protobuf exposing (..)
 
 import Json.Decode as JD
 import Json.Encode as JE
-import Dict
 
 
 uselessDeclarationToPreventErrorDueToEmptyOutputFile = 42
@@ -417,19 +416,59 @@ recentKifuRequestEncoder v =
 
 
 type alias RecentKifuResponse =
-    {
+    { kifus : List RecentKifuResponse_Kifu -- 1
     }
 
 
 recentKifuResponseDecoder : JD.Decoder RecentKifuResponse
 recentKifuResponseDecoder =
     JD.lazy <| \_ -> decode RecentKifuResponse
+        |> repeated "kifus" recentKifuResponse_KifuDecoder
 
 
 recentKifuResponseEncoder : RecentKifuResponse -> JE.Value
 recentKifuResponseEncoder v =
     JE.object <| List.filterMap identity <|
-        [
+        [ (repeatedFieldEncoder "kifus" recentKifuResponse_KifuEncoder v.kifus)
+        ]
+
+
+type alias RecentKifuResponse_Kifu =
+    { userId : String -- 1
+    , kifuId : String -- 2
+    , startTs : Int -- 3
+    , handicap : String -- 4
+    , gameName : String -- 5
+    , firstPlayer : String -- 6
+    , secondPlayer : String -- 7
+    , note : String -- 8
+    }
+
+
+recentKifuResponse_KifuDecoder : JD.Decoder RecentKifuResponse_Kifu
+recentKifuResponse_KifuDecoder =
+    JD.lazy <| \_ -> decode RecentKifuResponse_Kifu
+        |> required "userId" JD.string ""
+        |> required "kifuId" JD.string ""
+        |> required "startTs" intDecoder 0
+        |> required "handicap" JD.string ""
+        |> required "gameName" JD.string ""
+        |> required "firstPlayer" JD.string ""
+        |> required "secondPlayer" JD.string ""
+        |> required "note" JD.string ""
+
+
+recentKifuResponse_KifuEncoder : RecentKifuResponse_Kifu -> JE.Value
+recentKifuResponse_KifuEncoder v =
+    JE.object <| List.filterMap identity <|
+        [ (requiredFieldEncoder "userId" JE.string "" v.userId)
+        , (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
+        , (requiredFieldEncoder "startTs" numericStringEncoder 0 v.startTs)
+        , (requiredFieldEncoder "handicap" JE.string "" v.handicap)
+        , (requiredFieldEncoder "gameName" JE.string "" v.gameName)
+        , (requiredFieldEncoder "firstPlayer" JE.string "" v.firstPlayer)
+        , (requiredFieldEncoder "secondPlayer" JE.string "" v.secondPlayer)
+        , (requiredFieldEncoder "note" JE.string "" v.note)
         ]
 
 
@@ -836,6 +875,27 @@ finishedStatus_IdEncoder v =
         JE.string <| lookup v
 
 
+type alias Value =
+    { name : String -- 1
+    , value : String -- 2
+    }
+
+
+valueDecoder : JD.Decoder Value
+valueDecoder =
+    JD.lazy <| \_ -> decode Value
+        |> required "name" JD.string ""
+        |> required "value" JD.string ""
+
+
+valueEncoder : Value -> JE.Value
+valueEncoder v =
+    JE.object <| List.filterMap identity <|
+        [ (requiredFieldEncoder "name" JE.string "" v.name)
+        , (requiredFieldEncoder "value" JE.string "" v.value)
+        ]
+
+
 type alias GetKifuResponse =
     { userId : String -- 1
     , kifuId : String -- 2
@@ -845,7 +905,7 @@ type alias GetKifuResponse =
     , gameName : String -- 6
     , firstPlayers : List GetKifuResponse_Player -- 7
     , secondPlayers : List GetKifuResponse_Player -- 8
-    , otherFields : Dict.Dict String String -- 9
+    , otherFields : List Value -- 9
     , sfen : String -- 10
     , createdTs : Int -- 11
     , steps : List GetKifuResponse_Step -- 12
@@ -864,7 +924,7 @@ getKifuResponseDecoder =
         |> required "gameName" JD.string ""
         |> repeated "firstPlayers" getKifuResponse_PlayerDecoder
         |> repeated "secondPlayers" getKifuResponse_PlayerDecoder
-        |> mapEntries "otherFields" JD.string
+        |> repeated "otherFields" valueDecoder
         |> required "sfen" JD.string ""
         |> required "createdTs" intDecoder 0
         |> repeated "steps" getKifuResponse_StepDecoder
@@ -882,7 +942,7 @@ getKifuResponseEncoder v =
         , (requiredFieldEncoder "gameName" JE.string "" v.gameName)
         , (repeatedFieldEncoder "firstPlayers" getKifuResponse_PlayerEncoder v.firstPlayers)
         , (repeatedFieldEncoder "secondPlayers" getKifuResponse_PlayerEncoder v.secondPlayers)
-        , (mapEntriesFieldEncoder "otherFields" JE.string v.otherFields)
+        , (repeatedFieldEncoder "otherFields" valueEncoder v.otherFields)
         , (requiredFieldEncoder "sfen" JE.string "" v.sfen)
         , (requiredFieldEncoder "createdTs" numericStringEncoder 0 v.createdTs)
         , (repeatedFieldEncoder "steps" getKifuResponse_StepEncoder v.steps)
@@ -908,27 +968,6 @@ getKifuResponse_PlayerEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "name" JE.string "" v.name)
         , (requiredFieldEncoder "note" JE.string "" v.note)
-        ]
-
-
-type alias GetKifuResponse_OtherFieldsEntry =
-    { key : String -- 1
-    , value : String -- 2
-    }
-
-
-getKifuResponse_OtherFieldsEntryDecoder : JD.Decoder GetKifuResponse_OtherFieldsEntry
-getKifuResponse_OtherFieldsEntryDecoder =
-    JD.lazy <| \_ -> decode GetKifuResponse_OtherFieldsEntry
-        |> required "key" JD.string ""
-        |> required "value" JD.string ""
-
-
-getKifuResponse_OtherFieldsEntryEncoder : GetKifuResponse_OtherFieldsEntry -> JE.Value
-getKifuResponse_OtherFieldsEntryEncoder v =
-    JE.object <| List.filterMap identity <|
-        [ (requiredFieldEncoder "key" JE.string "" v.key)
-        , (requiredFieldEncoder "value" JE.string "" v.value)
         ]
 
 

@@ -8,11 +8,13 @@ import Proto.Api as PB
 
 type Request
     = AuthRequest PB.AuthRequest
+    | KifuRequest PB.KifuRequest
     | HelloRequest
 
 
 type Response
     = AuthResponse (Result Error PB.AuthResponse)
+    | KifuResponse (Result Error PB.KifuResponse)
     | HelloResponse (Result Error PB.HelloResponse)
 
 
@@ -106,6 +108,26 @@ request msg token req =
                     Http.expectStringResponse
                         (msg req << AuthResponse)
                         (resultJson PB.authResponseDecoder)
+                , timeout = Nothing
+                , tracker = Nothing
+                }
+
+        KifuRequest kifuReq ->
+            Http.request
+                { method = "POST"
+                , headers =
+                    case token of
+                        Just t ->
+                            Http.header "Authorization" t :: headers
+
+                        Nothing ->
+                            headers
+                , url = endpoint ++ "/kifu"
+                , body = Http.jsonBody <| PB.kifuRequestEncoder kifuReq
+                , expect =
+                    Http.expectStringResponse
+                        (msg req << KifuResponse)
+                        (resultJson PB.kifuResponseDecoder)
                 , timeout = Nothing
                 , tracker = Nothing
                 }

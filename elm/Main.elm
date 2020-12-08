@@ -55,6 +55,7 @@ type Route
     | ForgotPassword
     | ConfirmForgotPassword
     | SignIn
+    | MyPage
     | NotFound
 
 
@@ -69,6 +70,7 @@ routeParser =
         , UrlParser.map SignIn <| s "signin"
         , UrlParser.map ForgotPassword <| s "forgot_password"
         , UrlParser.map ConfirmForgotPassword <| s "confirm_forgot_password"
+        , UrlParser.map MyPage <| s "my"
         ]
 
 
@@ -101,6 +103,9 @@ routeToPath route =
         ConfirmForgotPassword ->
             UrlBuilder.absolute [ "confirm_forgot_password" ] []
 
+        MyPage ->
+            UrlBuilder.absolute [ "my" ] []
+
         NotFound ->
             UrlBuilder.absolute [] []
 
@@ -122,6 +127,8 @@ type alias Model =
     , authToken : Maybe PB.SignInResponse
     , errorMessage : Maybe String
     , prevState : PreviousState
+
+    --, recentKifu:PB.RecentKifuResponse
     }
 
 
@@ -321,6 +328,10 @@ apiResponse model req res =
                     , Cmd.none
                     )
 
+        Api.KifuResponse result ->
+            -- TODO
+            ( model, Cmd.none )
+
         Api.HelloResponse result ->
             authorizedResponse model req result <|
                 \r ->
@@ -482,6 +493,9 @@ routeToTitle route =
         ConfirmForgotPassword ->
             "Confirm forgot password"
 
+        MyPage ->
+            "MyPage"
+
         NotFound ->
             "NotFound"
 
@@ -519,6 +533,14 @@ content model =
         Index ->
             Element.column []
                 [ Element.text "index"
+                , Element.link
+                    [ Events.onClick HelloRequest ]
+                    { url = "", label = Element.text "test" }
+                ]
+
+        MyPage ->
+            Element.column []
+                [ Element.text "Recent kifu"
                 , Element.link
                     [ Events.onClick HelloRequest ]
                     { url = "", label = Element.text "test" }

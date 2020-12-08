@@ -95,6 +95,18 @@ message RecentKifuRequest {
 }
 
 message RecentKifuResponse {
+  message Kifu {
+    string user_id = 1;
+    string kifu_id = 2;
+    int64 start_ts = 3;
+
+    string handicap = 4;
+    string game_name = 5;
+    string first_player = 6;
+    string second_player = 7;
+    string note = 8;
+  }
+  repeated Kifu kifus = 1;
 }
 
 message PostKifuRequest {
@@ -170,6 +182,11 @@ message FinishedStatus {
   }
 }
 
+message Value {
+  string name = 1;
+  string value = 2;
+}
+
 message GetKifuResponse {
   string user_id = 1;
   string kifu_id = 2;
@@ -184,7 +201,7 @@ message GetKifuResponse {
   }
   repeated Player first_players = 7;
   repeated Player second_players = 8;
-  map<string, string> other_fields = 9;
+  repeated Value other_fields = 9;
   string sfen = 10;
   int64 created_ts = 11;
   message Move {

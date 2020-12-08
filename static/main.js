@@ -6042,6 +6042,7 @@ var $author$project$Main$ConfirmForgotPassword = {$: 'ConfirmForgotPassword'};
 var $author$project$Main$ConfirmSignUp = {$: 'ConfirmSignUp'};
 var $author$project$Main$ForgotPassword = {$: 'ForgotPassword'};
 var $author$project$Main$Index = {$: 'Index'};
+var $author$project$Main$MyPage = {$: 'MyPage'};
 var $author$project$Main$ResendConfirm = {$: 'ResendConfirm'};
 var $author$project$Main$SignIn = {$: 'SignIn'};
 var $author$project$Main$SignUp = {$: 'SignUp'};
@@ -6170,7 +6171,11 @@ var $author$project$Main$routeParser = $elm$url$Url$Parser$oneOf(
 			A2(
 			$elm$url$Url$Parser$map,
 			$author$project$Main$ConfirmForgotPassword,
-			$elm$url$Url$Parser$s('confirm_forgot_password'))
+			$elm$url$Url$Parser$s('confirm_forgot_password')),
+			A2(
+			$elm$url$Url$Parser$map,
+			$author$project$Main$MyPage,
+			$elm$url$Url$Parser$s('my'))
 		]));
 var $elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
@@ -6263,6 +6268,9 @@ var $author$project$Api$AuthResponse = function (a) {
 };
 var $author$project$Api$HelloResponse = function (a) {
 	return {$: 'HelloResponse', a: a};
+};
+var $author$project$Api$KifuResponse = function (a) {
+	return {$: 'KifuResponse', a: a};
 };
 var $elm$core$List$maybeCons = F3(
 	function (f, mx, xs) {
@@ -6677,6 +6685,588 @@ var $elm$http$Http$jsonBody = function (value) {
 		'application/json',
 		A2($elm$json$Json$Encode$encode, 0, value));
 };
+var $author$project$Proto$Api$deleteKifuRequestEncoder = function (v) {
+	return $elm$json$Json$Encode$object(
+		A2(
+			$elm$core$List$filterMap,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'kifuId', $elm$json$Json$Encode$string, '', v.kifuId)
+				])));
+};
+var $author$project$Proto$Api$getKifuRequestEncoder = function (v) {
+	return $elm$json$Json$Encode$object(
+		A2(
+			$elm$core$List$filterMap,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'kifuId', $elm$json$Json$Encode$string, '', v.kifuId)
+				])));
+};
+var $author$project$Proto$Api$postKifuRequestEncoder = function (v) {
+	return $elm$json$Json$Encode$object(
+		A2(
+			$elm$core$List$filterMap,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'payload', $elm$json$Json$Encode$string, '', v.payload),
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'format', $elm$json$Json$Encode$string, '', v.format),
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'encoding', $elm$json$Json$Encode$string, '', v.encoding)
+				])));
+};
+var $elm$json$Json$Encode$int = _Json_wrap;
+var $author$project$Proto$Api$recentKifuRequestEncoder = function (v) {
+	return $elm$json$Json$Encode$object(
+		A2(
+			$elm$core$List$filterMap,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'limit', $elm$json$Json$Encode$int, 0, v.limit)
+				])));
+};
+var $author$project$Proto$Api$kifuRequestSelectEncoder = function (v) {
+	switch (v.$) {
+		case 'KifuRequestSelectUnspecified':
+			return $elm$core$Maybe$Nothing;
+		case 'RequestRecentKifu':
+			var x = v.a;
+			return $elm$core$Maybe$Just(
+				_Utils_Tuple2(
+					'requestRecentKifu',
+					$author$project$Proto$Api$recentKifuRequestEncoder(x)));
+		case 'RequestPostKifu':
+			var x = v.a;
+			return $elm$core$Maybe$Just(
+				_Utils_Tuple2(
+					'requestPostKifu',
+					$author$project$Proto$Api$postKifuRequestEncoder(x)));
+		case 'RequestDeleteKifu':
+			var x = v.a;
+			return $elm$core$Maybe$Just(
+				_Utils_Tuple2(
+					'requestDeleteKifu',
+					$author$project$Proto$Api$deleteKifuRequestEncoder(x)));
+		default:
+			var x = v.a;
+			return $elm$core$Maybe$Just(
+				_Utils_Tuple2(
+					'requestGetKifu',
+					$author$project$Proto$Api$getKifuRequestEncoder(x)));
+	}
+};
+var $author$project$Proto$Api$kifuRequestEncoder = function (v) {
+	return $elm$json$Json$Encode$object(
+		A2(
+			$elm$core$List$filterMap,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					$author$project$Proto$Api$kifuRequestSelectEncoder(v.kifuRequestSelect)
+				])));
+};
+var $author$project$Proto$Api$KifuResponse = function (kifuResponseSelect) {
+	return {kifuResponseSelect: kifuResponseSelect};
+};
+var $author$project$Proto$Api$KifuResponseSelectUnspecified = {$: 'KifuResponseSelectUnspecified'};
+var $author$project$Proto$Api$ResponseDeleteKifu = function (a) {
+	return {$: 'ResponseDeleteKifu', a: a};
+};
+var $author$project$Proto$Api$ResponseGetKifu = function (a) {
+	return {$: 'ResponseGetKifu', a: a};
+};
+var $author$project$Proto$Api$ResponsePostKifu = function (a) {
+	return {$: 'ResponsePostKifu', a: a};
+};
+var $author$project$Proto$Api$ResponseRecentKifu = function (a) {
+	return {$: 'ResponseRecentKifu', a: a};
+};
+var $author$project$Proto$Api$DeleteKifuResponse = {};
+var $author$project$Proto$Api$deleteKifuResponseDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return $tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$DeleteKifuResponse);
+	});
+var $author$project$Proto$Api$GetKifuResponse = function (userId) {
+	return function (kifuId) {
+		return function (startTs) {
+			return function (endTs) {
+				return function (handicap) {
+					return function (gameName) {
+						return function (firstPlayers) {
+							return function (secondPlayers) {
+								return function (otherFields) {
+									return function (sfen) {
+										return function (createdTs) {
+											return function (steps) {
+												return function (note) {
+													return {createdTs: createdTs, endTs: endTs, firstPlayers: firstPlayers, gameName: gameName, handicap: handicap, kifuId: kifuId, note: note, otherFields: otherFields, secondPlayers: secondPlayers, sfen: sfen, startTs: startTs, steps: steps, userId: userId};
+												};
+											};
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
+};
+var $author$project$Proto$Api$GetKifuResponse_Player = F2(
+	function (name, note) {
+		return {name: name, note: note};
+	});
+var $author$project$Proto$Api$getKifuResponse_PlayerDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'note',
+			$elm$json$Json$Decode$string,
+			'',
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'name',
+				$elm$json$Json$Decode$string,
+				'',
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Player)));
+	});
+var $author$project$Proto$Api$GetKifuResponse_Step = F8(
+	function (seq, position, promoted, captured, timestampSec, thinkingSec, notes, op) {
+		return {captured: captured, notes: notes, op: op, position: position, promoted: promoted, seq: seq, thinkingSec: thinkingSec, timestampSec: timestampSec};
+	});
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
+var $elm$json$Json$Decode$fail = _Json_fail;
+var $tiziano88$elm_protobuf$Protobuf$fromMaybe = F2(
+	function (error, maybe) {
+		if (maybe.$ === 'Just') {
+			var v1 = maybe.a;
+			return $elm$json$Json$Decode$succeed(v1);
+		} else {
+			return $elm$json$Json$Decode$fail(error);
+		}
+	});
+var $elm$json$Json$Decode$int = _Json_decodeInt;
+var $tiziano88$elm_protobuf$Protobuf$intDecoder = $elm$json$Json$Decode$oneOf(
+	_List_fromArray(
+		[
+			$elm$json$Json$Decode$int,
+			A2(
+			$elm$json$Json$Decode$andThen,
+			A2(
+				$elm$core$Basics$composeR,
+				$elm$core$String$toInt,
+				$tiziano88$elm_protobuf$Protobuf$fromMaybe('could not convert string to integer')),
+			$elm$json$Json$Decode$string)
+		]));
+var $author$project$Proto$Api$Drop = function (a) {
+	return {$: 'Drop', a: a};
+};
+var $author$project$Proto$Api$Finish = function (a) {
+	return {$: 'Finish', a: a};
+};
+var $author$project$Proto$Api$Move = function (a) {
+	return {$: 'Move', a: a};
+};
+var $author$project$Proto$Api$OpUnspecified = {$: 'OpUnspecified'};
+var $author$project$Proto$Api$FinishedStatus_Checkmate = {$: 'FinishedStatus_Checkmate'};
+var $author$project$Proto$Api$FinishedStatus_Draw = {$: 'FinishedStatus_Draw'};
+var $author$project$Proto$Api$FinishedStatus_FoulLoss = {$: 'FinishedStatus_FoulLoss'};
+var $author$project$Proto$Api$FinishedStatus_FoulWin = {$: 'FinishedStatus_FoulWin'};
+var $author$project$Proto$Api$FinishedStatus_NotFinished = {$: 'FinishedStatus_NotFinished'};
+var $author$project$Proto$Api$FinishedStatus_NyugyokuWin = {$: 'FinishedStatus_NyugyokuWin'};
+var $author$project$Proto$Api$FinishedStatus_OverTimeLimit = {$: 'FinishedStatus_OverTimeLimit'};
+var $author$project$Proto$Api$FinishedStatus_RepetitionDraw = {$: 'FinishedStatus_RepetitionDraw'};
+var $author$project$Proto$Api$FinishedStatus_Surrender = {$: 'FinishedStatus_Surrender'};
+var $author$project$Proto$Api$FinishedStatus_Suspend = {$: 'FinishedStatus_Suspend'};
+var $author$project$Proto$Api$finishedStatus_IdDecoder = function () {
+	var lookup = function (s) {
+		switch (s) {
+			case 'NOT_FINISHED':
+				return $author$project$Proto$Api$FinishedStatus_NotFinished;
+			case 'SUSPEND':
+				return $author$project$Proto$Api$FinishedStatus_Suspend;
+			case 'SURRENDER':
+				return $author$project$Proto$Api$FinishedStatus_Surrender;
+			case 'DRAW':
+				return $author$project$Proto$Api$FinishedStatus_Draw;
+			case 'REPETITION_DRAW':
+				return $author$project$Proto$Api$FinishedStatus_RepetitionDraw;
+			case 'CHECKMATE':
+				return $author$project$Proto$Api$FinishedStatus_Checkmate;
+			case 'OVER_TIME_LIMIT':
+				return $author$project$Proto$Api$FinishedStatus_OverTimeLimit;
+			case 'FOUL_LOSS':
+				return $author$project$Proto$Api$FinishedStatus_FoulLoss;
+			case 'FOUL_WIN':
+				return $author$project$Proto$Api$FinishedStatus_FoulWin;
+			case 'NYUGYOKU_WIN':
+				return $author$project$Proto$Api$FinishedStatus_NyugyokuWin;
+			default:
+				return $author$project$Proto$Api$FinishedStatus_NotFinished;
+		}
+	};
+	return A2($elm$json$Json$Decode$map, lookup, $elm$json$Json$Decode$string);
+}();
+var $author$project$Proto$Api$GetKifuResponse_Drop = F2(
+	function (dst, piece) {
+		return {dst: dst, piece: piece};
+	});
+var $elm$json$Json$Decode$maybe = function (decoder) {
+	return $elm$json$Json$Decode$oneOf(
+		_List_fromArray(
+			[
+				A2($elm$json$Json$Decode$map, $elm$core$Maybe$Just, decoder),
+				$elm$json$Json$Decode$succeed($elm$core$Maybe$Nothing)
+			]));
+};
+var $tiziano88$elm_protobuf$Protobuf$optional = F3(
+	function (name, decoder, d) {
+		return A2(
+			$tiziano88$elm_protobuf$Protobuf$field,
+			$elm$json$Json$Decode$maybe(
+				A2($elm$json$Json$Decode$field, name, decoder)),
+			d);
+	});
+var $author$project$Proto$Api$Piece_Fu = {$: 'Piece_Fu'};
+var $author$project$Proto$Api$Piece_Gin = {$: 'Piece_Gin'};
+var $author$project$Proto$Api$Piece_Gyoku = {$: 'Piece_Gyoku'};
+var $author$project$Proto$Api$Piece_Hisha = {$: 'Piece_Hisha'};
+var $author$project$Proto$Api$Piece_Kaku = {$: 'Piece_Kaku'};
+var $author$project$Proto$Api$Piece_Kei = {$: 'Piece_Kei'};
+var $author$project$Proto$Api$Piece_Kin = {$: 'Piece_Kin'};
+var $author$project$Proto$Api$Piece_Kyou = {$: 'Piece_Kyou'};
+var $author$project$Proto$Api$Piece_NariGin = {$: 'Piece_NariGin'};
+var $author$project$Proto$Api$Piece_NariKei = {$: 'Piece_NariKei'};
+var $author$project$Proto$Api$Piece_NariKyou = {$: 'Piece_NariKyou'};
+var $author$project$Proto$Api$Piece_Null = {$: 'Piece_Null'};
+var $author$project$Proto$Api$Piece_Ryu = {$: 'Piece_Ryu'};
+var $author$project$Proto$Api$Piece_To = {$: 'Piece_To'};
+var $author$project$Proto$Api$Piece_Uma = {$: 'Piece_Uma'};
+var $author$project$Proto$Api$piece_IdDecoder = function () {
+	var lookup = function (s) {
+		switch (s) {
+			case 'NULL':
+				return $author$project$Proto$Api$Piece_Null;
+			case 'GYOKU':
+				return $author$project$Proto$Api$Piece_Gyoku;
+			case 'HISHA':
+				return $author$project$Proto$Api$Piece_Hisha;
+			case 'RYU':
+				return $author$project$Proto$Api$Piece_Ryu;
+			case 'KAKU':
+				return $author$project$Proto$Api$Piece_Kaku;
+			case 'UMA':
+				return $author$project$Proto$Api$Piece_Uma;
+			case 'KIN':
+				return $author$project$Proto$Api$Piece_Kin;
+			case 'GIN':
+				return $author$project$Proto$Api$Piece_Gin;
+			case 'NARI_GIN':
+				return $author$project$Proto$Api$Piece_NariGin;
+			case 'KEI':
+				return $author$project$Proto$Api$Piece_Kei;
+			case 'NARI_KEI':
+				return $author$project$Proto$Api$Piece_NariKei;
+			case 'KYOU':
+				return $author$project$Proto$Api$Piece_Kyou;
+			case 'NARI_KYOU':
+				return $author$project$Proto$Api$Piece_NariKyou;
+			case 'FU':
+				return $author$project$Proto$Api$Piece_Fu;
+			case 'TO':
+				return $author$project$Proto$Api$Piece_To;
+			default:
+				return $author$project$Proto$Api$Piece_Null;
+		}
+	};
+	return A2($elm$json$Json$Decode$map, lookup, $elm$json$Json$Decode$string);
+}();
+var $author$project$Proto$Api$piece_IdDefault = $author$project$Proto$Api$Piece_Null;
+var $author$project$Proto$Api$Pos = F2(
+	function (x, y) {
+		return {x: x, y: y};
+	});
+var $author$project$Proto$Api$posDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'y',
+			$tiziano88$elm_protobuf$Protobuf$intDecoder,
+			0,
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'x',
+				$tiziano88$elm_protobuf$Protobuf$intDecoder,
+				0,
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$Pos)));
+	});
+var $author$project$Proto$Api$getKifuResponse_DropDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'piece',
+			$author$project$Proto$Api$piece_IdDecoder,
+			$author$project$Proto$Api$piece_IdDefault,
+			A3(
+				$tiziano88$elm_protobuf$Protobuf$optional,
+				'dst',
+				$author$project$Proto$Api$posDecoder,
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Drop)));
+	});
+var $author$project$Proto$Api$GetKifuResponse_Move = F3(
+	function (src, dst, piece) {
+		return {dst: dst, piece: piece, src: src};
+	});
+var $author$project$Proto$Api$getKifuResponse_MoveDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'piece',
+			$author$project$Proto$Api$piece_IdDecoder,
+			$author$project$Proto$Api$piece_IdDefault,
+			A3(
+				$tiziano88$elm_protobuf$Protobuf$optional,
+				'dst',
+				$author$project$Proto$Api$posDecoder,
+				A3(
+					$tiziano88$elm_protobuf$Protobuf$optional,
+					'src',
+					$author$project$Proto$Api$posDecoder,
+					$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Move))));
+	});
+var $author$project$Proto$Api$opDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return $elm$json$Json$Decode$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$Move,
+					A2($elm$json$Json$Decode$field, 'move', $author$project$Proto$Api$getKifuResponse_MoveDecoder)),
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$Drop,
+					A2($elm$json$Json$Decode$field, 'drop', $author$project$Proto$Api$getKifuResponse_DropDecoder)),
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$Finish,
+					A2($elm$json$Json$Decode$field, 'finish', $author$project$Proto$Api$finishedStatus_IdDecoder)),
+					$elm$json$Json$Decode$succeed($author$project$Proto$Api$OpUnspecified)
+				]));
+	});
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $tiziano88$elm_protobuf$Protobuf$repeated = F3(
+	function (name, decoder, d) {
+		return A2(
+			$tiziano88$elm_protobuf$Protobuf$field,
+			A2(
+				$tiziano88$elm_protobuf$Protobuf$withDefault,
+				_List_Nil,
+				A2(
+					$elm$json$Json$Decode$field,
+					name,
+					$elm$json$Json$Decode$list(decoder))),
+			d);
+	});
+var $author$project$Proto$Api$getKifuResponse_StepDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A2(
+			$tiziano88$elm_protobuf$Protobuf$field,
+			$author$project$Proto$Api$opDecoder,
+			A3(
+				$tiziano88$elm_protobuf$Protobuf$repeated,
+				'notes',
+				$elm$json$Json$Decode$string,
+				A4(
+					$tiziano88$elm_protobuf$Protobuf$required,
+					'thinkingSec',
+					$tiziano88$elm_protobuf$Protobuf$intDecoder,
+					0,
+					A4(
+						$tiziano88$elm_protobuf$Protobuf$required,
+						'timestampSec',
+						$tiziano88$elm_protobuf$Protobuf$intDecoder,
+						0,
+						A4(
+							$tiziano88$elm_protobuf$Protobuf$required,
+							'captured',
+							$author$project$Proto$Api$piece_IdDecoder,
+							$author$project$Proto$Api$piece_IdDefault,
+							A4(
+								$tiziano88$elm_protobuf$Protobuf$required,
+								'promoted',
+								$elm$json$Json$Decode$bool,
+								false,
+								A4(
+									$tiziano88$elm_protobuf$Protobuf$required,
+									'position',
+									$elm$json$Json$Decode$string,
+									'',
+									A4(
+										$tiziano88$elm_protobuf$Protobuf$required,
+										'seq',
+										$tiziano88$elm_protobuf$Protobuf$intDecoder,
+										0,
+										$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Step)))))))));
+	});
+var $author$project$Proto$Api$Value = F2(
+	function (name, value) {
+		return {name: name, value: value};
+	});
+var $author$project$Proto$Api$valueDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'value',
+			$elm$json$Json$Decode$string,
+			'',
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'name',
+				$elm$json$Json$Decode$string,
+				'',
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$Value)));
+	});
+var $author$project$Proto$Api$getKifuResponseDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'note',
+			$elm$json$Json$Decode$string,
+			'',
+			A3(
+				$tiziano88$elm_protobuf$Protobuf$repeated,
+				'steps',
+				$author$project$Proto$Api$getKifuResponse_StepDecoder,
+				A4(
+					$tiziano88$elm_protobuf$Protobuf$required,
+					'createdTs',
+					$tiziano88$elm_protobuf$Protobuf$intDecoder,
+					0,
+					A4(
+						$tiziano88$elm_protobuf$Protobuf$required,
+						'sfen',
+						$elm$json$Json$Decode$string,
+						'',
+						A3(
+							$tiziano88$elm_protobuf$Protobuf$repeated,
+							'otherFields',
+							$author$project$Proto$Api$valueDecoder,
+							A3(
+								$tiziano88$elm_protobuf$Protobuf$repeated,
+								'secondPlayers',
+								$author$project$Proto$Api$getKifuResponse_PlayerDecoder,
+								A3(
+									$tiziano88$elm_protobuf$Protobuf$repeated,
+									'firstPlayers',
+									$author$project$Proto$Api$getKifuResponse_PlayerDecoder,
+									A4(
+										$tiziano88$elm_protobuf$Protobuf$required,
+										'gameName',
+										$elm$json$Json$Decode$string,
+										'',
+										A4(
+											$tiziano88$elm_protobuf$Protobuf$required,
+											'handicap',
+											$elm$json$Json$Decode$string,
+											'',
+											A4(
+												$tiziano88$elm_protobuf$Protobuf$required,
+												'endTs',
+												$tiziano88$elm_protobuf$Protobuf$intDecoder,
+												0,
+												A4(
+													$tiziano88$elm_protobuf$Protobuf$required,
+													'startTs',
+													$tiziano88$elm_protobuf$Protobuf$intDecoder,
+													0,
+													A4(
+														$tiziano88$elm_protobuf$Protobuf$required,
+														'kifuId',
+														$elm$json$Json$Decode$string,
+														'',
+														A4(
+															$tiziano88$elm_protobuf$Protobuf$required,
+															'userId',
+															$elm$json$Json$Decode$string,
+															'',
+															$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse))))))))))))));
+	});
+var $author$project$Proto$Api$PostKifuResponse = F2(
+	function (kifuId, duplicated) {
+		return {duplicated: duplicated, kifuId: kifuId};
+	});
+var $author$project$Proto$Api$PostKifuResponse_Kifu = F2(
+	function (userId, kifuId) {
+		return {kifuId: kifuId, userId: userId};
+	});
+var $author$project$Proto$Api$postKifuResponse_KifuDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'kifuId',
+			$elm$json$Json$Decode$string,
+			'',
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'userId',
+				$elm$json$Json$Decode$string,
+				'',
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$PostKifuResponse_Kifu)));
+	});
+var $author$project$Proto$Api$postKifuResponseDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A3(
+			$tiziano88$elm_protobuf$Protobuf$repeated,
+			'duplicated',
+			$author$project$Proto$Api$postKifuResponse_KifuDecoder,
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'kifuId',
+				$elm$json$Json$Decode$string,
+				'',
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$PostKifuResponse)));
+	});
+var $author$project$Proto$Api$RecentKifuResponse = {};
+var $author$project$Proto$Api$recentKifuResponseDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return $tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$RecentKifuResponse);
+	});
+var $author$project$Proto$Api$kifuResponseSelectDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return $elm$json$Json$Decode$oneOf(
+			_List_fromArray(
+				[
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$ResponseRecentKifu,
+					A2($elm$json$Json$Decode$field, 'responseRecentKifu', $author$project$Proto$Api$recentKifuResponseDecoder)),
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$ResponsePostKifu,
+					A2($elm$json$Json$Decode$field, 'responsePostKifu', $author$project$Proto$Api$postKifuResponseDecoder)),
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$ResponseDeleteKifu,
+					A2($elm$json$Json$Decode$field, 'responseDeleteKifu', $author$project$Proto$Api$deleteKifuResponseDecoder)),
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$ResponseGetKifu,
+					A2($elm$json$Json$Decode$field, 'responseGetKifu', $author$project$Proto$Api$getKifuResponseDecoder)),
+					$elm$json$Json$Decode$succeed($author$project$Proto$Api$KifuResponseSelectUnspecified)
+				]));
+	});
+var $author$project$Proto$Api$kifuResponseDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A2(
+			$tiziano88$elm_protobuf$Protobuf$field,
+			$author$project$Proto$Api$kifuResponseSelectDecoder,
+			$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$KifuResponse));
+	});
 var $elm$http$Http$Request = function (a) {
 	return {$: 'Request', a: a};
 };
@@ -6861,52 +7451,82 @@ var $author$project$Api$resultJson = F2(
 var $elm$http$Http$stringBody = _Http_pair;
 var $author$project$Api$request = F3(
 	function (msg, token, req) {
-		if (req.$ === 'AuthRequest') {
-			var authreq = req.a;
-			return $elm$http$Http$request(
-				{
-					body: $elm$http$Http$jsonBody(
-						$author$project$Proto$Api$authRequestEncoder(authreq)),
-					expect: A2(
-						$elm$http$Http$expectStringResponse,
-						A2(
-							$elm$core$Basics$composeL,
-							msg(req),
-							$author$project$Api$AuthResponse),
-						$author$project$Api$resultJson($author$project$Proto$Api$authResponseDecoder)),
-					headers: $author$project$Api$headers,
-					method: 'POST',
-					timeout: $elm$core$Maybe$Nothing,
-					tracker: $elm$core$Maybe$Nothing,
-					url: $author$project$Api$endpoint + '/auth'
-				});
-		} else {
-			return $elm$http$Http$request(
-				{
-					body: A2($elm$http$Http$stringBody, 'application/json', '{}'),
-					expect: A2(
-						$elm$http$Http$expectStringResponse,
-						A2(
-							$elm$core$Basics$composeL,
-							msg(req),
-							$author$project$Api$HelloResponse),
-						$author$project$Api$resultJson($author$project$Proto$Api$helloResponseDecoder)),
-					headers: function () {
-						if (token.$ === 'Just') {
-							var t = token.a;
-							return A2(
-								$elm$core$List$cons,
-								A2($elm$http$Http$header, 'Authorization', t),
-								$author$project$Api$headers);
-						} else {
-							return $author$project$Api$headers;
-						}
-					}(),
-					method: 'POST',
-					timeout: $elm$core$Maybe$Nothing,
-					tracker: $elm$core$Maybe$Nothing,
-					url: $author$project$Api$endpoint + '/hello'
-				});
+		switch (req.$) {
+			case 'AuthRequest':
+				var authreq = req.a;
+				return $elm$http$Http$request(
+					{
+						body: $elm$http$Http$jsonBody(
+							$author$project$Proto$Api$authRequestEncoder(authreq)),
+						expect: A2(
+							$elm$http$Http$expectStringResponse,
+							A2(
+								$elm$core$Basics$composeL,
+								msg(req),
+								$author$project$Api$AuthResponse),
+							$author$project$Api$resultJson($author$project$Proto$Api$authResponseDecoder)),
+						headers: $author$project$Api$headers,
+						method: 'POST',
+						timeout: $elm$core$Maybe$Nothing,
+						tracker: $elm$core$Maybe$Nothing,
+						url: $author$project$Api$endpoint + '/auth'
+					});
+			case 'KifuRequest':
+				var kifuReq = req.a;
+				return $elm$http$Http$request(
+					{
+						body: $elm$http$Http$jsonBody(
+							$author$project$Proto$Api$kifuRequestEncoder(kifuReq)),
+						expect: A2(
+							$elm$http$Http$expectStringResponse,
+							A2(
+								$elm$core$Basics$composeL,
+								msg(req),
+								$author$project$Api$KifuResponse),
+							$author$project$Api$resultJson($author$project$Proto$Api$kifuResponseDecoder)),
+						headers: function () {
+							if (token.$ === 'Just') {
+								var t = token.a;
+								return A2(
+									$elm$core$List$cons,
+									A2($elm$http$Http$header, 'Authorization', t),
+									$author$project$Api$headers);
+							} else {
+								return $author$project$Api$headers;
+							}
+						}(),
+						method: 'POST',
+						timeout: $elm$core$Maybe$Nothing,
+						tracker: $elm$core$Maybe$Nothing,
+						url: $author$project$Api$endpoint + '/kifu'
+					});
+			default:
+				return $elm$http$Http$request(
+					{
+						body: A2($elm$http$Http$stringBody, 'application/json', '{}'),
+						expect: A2(
+							$elm$http$Http$expectStringResponse,
+							A2(
+								$elm$core$Basics$composeL,
+								msg(req),
+								$author$project$Api$HelloResponse),
+							$author$project$Api$resultJson($author$project$Proto$Api$helloResponseDecoder)),
+						headers: function () {
+							if (token.$ === 'Just') {
+								var t = token.a;
+								return A2(
+									$elm$core$List$cons,
+									A2($elm$http$Http$header, 'Authorization', t),
+									$author$project$Api$headers);
+							} else {
+								return $author$project$Api$headers;
+							}
+						}(),
+						method: 'POST',
+						timeout: $elm$core$Maybe$Nothing,
+						tracker: $elm$core$Maybe$Nothing,
+						url: $author$project$Api$endpoint + '/hello'
+					});
 		}
 	});
 var $elm$url$Url$Builder$toQueryPair = function (_v0) {
@@ -6967,6 +7587,12 @@ var $author$project$Main$routeToPath = function (route) {
 				$elm$url$Url$Builder$absolute,
 				_List_fromArray(
 					['confirm_forgot_password']),
+				_List_Nil);
+		case 'MyPage':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['my']),
 				_List_Nil);
 		default:
 			return A2($elm$url$Url$Builder$absolute, _List_Nil, _List_Nil);
@@ -7145,123 +7771,127 @@ var $author$project$Main$signInAndReturn = F4(
 	});
 var $author$project$Main$apiResponse = F3(
 	function (model, req, res) {
-		if (res.$ === 'AuthResponse') {
-			var result = res.a;
-			if (result.$ === 'Ok') {
-				var v = result.a;
-				var _v2 = v.authResponseSelect;
-				switch (_v2.$) {
-					case 'ResponseSignUp':
-						var r = _v2.a;
-						var m = model.confirmSignUpModel;
-						return _Utils_Tuple2(
-							_Utils_update(
+		switch (res.$) {
+			case 'AuthResponse':
+				var result = res.a;
+				if (result.$ === 'Ok') {
+					var v = result.a;
+					var _v2 = v.authResponseSelect;
+					switch (_v2.$) {
+						case 'ResponseSignUp':
+							var r = _v2.a;
+							var m = model.confirmSignUpModel;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										confirmSignUpModel: _Utils_update(
+											m,
+											{
+												signUpResponse: $elm$core$Maybe$Just(r)
+											})
+									}),
+								A2(
+									$elm$browser$Browser$Navigation$pushUrl,
+									model.key,
+									$author$project$Main$routeToPath($author$project$Main$ConfirmSignUp)));
+						case 'ResponseConfirmSignUp':
+							var m = model.confirmSignUpModel;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{confirmSignUpModel: $author$project$Page$ConfirmSignUp$init}),
+								A2(
+									$elm$browser$Browser$Navigation$pushUrl,
+									model.key,
+									$author$project$Main$routeToPath($author$project$Main$Index)));
+						case 'ResponseForgotPassword':
+							var r = _v2.a;
+							var m = model.confirmForgotPasswordModel;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{
+										confirmForgotPasswordModel: _Utils_update(
+											m,
+											{
+												forgotPasswordResponse: $elm$core$Maybe$Just(r)
+											})
+									}),
+								A2(
+									$elm$browser$Browser$Navigation$pushUrl,
+									model.key,
+									$author$project$Main$routeToPath($author$project$Main$ConfirmForgotPassword)));
+						case 'ResponseConfirmForgotPassword':
+							return _Utils_Tuple2(
 								model,
-								{
-									confirmSignUpModel: _Utils_update(
-										m,
-										{
-											signUpResponse: $elm$core$Maybe$Just(r)
-										})
-								}),
-							A2(
-								$elm$browser$Browser$Navigation$pushUrl,
-								model.key,
-								$author$project$Main$routeToPath($author$project$Main$ConfirmSignUp)));
-					case 'ResponseConfirmSignUp':
-						var m = model.confirmSignUpModel;
-						return _Utils_Tuple2(
-							_Utils_update(
+								A2(
+									$elm$browser$Browser$Navigation$pushUrl,
+									model.key,
+									$author$project$Main$routeToPath($author$project$Main$Index)));
+						case 'ResponseSignIn':
+							var r = _v2.a;
+							return A4(
+								$author$project$Main$signInAndReturn,
 								model,
-								{confirmSignUpModel: $author$project$Page$ConfirmSignUp$init}),
-							A2(
-								$elm$browser$Browser$Navigation$pushUrl,
-								model.key,
-								$author$project$Main$routeToPath($author$project$Main$Index)));
-					case 'ResponseForgotPassword':
-						var r = _v2.a;
-						var m = model.confirmForgotPasswordModel;
-						return _Utils_Tuple2(
-							_Utils_update(
+								$elm$core$Maybe$Just(r),
+								r.token,
+								$elm$core$Maybe$Just(r.refreshToken));
+						case 'ResponseTokenRefresh':
+							var r = _v2.a;
+							return A4(
+								$author$project$Main$signInAndReturn,
 								model,
-								{
-									confirmForgotPasswordModel: _Utils_update(
-										m,
-										{
-											forgotPasswordResponse: $elm$core$Maybe$Just(r)
-										})
-								}),
-							A2(
-								$elm$browser$Browser$Navigation$pushUrl,
-								model.key,
-								$author$project$Main$routeToPath($author$project$Main$ConfirmForgotPassword)));
-					case 'ResponseConfirmForgotPassword':
-						return _Utils_Tuple2(
-							model,
-							A2(
-								$elm$browser$Browser$Navigation$pushUrl,
-								model.key,
-								$author$project$Main$routeToPath($author$project$Main$Index)));
-					case 'ResponseSignIn':
-						var r = _v2.a;
-						return A4(
-							$author$project$Main$signInAndReturn,
-							model,
-							$elm$core$Maybe$Just(r),
-							r.token,
-							$elm$core$Maybe$Just(r.refreshToken));
-					case 'ResponseTokenRefresh':
-						var r = _v2.a;
-						return A4(
-							$author$project$Main$signInAndReturn,
-							model,
-							A2(
-								$elm$core$Maybe$map,
-								function (t) {
-									return _Utils_update(
-										t,
-										{token: r.token});
-								},
-								model.authToken),
-							r.token,
-							$elm$core$Maybe$Nothing);
-					default:
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				}
-			} else {
-				if (result.a.$ === 'ErrorUnauthorized') {
-					var _v3 = result.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								authToken: $elm$core$Maybe$Nothing,
-								errorMessage: $elm$core$Maybe$Just('logout')
-							}),
-						$elm$core$Platform$Cmd$none);
+								A2(
+									$elm$core$Maybe$map,
+									function (t) {
+										return _Utils_update(
+											t,
+											{token: r.token});
+									},
+									model.authToken),
+								r.token,
+								$elm$core$Maybe$Nothing);
+						default:
+							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					}
 				} else {
-					var err = result.a;
-					return _Utils_Tuple2(
-						_Utils_update(
-							model,
-							{
-								errorMessage: $elm$core$Maybe$Just(
-									$author$project$Api$errorToString(err))
-							}),
-						$elm$core$Platform$Cmd$none);
+					if (result.a.$ === 'ErrorUnauthorized') {
+						var _v3 = result.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									authToken: $elm$core$Maybe$Nothing,
+									errorMessage: $elm$core$Maybe$Just('logout')
+								}),
+							$elm$core$Platform$Cmd$none);
+					} else {
+						var err = result.a;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									errorMessage: $elm$core$Maybe$Just(
+										$author$project$Api$errorToString(err))
+								}),
+							$elm$core$Platform$Cmd$none);
+					}
 				}
-			}
-		} else {
-			var result = res.a;
-			return A4(
-				$author$project$Main$authorizedResponse,
-				model,
-				req,
-				result,
-				function (r) {
-					var _v4 = A2($elm$core$Debug$log, 'HelloResponse', r);
-					return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-				});
+			case 'KifuResponse':
+				var result = res.a;
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+			default:
+				var result = res.a;
+				return A4(
+					$author$project$Main$authorizedResponse,
+					model,
+					req,
+					result,
+					function (r) {
+						var _v4 = A2($elm$core$Debug$log, 'HelloResponse', r);
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+					});
 		}
 	});
 var $elm$browser$Browser$Navigation$load = _Browser_load;
@@ -13187,7 +13817,6 @@ var $mdgriffith$elm_ui$Element$Input$hasFocusStyle = function (attr) {
 var $mdgriffith$elm_ui$Element$Input$focusDefault = function (attrs) {
 	return A2($elm$core$List$any, $mdgriffith$elm_ui$Element$Input$hasFocusStyle, attrs) ? $mdgriffith$elm_ui$Internal$Model$NoAttribute : $mdgriffith$elm_ui$Internal$Model$htmlClass('focusable');
 };
-var $elm$json$Json$Decode$fail = _Json_fail;
 var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
 	return {$: 'MayPreventDefault', a: a};
 };
@@ -15041,13 +15670,31 @@ var $author$project$Main$content = function (model) {
 										]))
 								])))
 					]));
-		default:
+		case 'Index':
 			return A2(
 				$mdgriffith$elm_ui$Element$column,
 				_List_Nil,
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$text('index'),
+						A2(
+						$mdgriffith$elm_ui$Element$link,
+						_List_fromArray(
+							[
+								$mdgriffith$elm_ui$Element$Events$onClick($author$project$Main$HelloRequest)
+							]),
+						{
+							label: $mdgriffith$elm_ui$Element$text('test'),
+							url: ''
+						})
+					]));
+		default:
+			return A2(
+				$mdgriffith$elm_ui$Element$column,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$text('Recent kifu'),
 						A2(
 						$mdgriffith$elm_ui$Element$link,
 						_List_fromArray(
@@ -15329,6 +15976,8 @@ var $author$project$Main$routeToTitle = function (route) {
 			return 'Forgot password';
 		case 'ConfirmForgotPassword':
 			return 'Confirm forgot password';
+		case 'MyPage':
+			return 'MyPage';
 		default:
 			return 'NotFound';
 	}
