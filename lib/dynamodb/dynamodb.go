@@ -303,7 +303,7 @@ func (d *DynamoDB) Scan(ctx context.Context, pk string, f func(*Item)) error {
 	return rerr
 }
 
-func (d *DynamoDB) RecentlyUpdated(ctx context.Context, pk string, limit int64) ([]*Key, error) {
+func (d *DynamoDB) RecentlyUpdated(ctx context.Context, pk string, limit int) ([]*Key, error) {
 	input := &dynamodb.QueryInput{
 		TableName:              aws.String(d.table),
 		IndexName:              aws.String(inversedVersionIndex),
@@ -311,7 +311,7 @@ func (d *DynamoDB) RecentlyUpdated(ctx context.Context, pk string, limit int64) 
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":pk": {S: aws.String(pk)},
 		},
-		Limit: aws.Int64(limit),
+		Limit: aws.Int64(int64(limit)),
 	}
 	d.logger.Info("RecentlyUpdated request", input.GoString())
 	var ret []*Key

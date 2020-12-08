@@ -34,7 +34,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 }
 
 func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	db := args[0].(func() *db.DynamoDB)()
+	db := args[0].(func() db.DB)()
 
 	if *c.userId == "" {
 		log.Fatalf("user-id is required")

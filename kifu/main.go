@@ -59,13 +59,54 @@ func init() {
 }
 
 type server struct {
-	table *db.DynamoDB
+	table db.DB
 }
 
 var _ lambda.Server = (*server)(nil)
 
 func (s *server) recentKifu(ctx context.Context, userId string, req *apipb.RecentKifuRequest) (*apipb.KifuResponse, error) {
-	return nil, nil
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "time.LoadLocation: %v", err)
+	}
+
+	kifus, err := s.table.GetRecentKifu(ctx, userId, int(req.Limit))
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "GetRecentKifu: %v", err)
+	}
+
+	var ret []*apipb.RecentKifuResponse_Kifu
+	for _, kifu := range kifus {
+		var firstPlayers, secondPlayers []string
+		for _, player := range kifu.Players {
+			switch player.Order {
+			case documentpb.Player_BLACK:
+				firstPlayers = append(firstPlayers, player.GetName())
+			case documentpb.Player_WHITE:
+				secondPlayers = append(secondPlayers, player.GetName())
+			}
+		}
+
+		ret = append(ret, &apipb.RecentKifuResponse_Kifu{
+			UserId:  kifu.GetUserId(),
+			KifuId:  kifu.GetKifuId(),
+			StartTs: pbconv.DateTimeToTS(kifu.GetStart(), loc),
+
+			Handicap:     kifu.GetHandicap().String(),
+			GameName:     kifu.GetGameName(),
+			FirstPlayer:  strings.Join(firstPlayers, ", "),
+			SecondPlayer: strings.Join(secondPlayers, ", "),
+			Note:         kifu.GetNote(),
+		})
+	}
+
+	return &apipb.KifuResponse{
+		KifuResponseSelect: &apipb.KifuResponse_ResponseRecentKifu{
+			ResponseRecentKifu: &apipb.RecentKifuResponse{
+				Kifus: ret,
+			},
+		},
+	}, nil
 }
 
 func (s *server) postKifu(ctx context.Context, userId string, req *apipb.PostKifuRequest) (*apipb.KifuResponse, error) {
@@ -218,6 +259,14 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 		}
 	}
 
+	var otherFields []*apipb.Value
+	for k, v := range kifu.OtherFields {
+		otherFields = append(otherFields, &apipb.Value{
+			Name:  k,
+			Value: v,
+		})
+	}
+
 	return &apipb.KifuResponse{
 		KifuResponseSelect: &apipb.KifuResponse_ResponseGetKifu{
 			ResponseGetKifu: &apipb.GetKifuResponse{
@@ -230,7 +279,7 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 				GameName:      kifu.GetGameName(),
 				FirstPlayers:  firstPlayers,
 				SecondPlayers: secondPlayers,
-				OtherFields:   kifu.OtherFields,
+				OtherFields:   otherFields,
 				Sfen:          kifu.GetSfen(),
 				CreatedTs:     kifu.GetCreatedTs(),
 				Steps:         resSteps,

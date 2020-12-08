@@ -17,11 +17,6 @@ import (
 	"github.com/yunomu/kansousen/lib/pbconv"
 )
 
-var (
-	ErrEmpty        = errors.New("result is empty")
-	ErrInvalidValue = errors.New("internal: invalid value")
-)
-
 type DynamoDB struct {
 	table       *dynamodb.DynamoDB
 	parallelism int
@@ -355,7 +350,7 @@ func (db *DynamoDB) GetSteps(ctx context.Context, userId, kifuId string) ([]*doc
 	return ret, nil
 }
 
-func (db *DynamoDB) GetPositions(ctx context.Context, userIds []string, pos string) ([]*documentpb.Position, error) {
+func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string) ([]*documentpb.Position, error) {
 	if len(userIds) == 0 {
 		return nil, nil
 	}
@@ -444,11 +439,11 @@ func (db *DynamoDB) GetPositions(ctx context.Context, userIds []string, pos stri
 	return ret, nil
 }
 
-func (db *DynamoDB) GetRecentKifu(ctx context.Context, userId string) ([]*documentpb.Kifu, error) {
+func (db *DynamoDB) GetRecentKifu(ctx context.Context, userId string, limit int) ([]*documentpb.Kifu, error) {
 	var ret []*documentpb.Kifu
 
 	pk, _ := buildKifuKey(userId, "")
-	keys, err := db.table.RecentlyUpdated(ctx, pk, 10)
+	keys, err := db.table.RecentlyUpdated(ctx, pk, limit)
 	if err != nil {
 		return nil, err
 	}

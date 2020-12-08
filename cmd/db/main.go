@@ -69,7 +69,7 @@ func (l *logger) Info(function string, message string) {
 }
 
 func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	return c.commander.Execute(ctx, func() *db.DynamoDB {
+	return c.commander.Execute(ctx, func() db.DB {
 		config := aws.NewConfig().WithRegion(*c.region)
 
 		if *c.endpoint != "" {
