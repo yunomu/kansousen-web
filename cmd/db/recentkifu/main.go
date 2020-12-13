@@ -14,6 +14,7 @@ import (
 
 type Command struct {
 	userId *string
+	limit  *int
 }
 
 func NewCommand() *Command {
@@ -31,6 +32,7 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.SetOutput(os.Stderr)
 
 	c.userId = f.String("user-id", "", "User ID")
+	c.limit = f.Int("limit", 10, "read limit")
 }
 
 func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
@@ -40,7 +42,7 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		log.Fatalf("user-id is required")
 	}
 
-	kifus, err := db.GetRecentKifu(ctx, *c.userId)
+	kifus, err := db.GetRecentKifu(ctx, *c.userId, *c.limit)
 	if err != nil {
 		log.Fatalf("GetRecentKifu: %v", err)
 	}

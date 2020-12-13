@@ -35,32 +35,52 @@ func KifPosToPos(p *ptypes.Pos) *document.Pos {
 	}
 }
 
+func posXFromInt(x int32) sfen.PosX {
+	x = 9 - x
+	if x < 0 {
+		panic("invalid x")
+	}
+	return sfen.PosXs[x]
+}
+
+func posYFromInt(y int32) sfen.PosY {
+	if y <= 0 {
+		panic("invalid y")
+	}
+	y -= 1
+	return sfen.PosYs[y]
+}
+
 func stepToMove(p *sfen.Surface, step *ptypes.Step, move string) *document.Move {
 	if step.FinishedStatus != ptypes.FinishedStatus_NOT_FINISHED {
 		return nil
 	}
 
-	piece := p.GetPiece(sfen.PosX(step.Dst.X), sfen.PosY(step.Dst.Y))
+	piece := p.GetPiece(posXFromInt(step.Dst.X), posYFromInt(step.Dst.Y))
 	var captured document.Piece_Id
-	switch piece.Type {
-	case sfen.Piece_NULL:
+	if piece == nil {
 		captured = document.Piece_NULL
-	case sfen.Piece_HISHA:
-		captured = document.Piece_HISHA
-	case sfen.Piece_KAKU:
-		captured = document.Piece_KAKU
-	case sfen.Piece_KIN:
-		captured = document.Piece_KIN
-	case sfen.Piece_GIN:
-		captured = document.Piece_GIN
-	case sfen.Piece_KEI:
-		captured = document.Piece_KEI
-	case sfen.Piece_KYOU:
-		captured = document.Piece_KYOU
-	case sfen.Piece_FU:
-		captured = document.Piece_FU
-	default:
-		panic("Unknown Piece type")
+	} else {
+		switch piece.Type {
+		case sfen.Piece_NULL:
+			captured = document.Piece_NULL
+		case sfen.Piece_HISHA:
+			captured = document.Piece_HISHA
+		case sfen.Piece_KAKU:
+			captured = document.Piece_KAKU
+		case sfen.Piece_KIN:
+			captured = document.Piece_KIN
+		case sfen.Piece_GIN:
+			captured = document.Piece_GIN
+		case sfen.Piece_KEI:
+			captured = document.Piece_KEI
+		case sfen.Piece_KYOU:
+			captured = document.Piece_KYOU
+		case sfen.Piece_FU:
+			captured = document.Piece_FU
+		default:
+			panic("Unknown Piece type")
+		}
 	}
 
 	return &document.Move{
