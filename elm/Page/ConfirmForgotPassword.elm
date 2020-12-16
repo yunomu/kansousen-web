@@ -4,6 +4,7 @@ import Element exposing (Element)
 import Element.Input as Input
 import Html
 import Proto.Api as PB
+import Style
 
 
 type Msg
@@ -86,13 +87,13 @@ view msg model =
                 , checked = model.showPassword
                 , label = Input.labelRight [] <| Element.text "Show password"
                 }
-            , Input.button []
+            , Input.button Style.submitButton
                 { onPress = Just (msg Submit)
                 , label = Element.text "Confirm"
                 }
             ]
     in
-    Element.column [] <|
+    Element.column Style.mainColumn <|
         case model.forgotPasswordResponse of
             Just res ->
                 (Element.el [] <|

@@ -3,6 +3,7 @@ module Page.ResendConfirm exposing (Model, Msg(..), init, update, view)
 import Element exposing (Element)
 import Element.Input as Input
 import Proto.Api as PB
+import Style
 
 
 type Msg
@@ -32,14 +33,14 @@ update msg model =
 
 view : (Msg -> msg) -> Model -> Element msg
 view msg model =
-    Element.column []
+    Element.column Style.mainColumn
         [ Input.username []
             { onChange = msg << ChangeName
             , text = model.username
             , placeholder = Nothing
             , label = Input.labelLeft [] <| Element.text "Username"
             }
-        , Input.button []
+        , Input.button Style.submitButton
             { onPress = Just (msg Submit)
             , label = Element.text "Submit"
             }

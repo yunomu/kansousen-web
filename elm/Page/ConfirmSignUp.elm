@@ -3,13 +3,14 @@ module Page.ConfirmSignUp exposing (Model, Msg(..), init, update, view)
 import Element exposing (Element)
 import Element.Input as Input
 import Proto.Api as PB
+import Route
+import Style
 
 
 type Msg
     = ChangeName String
     | ChangeCode String
     | Submit
-    | ResendCode
 
 
 type alias Model =
@@ -44,9 +45,6 @@ update msg model =
         Submit ->
             model
 
-        ResendCode ->
-            model
-
 
 view : (Msg -> msg) -> Model -> Element msg
 view msg model =
@@ -64,17 +62,17 @@ view msg model =
                 , placeholder = Nothing
                 , label = Input.labelLeft [] <| Element.text "Confirmation code"
                 }
-            , Input.button []
+            , Input.button Style.submitButton
                 { onPress = Just (msg Submit)
                 , label = Element.text "Submit"
                 }
-            , Input.button []
-                { onPress = Just (msg ResendCode)
+            , Element.link []
+                { url = Route.path Route.ResendConfirm
                 , label = Element.text "Resend confirmation code"
                 }
             ]
     in
-    Element.column [] <|
+    Element.column Style.mainColumn <|
         case model.signUpResponse of
             Just res ->
                 (Element.el [] <|

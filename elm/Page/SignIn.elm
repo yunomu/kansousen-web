@@ -4,6 +4,8 @@ import Element exposing (Element)
 import Element.Input as Input
 import Html
 import Proto.Api as PB
+import Route
+import Style
 
 
 type Msg
@@ -11,7 +13,6 @@ type Msg
     | ChangePassword String
     | ChangeShowPassword
     | Submit
-    | ForgotPassword
 
 
 type alias Model =
@@ -49,13 +50,10 @@ update msg model =
         Submit ->
             model
 
-        ForgotPassword ->
-            model
-
 
 view : (Msg -> msg) -> Model -> Element msg
 view msg model =
-    Element.column []
+    Element.column Style.mainColumn
         [ Element.html (Html.h1 [] [ Html.text "Sign in" ])
         , Input.username []
             { onChange = msg << ChangeUsername
@@ -76,12 +74,12 @@ view msg model =
             , checked = model.showPassword
             , label = Input.labelRight [] <| Element.text "Show password"
             }
-        , Input.button []
+        , Input.button Style.submitButton
             { onPress = Just (msg Submit)
             , label = Element.text "Sign In"
             }
-        , Input.button []
-            { onPress = Just (msg ForgotPassword)
+        , Element.link []
+            { url = Route.path Route.ForgotPassword
             , label = Element.text "Forgot password"
             }
         ]

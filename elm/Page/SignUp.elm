@@ -4,6 +4,7 @@ import Element exposing (Element)
 import Element.Input as Input
 import Html
 import Proto.Api as PB
+import Style
 
 
 type Msg
@@ -56,7 +57,7 @@ update msg model =
 
 view : (Msg -> msg) -> Model -> Element msg
 view msg model =
-    Element.column []
+    Element.column Style.mainColumn
         [ Element.html (Html.h1 [] [ Html.text "Sign up" ])
         , Input.username []
             { onChange = msg << ChangeUsername
@@ -83,7 +84,7 @@ view msg model =
             , checked = model.showPassword
             , label = Input.labelRight [] <| Element.text "Show password"
             }
-        , Input.button []
+        , Input.button Style.submitButton
             { onPress = Just (msg Submit)
             , label = Element.text "SignUp"
             }

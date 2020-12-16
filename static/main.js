@@ -5382,28 +5382,7 @@ var $elm$core$Task$perform = F2(
 var $elm$browser$Browser$application = _Browser_application;
 var $elm$json$Json$Decode$field = _Json_decodeField;
 var $author$project$Main$PrevNone = {$: 'PrevNone'};
-var $author$project$Page$ConfirmForgotPassword$init = {
-	forgotPasswordResponse: $elm$core$Maybe$Nothing,
-	params: {confirmationCode: '', password: '', username: ''},
-	showPassword: false
-};
-var $author$project$Page$ConfirmSignUp$init = {
-	params: {confirmationCode: '', username: ''},
-	signUpResponse: $elm$core$Maybe$Nothing
-};
-var $author$project$Page$ForgotPassword$init = {username: ''};
-var $author$project$Page$ResendConfirm$init = {username: ''};
-var $author$project$Page$SignIn$init = {
-	params: {password: '', username: ''},
-	showPassword: false
-};
-var $author$project$Page$SignUp$init = {
-	params: {email: '', password: '', username: ''},
-	showPassword: false
-};
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
-var $author$project$Main$NotFound = {$: 'NotFound'};
+var $author$project$Route$NotFound = {$: 'NotFound'};
 var $elm$url$Url$Parser$State = F5(
 	function (visited, unvisited, params, frag, value) {
 		return {frag: frag, params: params, unvisited: unvisited, value: value, visited: visited};
@@ -6038,14 +6017,15 @@ var $elm$url$Url$Parser$parse = F2(
 					url.fragment,
 					$elm$core$Basics$identity)));
 	});
-var $author$project$Main$ConfirmForgotPassword = {$: 'ConfirmForgotPassword'};
-var $author$project$Main$ConfirmSignUp = {$: 'ConfirmSignUp'};
-var $author$project$Main$ForgotPassword = {$: 'ForgotPassword'};
-var $author$project$Main$Index = {$: 'Index'};
-var $author$project$Main$MyPage = {$: 'MyPage'};
-var $author$project$Main$ResendConfirm = {$: 'ResendConfirm'};
-var $author$project$Main$SignIn = {$: 'SignIn'};
-var $author$project$Main$SignUp = {$: 'SignUp'};
+var $author$project$Route$ConfirmForgotPassword = {$: 'ConfirmForgotPassword'};
+var $author$project$Route$ConfirmSignUp = {$: 'ConfirmSignUp'};
+var $author$project$Route$ForgotPassword = {$: 'ForgotPassword'};
+var $author$project$Route$Index = {$: 'Index'};
+var $author$project$Route$MyPage = {$: 'MyPage'};
+var $author$project$Route$ResendConfirm = {$: 'ResendConfirm'};
+var $author$project$Route$SignIn = {$: 'SignIn'};
+var $author$project$Route$SignUp = {$: 'SignUp'};
+var $author$project$Route$Upload = {$: 'Upload'};
 var $elm$url$Url$Parser$Parser = function (a) {
 	return {$: 'Parser', a: a};
 };
@@ -6140,42 +6120,46 @@ var $elm$url$Url$Parser$top = $elm$url$Url$Parser$Parser(
 		return _List_fromArray(
 			[state]);
 	});
-var $author$project$Main$routeParser = $elm$url$Url$Parser$oneOf(
+var $author$project$Route$parser = $elm$url$Url$Parser$oneOf(
 	_List_fromArray(
 		[
-			A2($elm$url$Url$Parser$map, $author$project$Main$Index, $elm$url$Url$Parser$top),
+			A2($elm$url$Url$Parser$map, $author$project$Route$Index, $elm$url$Url$Parser$top),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$Index,
+			$author$project$Route$Index,
 			$elm$url$Url$Parser$s('index.html')),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$SignUp,
+			$author$project$Route$SignUp,
 			$elm$url$Url$Parser$s('signup')),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$ConfirmSignUp,
+			$author$project$Route$ConfirmSignUp,
 			$elm$url$Url$Parser$s('confirm_signup')),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$ResendConfirm,
+			$author$project$Route$ResendConfirm,
 			$elm$url$Url$Parser$s('resend_confirm')),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$SignIn,
+			$author$project$Route$SignIn,
 			$elm$url$Url$Parser$s('signin')),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$ForgotPassword,
+			$author$project$Route$ForgotPassword,
 			$elm$url$Url$Parser$s('forgot_password')),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$ConfirmForgotPassword,
+			$author$project$Route$ConfirmForgotPassword,
 			$elm$url$Url$Parser$s('confirm_forgot_password')),
 			A2(
 			$elm$url$Url$Parser$map,
-			$author$project$Main$MyPage,
-			$elm$url$Url$Parser$s('my'))
+			$author$project$Route$MyPage,
+			$elm$url$Url$Parser$s('my')),
+			A2(
+			$elm$url$Url$Parser$map,
+			$author$project$Route$Upload,
+			$elm$url$Url$Parser$s('upload'))
 		]));
 var $elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
@@ -6186,12 +6170,39 @@ var $elm$core$Maybe$withDefault = F2(
 			return _default;
 		}
 	});
-var $author$project$Main$toRoute = function (url) {
+var $author$project$Route$fromUrl = function (url) {
 	return A2(
 		$elm$core$Maybe$withDefault,
-		$author$project$Main$NotFound,
-		A2($elm$url$Url$Parser$parse, $author$project$Main$routeParser, url));
+		$author$project$Route$NotFound,
+		A2($elm$url$Url$Parser$parse, $author$project$Route$parser, url));
 };
+var $author$project$Page$ConfirmForgotPassword$init = {
+	forgotPasswordResponse: $elm$core$Maybe$Nothing,
+	params: {confirmationCode: '', password: '', username: ''},
+	showPassword: false
+};
+var $author$project$Page$ConfirmSignUp$init = {
+	params: {confirmationCode: '', username: ''},
+	signUpResponse: $elm$core$Maybe$Nothing
+};
+var $author$project$Page$ForgotPassword$init = {username: ''};
+var $author$project$Page$ResendConfirm$init = {username: ''};
+var $author$project$Page$SignIn$init = {
+	params: {password: '', username: ''},
+	showPassword: false
+};
+var $author$project$Page$SignUp$init = {
+	params: {email: '', password: '', username: ''},
+	showPassword: false
+};
+var $author$project$Page$Upload$init = function (repeat) {
+	return {
+		repeat: repeat,
+		request: {encoding: 'UTF-8', format: 'KIF', payload: ''}
+	};
+};
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $author$project$Main$init = F3(
 	function (flags, url, key) {
 		var authToken = function () {
@@ -6214,10 +6225,12 @@ var $author$project$Main$init = F3(
 				forgotPasswordModel: $author$project$Page$ForgotPassword$init,
 				key: key,
 				prevState: $author$project$Main$PrevNone,
+				recentKifu: _List_Nil,
 				resendConfirmModel: $author$project$Page$ResendConfirm$init,
-				route: $author$project$Main$toRoute(url),
+				route: $author$project$Route$fromUrl(url),
 				signInModel: $author$project$Page$SignIn$init,
-				signUpModel: $author$project$Page$SignUp$init
+				signUpModel: $author$project$Page$SignUp$init,
+				uploadModel: $author$project$Page$Upload$init(false)
 			},
 			$elm$core$Platform$Cmd$none);
 	});
@@ -6240,6 +6253,12 @@ var $author$project$Proto$Api$AuthRequest = function (authRequestSelect) {
 	return {authRequestSelect: authRequestSelect};
 };
 var $author$project$Api$HelloRequest = {$: 'HelloRequest'};
+var $author$project$Api$KifuRequest = function (a) {
+	return {$: 'KifuRequest', a: a};
+};
+var $author$project$Proto$Api$KifuRequest = function (kifuRequestSelect) {
+	return {kifuRequestSelect: kifuRequestSelect};
+};
 var $author$project$Proto$Api$RequestConfirmForgotPassword = function (a) {
 	return {$: 'RequestConfirmForgotPassword', a: a};
 };
@@ -6248,6 +6267,12 @@ var $author$project$Proto$Api$RequestConfirmSignUp = function (a) {
 };
 var $author$project$Proto$Api$RequestForgotPassword = function (a) {
 	return {$: 'RequestForgotPassword', a: a};
+};
+var $author$project$Proto$Api$RequestPostKifu = function (a) {
+	return {$: 'RequestPostKifu', a: a};
+};
+var $author$project$Proto$Api$RequestRecentKifu = function (a) {
+	return {$: 'RequestRecentKifu', a: a};
 };
 var $author$project$Proto$Api$RequestSignIn = function (a) {
 	return {$: 'RequestSignIn', a: a};
@@ -6262,6 +6287,81 @@ var $author$project$Proto$Api$RequestTokenRefresh = function (a) {
 	return {$: 'RequestTokenRefresh', a: a};
 };
 var $elm$core$Debug$log = _Debug_log;
+var $elm$url$Url$Builder$toQueryPair = function (_v0) {
+	var key = _v0.a;
+	var value = _v0.b;
+	return key + ('=' + value);
+};
+var $elm$url$Url$Builder$toQuery = function (parameters) {
+	if (!parameters.b) {
+		return '';
+	} else {
+		return '?' + A2(
+			$elm$core$String$join,
+			'&',
+			A2($elm$core$List$map, $elm$url$Url$Builder$toQueryPair, parameters));
+	}
+};
+var $elm$url$Url$Builder$absolute = F2(
+	function (pathSegments, parameters) {
+		return '/' + (A2($elm$core$String$join, '/', pathSegments) + $elm$url$Url$Builder$toQuery(parameters));
+	});
+var $author$project$Route$path = function (route) {
+	switch (route.$) {
+		case 'Index':
+			return A2($elm$url$Url$Builder$absolute, _List_Nil, _List_Nil);
+		case 'SignUp':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['signup']),
+				_List_Nil);
+		case 'ConfirmSignUp':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['confirm_signup']),
+				_List_Nil);
+		case 'ResendConfirm':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['resend_confirm']),
+				_List_Nil);
+		case 'SignIn':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['signin']),
+				_List_Nil);
+		case 'ForgotPassword':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['forgot_password']),
+				_List_Nil);
+		case 'ConfirmForgotPassword':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['confirm_forgot_password']),
+				_List_Nil);
+		case 'MyPage':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['my']),
+				_List_Nil);
+		case 'Upload':
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					['upload']),
+				_List_Nil);
+		default:
+			return A2($elm$url$Url$Builder$absolute, _List_Nil, _List_Nil);
+	}
+};
 var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $author$project$Api$AuthResponse = function (a) {
 	return {$: 'AuthResponse', a: a};
@@ -7231,10 +7331,64 @@ var $author$project$Proto$Api$postKifuResponseDecoder = $elm$json$Json$Decode$la
 				'',
 				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$PostKifuResponse)));
 	});
-var $author$project$Proto$Api$RecentKifuResponse = {};
+var $author$project$Proto$Api$RecentKifuResponse = function (kifus) {
+	return {kifus: kifus};
+};
+var $author$project$Proto$Api$RecentKifuResponse_Kifu = F8(
+	function (userId, kifuId, startTs, handicap, gameName, firstPlayer, secondPlayer, note) {
+		return {firstPlayer: firstPlayer, gameName: gameName, handicap: handicap, kifuId: kifuId, note: note, secondPlayer: secondPlayer, startTs: startTs, userId: userId};
+	});
+var $author$project$Proto$Api$recentKifuResponse_KifuDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'note',
+			$elm$json$Json$Decode$string,
+			'',
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'secondPlayer',
+				$elm$json$Json$Decode$string,
+				'',
+				A4(
+					$tiziano88$elm_protobuf$Protobuf$required,
+					'firstPlayer',
+					$elm$json$Json$Decode$string,
+					'',
+					A4(
+						$tiziano88$elm_protobuf$Protobuf$required,
+						'gameName',
+						$elm$json$Json$Decode$string,
+						'',
+						A4(
+							$tiziano88$elm_protobuf$Protobuf$required,
+							'handicap',
+							$elm$json$Json$Decode$string,
+							'',
+							A4(
+								$tiziano88$elm_protobuf$Protobuf$required,
+								'startTs',
+								$tiziano88$elm_protobuf$Protobuf$intDecoder,
+								0,
+								A4(
+									$tiziano88$elm_protobuf$Protobuf$required,
+									'kifuId',
+									$elm$json$Json$Decode$string,
+									'',
+									A4(
+										$tiziano88$elm_protobuf$Protobuf$required,
+										'userId',
+										$elm$json$Json$Decode$string,
+										'',
+										$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$RecentKifuResponse_Kifu)))))))));
+	});
 var $author$project$Proto$Api$recentKifuResponseDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
-		return $tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$RecentKifuResponse);
+		return A3(
+			$tiziano88$elm_protobuf$Protobuf$repeated,
+			'kifus',
+			$author$project$Proto$Api$recentKifuResponse_KifuDecoder,
+			$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$RecentKifuResponse));
 	});
 var $author$project$Proto$Api$kifuResponseSelectDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
@@ -7529,75 +7683,6 @@ var $author$project$Api$request = F3(
 					});
 		}
 	});
-var $elm$url$Url$Builder$toQueryPair = function (_v0) {
-	var key = _v0.a;
-	var value = _v0.b;
-	return key + ('=' + value);
-};
-var $elm$url$Url$Builder$toQuery = function (parameters) {
-	if (!parameters.b) {
-		return '';
-	} else {
-		return '?' + A2(
-			$elm$core$String$join,
-			'&',
-			A2($elm$core$List$map, $elm$url$Url$Builder$toQueryPair, parameters));
-	}
-};
-var $elm$url$Url$Builder$absolute = F2(
-	function (pathSegments, parameters) {
-		return '/' + (A2($elm$core$String$join, '/', pathSegments) + $elm$url$Url$Builder$toQuery(parameters));
-	});
-var $author$project$Main$routeToPath = function (route) {
-	switch (route.$) {
-		case 'Index':
-			return A2($elm$url$Url$Builder$absolute, _List_Nil, _List_Nil);
-		case 'SignUp':
-			return A2(
-				$elm$url$Url$Builder$absolute,
-				_List_fromArray(
-					['signup']),
-				_List_Nil);
-		case 'ConfirmSignUp':
-			return A2(
-				$elm$url$Url$Builder$absolute,
-				_List_fromArray(
-					['confirm_signup']),
-				_List_Nil);
-		case 'ResendConfirm':
-			return A2(
-				$elm$url$Url$Builder$absolute,
-				_List_fromArray(
-					['resend_confirm']),
-				_List_Nil);
-		case 'SignIn':
-			return A2(
-				$elm$url$Url$Builder$absolute,
-				_List_fromArray(
-					['signin']),
-				_List_Nil);
-		case 'ForgotPassword':
-			return A2(
-				$elm$url$Url$Builder$absolute,
-				_List_fromArray(
-					['forgot_password']),
-				_List_Nil);
-		case 'ConfirmForgotPassword':
-			return A2(
-				$elm$url$Url$Builder$absolute,
-				_List_fromArray(
-					['confirm_forgot_password']),
-				_List_Nil);
-		case 'MyPage':
-			return A2(
-				$elm$url$Url$Builder$absolute,
-				_List_fromArray(
-					['my']),
-				_List_Nil);
-		default:
-			return A2($elm$url$Url$Builder$absolute, _List_Nil, _List_Nil);
-	}
-};
 var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$authorizedResponse = F4(
 	function (model, req, result, f) {
@@ -7634,7 +7719,7 @@ var $author$project$Main$authorizedResponse = F4(
 						A2(
 							$elm$browser$Browser$Navigation$pushUrl,
 							model.key,
-							$author$project$Main$routeToPath($author$project$Main$SignIn)));
+							$author$project$Route$path($author$project$Route$SignIn)));
 				}
 			} else {
 				var err = result.a;
@@ -7765,7 +7850,7 @@ var $author$project$Main$signInAndReturn = F4(
 							A2(
 							$elm$browser$Browser$Navigation$pushUrl,
 							model.key,
-							$author$project$Main$routeToPath($author$project$Main$Index))
+							$author$project$Route$path($author$project$Route$MyPage))
 						])));
 		}
 	});
@@ -7794,7 +7879,7 @@ var $author$project$Main$apiResponse = F3(
 								A2(
 									$elm$browser$Browser$Navigation$pushUrl,
 									model.key,
-									$author$project$Main$routeToPath($author$project$Main$ConfirmSignUp)));
+									$author$project$Route$path($author$project$Route$ConfirmSignUp)));
 						case 'ResponseConfirmSignUp':
 							var m = model.confirmSignUpModel;
 							return _Utils_Tuple2(
@@ -7804,7 +7889,7 @@ var $author$project$Main$apiResponse = F3(
 								A2(
 									$elm$browser$Browser$Navigation$pushUrl,
 									model.key,
-									$author$project$Main$routeToPath($author$project$Main$Index)));
+									$author$project$Route$path($author$project$Route$Index)));
 						case 'ResponseForgotPassword':
 							var r = _v2.a;
 							var m = model.confirmForgotPasswordModel;
@@ -7821,14 +7906,14 @@ var $author$project$Main$apiResponse = F3(
 								A2(
 									$elm$browser$Browser$Navigation$pushUrl,
 									model.key,
-									$author$project$Main$routeToPath($author$project$Main$ConfirmForgotPassword)));
+									$author$project$Route$path($author$project$Route$ConfirmForgotPassword)));
 						case 'ResponseConfirmForgotPassword':
 							return _Utils_Tuple2(
 								model,
 								A2(
 									$elm$browser$Browser$Navigation$pushUrl,
 									model.key,
-									$author$project$Main$routeToPath($author$project$Main$Index)));
+									$author$project$Route$path($author$project$Route$Index)));
 						case 'ResponseSignIn':
 							var r = _v2.a;
 							return A4(
@@ -7880,7 +7965,34 @@ var $author$project$Main$apiResponse = F3(
 				}
 			case 'KifuResponse':
 				var result = res.a;
-				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				return A4(
+					$author$project$Main$authorizedResponse,
+					model,
+					req,
+					result,
+					function (kifuRes) {
+						var _v4 = kifuRes.kifuResponseSelect;
+						switch (_v4.$) {
+							case 'ResponseRecentKifu':
+								var r = _v4.a;
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{recentKifu: r.kifus}),
+									$elm$core$Platform$Cmd$none);
+							case 'ResponsePostKifu':
+								var r = _v4.a;
+								return _Utils_Tuple2(
+									model,
+									A2(
+										$elm$browser$Browser$Navigation$pushUrl,
+										model.key,
+										$author$project$Route$path(
+											model.uploadModel.repeat ? $author$project$Route$Upload : $author$project$Route$Index)));
+							default:
+								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+						}
+					});
 			default:
 				var result = res.a;
 				return A4(
@@ -7889,7 +8001,7 @@ var $author$project$Main$apiResponse = F3(
 					req,
 					result,
 					function (r) {
-						var _v4 = A2($elm$core$Debug$log, 'HelloResponse', r);
+						var _v5 = A2($elm$core$Debug$log, 'HelloResponse', r);
 						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 					});
 		}
@@ -8001,8 +8113,6 @@ var $author$project$Page$ConfirmSignUp$update = F2(
 							params,
 							{confirmationCode: str})
 					});
-			case 'Submit':
-				return model;
 			default:
 				return model;
 		}
@@ -8044,8 +8154,6 @@ var $author$project$Page$SignIn$update = F2(
 				return _Utils_update(
 					model,
 					{showPassword: !model.showPassword});
-			case 'Submit':
-				return model;
 			default:
 				return model;
 		}
@@ -8089,8 +8197,35 @@ var $author$project$Page$SignUp$update = F2(
 				return model;
 		}
 	});
+var $author$project$Page$Upload$update = F2(
+	function (msg, model) {
+		switch (msg.$) {
+			case 'Submit':
+				return model;
+			case 'ChangeKifu':
+				var str = msg.a;
+				var req = model.request;
+				return _Utils_update(
+					model,
+					{
+						request: _Utils_update(
+							req,
+							{payload: str})
+					});
+			default:
+				return _Utils_update(
+					model,
+					{repeat: !model.repeat});
+		}
+	});
 var $author$project$Main$update = F2(
 	function (msg, model) {
+		var authToken = A2(
+			$elm$core$Maybe$map,
+			function (at) {
+				return at.token;
+			},
+			model.authToken);
 		switch (msg.$) {
 			case 'LinkClicked':
 				var urlRequest = msg.a;
@@ -8110,16 +8245,60 @@ var $author$project$Main$update = F2(
 				}
 			case 'UrlChanged':
 				var url = msg.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							errorMessage: $elm$core$Maybe$Nothing,
-							route: $author$project$Main$toRoute(url),
-							signInModel: $author$project$Page$SignIn$init,
-							signUpModel: $author$project$Page$SignUp$init
-						}),
-					$elm$core$Platform$Cmd$none);
+				var model_ = _Utils_update(
+					model,
+					{
+						errorMessage: $elm$core$Maybe$Nothing,
+						route: $author$project$Route$fromUrl(url)
+					});
+				var _v2 = model_.route;
+				switch (_v2.$) {
+					case 'SignUp':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model_,
+								{signUpModel: $author$project$Page$SignUp$init}),
+							$elm$core$Platform$Cmd$none);
+					case 'SignIn':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model_,
+								{signInModel: $author$project$Page$SignIn$init}),
+							$elm$core$Platform$Cmd$none);
+					case 'ConfirmSignUp':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model_,
+								{confirmSignUpModel: $author$project$Page$ConfirmSignUp$init}),
+							$elm$core$Platform$Cmd$none);
+					case 'ForgotPassword':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model_,
+								{forgotPasswordModel: $author$project$Page$ForgotPassword$init}),
+							$elm$core$Platform$Cmd$none);
+					case 'MyPage':
+						return _Utils_Tuple2(
+							model_,
+							A3(
+								$author$project$Api$request,
+								$author$project$Main$ApiResponse,
+								authToken,
+								$author$project$Api$KifuRequest(
+									$author$project$Proto$Api$KifuRequest(
+										$author$project$Proto$Api$RequestRecentKifu(
+											{limit: 10})))));
+					case 'Upload':
+						return _Utils_Tuple2(
+							_Utils_update(
+								model_,
+								{
+									uploadModel: $author$project$Page$Upload$init(model.uploadModel.repeat)
+								}),
+							$elm$core$Platform$Cmd$none);
+					default:
+						return _Utils_Tuple2(model_, $elm$core$Platform$Cmd$none);
+				}
 			case 'SignUpMsg':
 				var m = msg.a;
 				if (m.$ === 'Submit') {
@@ -8143,61 +8322,45 @@ var $author$project$Main$update = F2(
 				}
 			case 'ConfirmSignUpMsg':
 				var m = msg.a;
-				switch (m.$) {
-					case 'Submit':
-						return _Utils_Tuple2(
+				if (m.$ === 'Submit') {
+					return _Utils_Tuple2(
+						model,
+						A3(
+							$author$project$Api$request,
+							$author$project$Main$ApiResponse,
+							$elm$core$Maybe$Nothing,
+							$author$project$Api$AuthRequest(
+								$author$project$Proto$Api$AuthRequest(
+									$author$project$Proto$Api$RequestConfirmSignUp(model.confirmSignUpModel.params)))));
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
 							model,
-							A3(
-								$author$project$Api$request,
-								$author$project$Main$ApiResponse,
-								$elm$core$Maybe$Nothing,
-								$author$project$Api$AuthRequest(
-									$author$project$Proto$Api$AuthRequest(
-										$author$project$Proto$Api$RequestConfirmSignUp(model.confirmSignUpModel.params)))));
-					case 'ResendCode':
-						return _Utils_Tuple2(
-							model,
-							A2(
-								$elm$browser$Browser$Navigation$pushUrl,
-								model.key,
-								$author$project$Main$routeToPath($author$project$Main$ResendConfirm)));
-					default:
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									confirmSignUpModel: A2($author$project$Page$ConfirmSignUp$update, m, model.confirmSignUpModel)
-								}),
-							$elm$core$Platform$Cmd$none);
+							{
+								confirmSignUpModel: A2($author$project$Page$ConfirmSignUp$update, m, model.confirmSignUpModel)
+							}),
+						$elm$core$Platform$Cmd$none);
 				}
 			case 'SignInMsg':
 				var m = msg.a;
-				switch (m.$) {
-					case 'Submit':
-						return _Utils_Tuple2(
+				if (m.$ === 'Submit') {
+					return _Utils_Tuple2(
+						model,
+						A3(
+							$author$project$Api$request,
+							$author$project$Main$ApiResponse,
+							$elm$core$Maybe$Nothing,
+							$author$project$Api$AuthRequest(
+								$author$project$Proto$Api$AuthRequest(
+									$author$project$Proto$Api$RequestSignIn(model.signInModel.params)))));
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
 							model,
-							A3(
-								$author$project$Api$request,
-								$author$project$Main$ApiResponse,
-								$elm$core$Maybe$Nothing,
-								$author$project$Api$AuthRequest(
-									$author$project$Proto$Api$AuthRequest(
-										$author$project$Proto$Api$RequestSignIn(model.signInModel.params)))));
-					case 'ForgotPassword':
-						return _Utils_Tuple2(
-							model,
-							A2(
-								$elm$browser$Browser$Navigation$pushUrl,
-								model.key,
-								$author$project$Main$routeToPath($author$project$Main$ForgotPassword)));
-					default:
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									signInModel: A2($author$project$Page$SignIn$update, m, model.signInModel)
-								}),
-							$elm$core$Platform$Cmd$none);
+							{
+								signInModel: A2($author$project$Page$SignIn$update, m, model.signInModel)
+							}),
+						$elm$core$Platform$Cmd$none);
 				}
 			case 'ForgotPasswordMsg':
 				var m = msg.a;
@@ -8245,21 +8408,33 @@ var $author$project$Main$update = F2(
 				var req = msg.a;
 				var res = msg.b;
 				return A3($author$project$Main$apiResponse, model, req, res);
+			case 'UploadMsg':
+				var uploadMsg = msg.a;
+				if (uploadMsg.$ === 'Submit') {
+					return _Utils_Tuple2(
+						model,
+						A3(
+							$author$project$Api$request,
+							$author$project$Main$ApiResponse,
+							authToken,
+							$author$project$Api$KifuRequest(
+								$author$project$Proto$Api$KifuRequest(
+									$author$project$Proto$Api$RequestPostKifu(model.uploadModel.request)))));
+				} else {
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								uploadModel: A2($author$project$Page$Upload$update, uploadMsg, model.uploadModel)
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
 			case 'HelloRequest':
 				return _Utils_Tuple2(
 					model,
-					A3(
-						$author$project$Api$request,
-						$author$project$Main$ApiResponse,
-						A2(
-							$elm$core$Maybe$map,
-							function (at) {
-								return at.token;
-							},
-							model.authToken),
-						$author$project$Api$HelloRequest));
+					A3($author$project$Api$request, $author$project$Main$ApiResponse, authToken, $author$project$Api$HelloRequest));
 			default:
-				var _v7 = A2(
+				var _v9 = A2(
 					$elm$core$Debug$log,
 					$elm$core$Debug$toString(msg),
 					msg);
@@ -13710,6 +13885,9 @@ var $author$project$Main$SignInMsg = function (a) {
 var $author$project$Main$SignUpMsg = function (a) {
 	return {$: 'SignUpMsg', a: a};
 };
+var $author$project$Main$UploadMsg = function (a) {
+	return {$: 'UploadMsg', a: a};
+};
 var $elm$html$Html$a = _VirtualDom_node('a');
 var $elm$html$Html$Attributes$href = function (url) {
 	return A2(
@@ -13754,6 +13932,33 @@ var $mdgriffith$elm_ui$Element$link = F2(
 				_List_fromArray(
 					[label])));
 	});
+var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
+	function (a, b, c) {
+		return {$: 'SpacingStyle', a: a, b: b, c: c};
+	});
+var $mdgriffith$elm_ui$Internal$Model$StyleClass = F2(
+	function (a, b) {
+		return {$: 'StyleClass', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Flag$spacing = $mdgriffith$elm_ui$Internal$Flag$flag(3);
+var $mdgriffith$elm_ui$Internal$Model$spacingName = F2(
+	function (x, y) {
+		return 'spacing-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y)));
+	});
+var $mdgriffith$elm_ui$Element$spacing = function (x) {
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$spacing,
+		A3(
+			$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
+			A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, x),
+			x,
+			x));
+};
+var $author$project$Style$mainColumn = _List_fromArray(
+	[
+		$mdgriffith$elm_ui$Element$spacing(5)
+	]);
 var $elm$virtual_dom$VirtualDom$Normal = function (a) {
 	return {$: 'Normal', a: a};
 };
@@ -14033,29 +14238,6 @@ var $mdgriffith$elm_ui$Element$Input$isHiddenLabel = function (label) {
 	} else {
 		return false;
 	}
-};
-var $mdgriffith$elm_ui$Internal$Model$SpacingStyle = F3(
-	function (a, b, c) {
-		return {$: 'SpacingStyle', a: a, b: b, c: c};
-	});
-var $mdgriffith$elm_ui$Internal$Model$StyleClass = F2(
-	function (a, b) {
-		return {$: 'StyleClass', a: a, b: b};
-	});
-var $mdgriffith$elm_ui$Internal$Flag$spacing = $mdgriffith$elm_ui$Internal$Flag$flag(3);
-var $mdgriffith$elm_ui$Internal$Model$spacingName = F2(
-	function (x, y) {
-		return 'spacing-' + ($elm$core$String$fromInt(x) + ('-' + $elm$core$String$fromInt(y)));
-	});
-var $mdgriffith$elm_ui$Element$spacing = function (x) {
-	return A2(
-		$mdgriffith$elm_ui$Internal$Model$StyleClass,
-		$mdgriffith$elm_ui$Internal$Flag$spacing,
-		A3(
-			$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
-			A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, x),
-			x,
-			x));
 };
 var $mdgriffith$elm_ui$Element$Input$tabindex = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Attributes$tabindex);
 var $mdgriffith$elm_ui$Element$Input$checkbox = F2(
@@ -15193,6 +15375,32 @@ var $mdgriffith$elm_ui$Element$Input$newPassword = F2(
 			attrs,
 			{label: pass.label, onChange: pass.onChange, placeholder: pass.placeholder, text: pass.text});
 	});
+var $mdgriffith$elm_ui$Element$padding = function (x) {
+	var f = x;
+	return A2(
+		$mdgriffith$elm_ui$Internal$Model$StyleClass,
+		$mdgriffith$elm_ui$Internal$Flag$padding,
+		A5(
+			$mdgriffith$elm_ui$Internal$Model$PaddingStyle,
+			'p-' + $elm$core$String$fromInt(x),
+			f,
+			f,
+			f,
+			f));
+};
+var $mdgriffith$elm_ui$Element$rgb255 = F3(
+	function (red, green, blue) {
+		return A4($mdgriffith$elm_ui$Internal$Model$Rgba, red / 255, green / 255, blue / 255, 1);
+	});
+var $author$project$Style$submitBackgroundColor = A3($mdgriffith$elm_ui$Element$rgb255, 0, 0, 255);
+var $author$project$Style$submitFontColor = A3($mdgriffith$elm_ui$Element$rgb, 1, 1, 1);
+var $author$project$Style$submitButton = _List_fromArray(
+	[
+		$mdgriffith$elm_ui$Element$Font$color($author$project$Style$submitFontColor),
+		$mdgriffith$elm_ui$Element$Background$color($author$project$Style$submitBackgroundColor),
+		$mdgriffith$elm_ui$Element$Border$rounded(3),
+		$mdgriffith$elm_ui$Element$padding(3)
+	]);
 var $mdgriffith$elm_ui$Element$Input$text = $mdgriffith$elm_ui$Element$Input$textHelper(
 	{
 		autofill: $elm$core$Maybe$Nothing,
@@ -15273,7 +15481,7 @@ var $author$project$Page$ConfirmForgotPassword$view = F2(
 				}),
 				A2(
 				$mdgriffith$elm_ui$Element$Input$button,
-				_List_Nil,
+				$author$project$Style$submitButton,
 				{
 					label: $mdgriffith$elm_ui$Element$text('Confirm'),
 					onPress: $elm$core$Maybe$Just(
@@ -15282,7 +15490,7 @@ var $author$project$Page$ConfirmForgotPassword$view = F2(
 			]);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
-			_List_Nil,
+			$author$project$Style$mainColumn,
 			function () {
 				var _v0 = model.forgotPasswordResponse;
 				if (_v0.$ === 'Just') {
@@ -15305,7 +15513,6 @@ var $author$project$Page$ConfirmSignUp$ChangeCode = function (a) {
 var $author$project$Page$ConfirmSignUp$ChangeName = function (a) {
 	return {$: 'ChangeName', a: a};
 };
-var $author$project$Page$ConfirmSignUp$ResendCode = {$: 'ResendCode'};
 var $author$project$Page$ConfirmSignUp$Submit = {$: 'Submit'};
 var $author$project$Page$ConfirmSignUp$view = F2(
 	function (msg, model) {
@@ -15337,19 +15544,18 @@ var $author$project$Page$ConfirmSignUp$view = F2(
 				}),
 				A2(
 				$mdgriffith$elm_ui$Element$Input$button,
-				_List_Nil,
+				$author$project$Style$submitButton,
 				{
 					label: $mdgriffith$elm_ui$Element$text('Submit'),
 					onPress: $elm$core$Maybe$Just(
 						msg($author$project$Page$ConfirmSignUp$Submit))
 				}),
 				A2(
-				$mdgriffith$elm_ui$Element$Input$button,
+				$mdgriffith$elm_ui$Element$link,
 				_List_Nil,
 				{
 					label: $mdgriffith$elm_ui$Element$text('Resend confirmation code'),
-					onPress: $elm$core$Maybe$Just(
-						msg($author$project$Page$ConfirmSignUp$ResendCode))
+					url: $author$project$Route$path($author$project$Route$ResendConfirm)
 				})
 			]);
 		return A2(
@@ -15396,7 +15602,7 @@ var $author$project$Page$ForgotPassword$view = F2(
 					}),
 					A2(
 					$mdgriffith$elm_ui$Element$Input$button,
-					_List_Nil,
+					$author$project$Style$submitButton,
 					{
 						label: $mdgriffith$elm_ui$Element$text('Submit'),
 						onPress: $elm$core$Maybe$Just(
@@ -15404,6 +15610,53 @@ var $author$project$Page$ForgotPassword$view = F2(
 					})
 				]));
 	});
+var $author$project$Page$MyPage$label = function (kifu) {
+	var t = $elm$core$String$concat(
+		_List_fromArray(
+			[kifu.gameName, ': ', kifu.firstPlayer, ' vs ', kifu.secondPlayer]));
+	return $mdgriffith$elm_ui$Element$text(
+		function () {
+			if (t === '') {
+				return '...';
+			} else {
+				return t;
+			}
+		}());
+};
+var $author$project$Page$MyPage$url = function (kifu) {
+	return '/kifu/' + kifu.kifuId;
+};
+var $author$project$Page$MyPage$view = function (kifus) {
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_Nil,
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_Nil,
+				{
+					label: $mdgriffith$elm_ui$Element$text('アップロード'),
+					url: $author$project$Route$path($author$project$Route$Upload)
+				}),
+				$mdgriffith$elm_ui$Element$text('最近の棋譜'),
+				A2(
+				$mdgriffith$elm_ui$Element$column,
+				_List_Nil,
+				A2(
+					$elm$core$List$map,
+					function (kifu) {
+						return A2(
+							$mdgriffith$elm_ui$Element$link,
+							_List_Nil,
+							{
+								label: $author$project$Page$MyPage$label(kifu),
+								url: $author$project$Page$MyPage$url(kifu)
+							});
+					},
+					kifus))
+			]));
+};
 var $author$project$Page$ResendConfirm$ChangeName = function (a) {
 	return {$: 'ChangeName', a: a};
 };
@@ -15429,7 +15682,7 @@ var $author$project$Page$ResendConfirm$view = F2(
 					}),
 					A2(
 					$mdgriffith$elm_ui$Element$Input$button,
-					_List_Nil,
+					$author$project$Style$submitButton,
 					{
 						label: $mdgriffith$elm_ui$Element$text('Submit'),
 						onPress: $elm$core$Maybe$Just(
@@ -15444,7 +15697,6 @@ var $author$project$Page$SignIn$ChangeShowPassword = {$: 'ChangeShowPassword'};
 var $author$project$Page$SignIn$ChangeUsername = function (a) {
 	return {$: 'ChangeUsername', a: a};
 };
-var $author$project$Page$SignIn$ForgotPassword = {$: 'ForgotPassword'};
 var $author$project$Page$SignIn$Submit = {$: 'Submit'};
 var $mdgriffith$elm_ui$Element$Input$currentPassword = F2(
 	function (attrs, pass) {
@@ -15518,19 +15770,18 @@ var $author$project$Page$SignIn$view = F2(
 					}),
 					A2(
 					$mdgriffith$elm_ui$Element$Input$button,
-					_List_Nil,
+					$author$project$Style$submitButton,
 					{
 						label: $mdgriffith$elm_ui$Element$text('Sign In'),
 						onPress: $elm$core$Maybe$Just(
 							msg($author$project$Page$SignIn$Submit))
 					}),
 					A2(
-					$mdgriffith$elm_ui$Element$Input$button,
+					$mdgriffith$elm_ui$Element$link,
 					_List_Nil,
 					{
 						label: $mdgriffith$elm_ui$Element$text('Forgot password'),
-						onPress: $elm$core$Maybe$Just(
-							msg($author$project$Page$SignIn$ForgotPassword))
+						url: $author$project$Route$path($author$project$Route$ForgotPassword)
 					})
 				]));
 	});
@@ -15622,11 +15873,86 @@ var $author$project$Page$SignUp$view = F2(
 					}),
 					A2(
 					$mdgriffith$elm_ui$Element$Input$button,
-					_List_Nil,
+					$author$project$Style$submitButton,
 					{
 						label: $mdgriffith$elm_ui$Element$text('SignUp'),
 						onPress: $elm$core$Maybe$Just(
 							msg($author$project$Page$SignUp$Submit))
+					})
+				]));
+	});
+var $author$project$Page$Upload$ChangeKifu = function (a) {
+	return {$: 'ChangeKifu', a: a};
+};
+var $author$project$Page$Upload$ChangeRepeat = {$: 'ChangeRepeat'};
+var $author$project$Page$Upload$Submit = {$: 'Submit'};
+var $author$project$Style$kifuField = _List_fromArray(
+	[
+		$mdgriffith$elm_ui$Element$Font$size(15),
+		$mdgriffith$elm_ui$Element$width(
+		$mdgriffith$elm_ui$Element$px(500)),
+		$mdgriffith$elm_ui$Element$height(
+		$mdgriffith$elm_ui$Element$px(700))
+	]);
+var $mdgriffith$elm_ui$Element$Input$Above = {$: 'Above'};
+var $mdgriffith$elm_ui$Element$Input$labelAbove = $mdgriffith$elm_ui$Element$Input$Label($mdgriffith$elm_ui$Element$Input$Above);
+var $mdgriffith$elm_ui$Element$Input$multiline = F2(
+	function (attrs, multi) {
+		return A3(
+			$mdgriffith$elm_ui$Element$Input$textHelper,
+			{autofill: $elm$core$Maybe$Nothing, spellchecked: multi.spellcheck, type_: $mdgriffith$elm_ui$Element$Input$TextArea},
+			attrs,
+			{label: multi.label, onChange: multi.onChange, placeholder: multi.placeholder, text: multi.text});
+	});
+var $author$project$Page$Upload$view = F2(
+	function (msg, model) {
+		return A2(
+			$mdgriffith$elm_ui$Element$column,
+			$author$project$Style$mainColumn,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$html(
+					A2(
+						$elm$html$Html$h1,
+						_List_Nil,
+						_List_fromArray(
+							[
+								$elm$html$Html$text('Upload')
+							]))),
+					A2(
+					$mdgriffith$elm_ui$Element$Input$multiline,
+					$author$project$Style$kifuField,
+					{
+						label: A2(
+							$mdgriffith$elm_ui$Element$Input$labelAbove,
+							_List_Nil,
+							$mdgriffith$elm_ui$Element$text('棋譜')),
+						onChange: A2($elm$core$Basics$composeL, msg, $author$project$Page$Upload$ChangeKifu),
+						placeholder: $elm$core$Maybe$Nothing,
+						spellcheck: false,
+						text: model.request.payload
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$Input$checkbox,
+					_List_Nil,
+					{
+						checked: model.repeat,
+						icon: $mdgriffith$elm_ui$Element$Input$defaultCheckbox,
+						label: A2(
+							$mdgriffith$elm_ui$Element$Input$labelRight,
+							_List_Nil,
+							$mdgriffith$elm_ui$Element$text('続けて入力する')),
+						onChange: function (_v0) {
+							return msg($author$project$Page$Upload$ChangeRepeat);
+						}
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$Input$button,
+					$author$project$Style$submitButton,
+					{
+						label: $mdgriffith$elm_ui$Element$text('Submit'),
+						onPress: $elm$core$Maybe$Just(
+							msg($author$project$Page$Upload$Submit))
 					})
 				]));
 	});
@@ -15645,6 +15971,10 @@ var $author$project$Main$content = function (model) {
 			return A2($author$project$Page$ForgotPassword$view, $author$project$Main$ForgotPasswordMsg, model.forgotPasswordModel);
 		case 'ConfirmForgotPassword':
 			return A2($author$project$Page$ConfirmForgotPassword$view, $author$project$Main$ConfirmForgotPasswordMsg, model.confirmForgotPasswordModel);
+		case 'MyPage':
+			return $author$project$Page$MyPage$view(model.recentKifu);
+		case 'Upload':
+			return A2($author$project$Page$Upload$view, $author$project$Main$UploadMsg, model.uploadModel);
 		case 'NotFound':
 			return A2(
 				$mdgriffith$elm_ui$Element$column,
@@ -15670,10 +16000,10 @@ var $author$project$Main$content = function (model) {
 										]))
 								])))
 					]));
-		case 'Index':
+		default:
 			return A2(
 				$mdgriffith$elm_ui$Element$column,
-				_List_Nil,
+				$author$project$Style$mainColumn,
 				_List_fromArray(
 					[
 						$mdgriffith$elm_ui$Element$text('index'),
@@ -15688,25 +16018,94 @@ var $author$project$Main$content = function (model) {
 							url: ''
 						})
 					]));
-		default:
-			return A2(
-				$mdgriffith$elm_ui$Element$column,
-				_List_Nil,
-				_List_fromArray(
-					[
-						$mdgriffith$elm_ui$Element$text('Recent kifu'),
-						A2(
-						$mdgriffith$elm_ui$Element$link,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$Events$onClick($author$project$Main$HelloRequest)
-							]),
-						{
-							label: $mdgriffith$elm_ui$Element$text('test'),
-							url: ''
-						})
-					]));
 	}
+};
+var $author$project$Style$border = A2(
+	$mdgriffith$elm_ui$Element$el,
+	_List_fromArray(
+		[
+			$mdgriffith$elm_ui$Element$width(
+			$mdgriffith$elm_ui$Element$px(1)),
+			$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$fill),
+			$mdgriffith$elm_ui$Element$Background$color(
+			A3($mdgriffith$elm_ui$Element$rgb, 0, 0, 0))
+		]),
+	$mdgriffith$elm_ui$Element$none);
+var $author$project$Main$headerAttrs = _List_fromArray(
+	[
+		$mdgriffith$elm_ui$Element$spacing(10)
+	]);
+var $mdgriffith$elm_ui$Element$row = F2(
+	function (attrs, children) {
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asRow,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
+				A2(
+					$elm$core$List$cons,
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+					A2(
+						$elm$core$List$cons,
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+						attrs))),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
+	});
+var $author$project$Main$userInfo = function (model) {
+	return _Utils_eq(model.authToken, $elm$core$Maybe$Nothing) ? A2(
+		$mdgriffith$elm_ui$Element$row,
+		$author$project$Main$headerAttrs,
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_Nil,
+				{
+					label: $mdgriffith$elm_ui$Element$text('Sign up'),
+					url: $author$project$Route$path($author$project$Route$SignUp)
+				}),
+				$author$project$Style$border,
+				A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_Nil,
+				{
+					label: $mdgriffith$elm_ui$Element$text('Sign in'),
+					url: $author$project$Route$path($author$project$Route$SignIn)
+				})
+			])) : A2(
+		$mdgriffith$elm_ui$Element$row,
+		$author$project$Main$headerAttrs,
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_Nil,
+				{
+					label: $mdgriffith$elm_ui$Element$text('My page'),
+					url: $author$project$Route$path($author$project$Route$MyPage)
+				}),
+				$author$project$Style$border,
+				$mdgriffith$elm_ui$Element$text('Logout')
+			]));
+};
+var $author$project$Main$header = function (model) {
+	return A2(
+		$mdgriffith$elm_ui$Element$row,
+		$author$project$Main$headerAttrs,
+		_List_fromArray(
+			[
+				A2(
+				$mdgriffith$elm_ui$Element$link,
+				_List_Nil,
+				{
+					label: $mdgriffith$elm_ui$Element$text('Index'),
+					url: $author$project$Route$path($author$project$Route$Index)
+				}),
+				$author$project$Style$border,
+				$author$project$Main$userInfo(model)
+			]));
 };
 var $mdgriffith$elm_ui$Internal$Model$OnlyDynamic = F2(
 	function (a, b) {
@@ -15978,78 +16377,37 @@ var $author$project$Main$routeToTitle = function (route) {
 			return 'Confirm forgot password';
 		case 'MyPage':
 			return 'MyPage';
+		case 'Upload':
+			return 'Upload';
 		default:
 			return 'NotFound';
 	}
 };
-var $mdgriffith$elm_ui$Element$row = F2(
-	function (attrs, children) {
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asRow,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
-					A2(
-						$elm$core$List$cons,
-						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-						attrs))),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
-	});
-var $mdgriffith$elm_ui$Element$spaceEvenly = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$spacing, $mdgriffith$elm_ui$Internal$Style$classes.spaceEvenly);
 var $author$project$Main$view = function (model) {
 	return {
 		body: _List_fromArray(
 			[
 				A2(
 				$mdgriffith$elm_ui$Element$layout,
-				_List_Nil,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$padding(10)
+					]),
 				A2(
 					$mdgriffith$elm_ui$Element$column,
-					_List_Nil,
 					_List_fromArray(
 						[
-							A2(
-							$mdgriffith$elm_ui$Element$row,
-							_List_fromArray(
-								[$mdgriffith$elm_ui$Element$spaceEvenly]),
-							_List_fromArray(
-								[
-									A2(
-									$mdgriffith$elm_ui$Element$link,
-									_List_Nil,
-									{
-										label: $mdgriffith$elm_ui$Element$text('Header'),
-										url: $author$project$Main$routeToPath($author$project$Main$Index)
-									}),
-									$mdgriffith$elm_ui$Element$text('|'),
-									A2(
-									$mdgriffith$elm_ui$Element$link,
-									_List_Nil,
-									{
-										label: $mdgriffith$elm_ui$Element$text('Sign up'),
-										url: $author$project$Main$routeToPath($author$project$Main$SignUp)
-									}),
-									$mdgriffith$elm_ui$Element$text('|'),
-									A2(
-									$mdgriffith$elm_ui$Element$link,
-									_List_Nil,
-									{
-										label: $mdgriffith$elm_ui$Element$text('Sign in'),
-										url: $author$project$Main$routeToPath($author$project$Main$SignIn)
-									})
-								])),
+							$mdgriffith$elm_ui$Element$spacing(20)
+						]),
+					_List_fromArray(
+						[
+							$author$project$Main$header(model),
 							A2(
 							$mdgriffith$elm_ui$Element$el,
 							_List_Nil,
 							$mdgriffith$elm_ui$Element$text(
 								A2($elm$core$Maybe$withDefault, '', model.errorMessage))),
-							$author$project$Main$content(model),
-							$mdgriffith$elm_ui$Element$text('footer')
+							$author$project$Main$content(model)
 						])))
 			]),
 		title: $author$project$Main$routeToTitle(model.route)
