@@ -33,6 +33,16 @@ submitButton =
     ]
 
 
+button : List (Attribute msg)
+button =
+    [ Border.rounded 3
+    , Border.color (Element.rgb 0 0 0)
+    , Border.solid
+    , Border.width 2
+    , Element.padding 3
+    ]
+
+
 border : Element msg
 border =
     Element.el

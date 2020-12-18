@@ -4587,12 +4587,12 @@ var _Bitwise_shiftRightZfBy = F2(function(offset, a)
 var $elm$core$Maybe$Just = function (a) {
 	return {$: 'Just', a: a};
 };
-var $author$project$Main$LinkClicked = function (a) {
-	return {$: 'LinkClicked', a: a};
-};
 var $elm$core$Maybe$Nothing = {$: 'Nothing'};
 var $author$project$Main$UrlChanged = function (a) {
 	return {$: 'UrlChanged', a: a};
+};
+var $author$project$Main$UrlRequest = function (a) {
+	return {$: 'UrlRequest', a: a};
 };
 var $elm$core$List$cons = _List_cons;
 var $elm$core$Elm$JsArray$foldr = _JsArray_foldr;
@@ -6021,6 +6021,10 @@ var $author$project$Route$ConfirmForgotPassword = {$: 'ConfirmForgotPassword'};
 var $author$project$Route$ConfirmSignUp = {$: 'ConfirmSignUp'};
 var $author$project$Route$ForgotPassword = {$: 'ForgotPassword'};
 var $author$project$Route$Index = {$: 'Index'};
+var $author$project$Route$Kifu = F2(
+	function (a, b) {
+		return {$: 'Kifu', a: a, b: b};
+	});
 var $author$project$Route$MyPage = {$: 'MyPage'};
 var $author$project$Route$ResendConfirm = {$: 'ResendConfirm'};
 var $author$project$Route$SignIn = {$: 'SignIn'};
@@ -6029,6 +6033,40 @@ var $author$project$Route$Upload = {$: 'Upload'};
 var $elm$url$Url$Parser$Parser = function (a) {
 	return {$: 'Parser', a: a};
 };
+var $elm$url$Url$Parser$custom = F2(
+	function (tipe, stringToSomething) {
+		return $elm$url$Url$Parser$Parser(
+			function (_v0) {
+				var visited = _v0.visited;
+				var unvisited = _v0.unvisited;
+				var params = _v0.params;
+				var frag = _v0.frag;
+				var value = _v0.value;
+				if (!unvisited.b) {
+					return _List_Nil;
+				} else {
+					var next = unvisited.a;
+					var rest = unvisited.b;
+					var _v2 = stringToSomething(next);
+					if (_v2.$ === 'Just') {
+						var nextValue = _v2.a;
+						return _List_fromArray(
+							[
+								A5(
+								$elm$url$Url$Parser$State,
+								A2($elm$core$List$cons, next, visited),
+								rest,
+								params,
+								frag,
+								value(nextValue))
+							]);
+					} else {
+						return _List_Nil;
+					}
+				}
+			});
+	});
+var $elm$url$Url$Parser$int = A2($elm$url$Url$Parser$custom, 'NUMBER', $elm$core$String$toInt);
 var $elm$url$Url$Parser$mapState = F2(
 	function (func, _v0) {
 		var visited = _v0.visited;
@@ -6115,6 +6153,19 @@ var $elm$url$Url$Parser$s = function (str) {
 			}
 		});
 };
+var $elm$url$Url$Parser$slash = F2(
+	function (_v0, _v1) {
+		var parseBefore = _v0.a;
+		var parseAfter = _v1.a;
+		return $elm$url$Url$Parser$Parser(
+			function (state) {
+				return A2(
+					$elm$core$List$concatMap,
+					parseAfter,
+					parseBefore(state));
+			});
+	});
+var $elm$url$Url$Parser$string = A2($elm$url$Url$Parser$custom, 'STRING', $elm$core$Maybe$Just);
 var $elm$url$Url$Parser$top = $elm$url$Url$Parser$Parser(
 	function (state) {
 		return _List_fromArray(
@@ -6159,7 +6210,35 @@ var $author$project$Route$parser = $elm$url$Url$Parser$oneOf(
 			A2(
 			$elm$url$Url$Parser$map,
 			$author$project$Route$Upload,
-			$elm$url$Url$Parser$s('upload'))
+			$elm$url$Url$Parser$s('upload')),
+			A2(
+			$elm$url$Url$Parser$map,
+			$author$project$Route$Kifu,
+			A2(
+				$elm$url$Url$Parser$slash,
+				$elm$url$Url$Parser$s('kifu'),
+				A2($elm$url$Url$Parser$slash, $elm$url$Url$Parser$string, $elm$url$Url$Parser$int))),
+			A2(
+			$elm$url$Url$Parser$map,
+			function (id) {
+				return A2($author$project$Route$Kifu, id, 0);
+			},
+			A2(
+				$elm$url$Url$Parser$slash,
+				$elm$url$Url$Parser$s('kifu'),
+				$elm$url$Url$Parser$string)),
+			A2(
+			$elm$url$Url$Parser$map,
+			function (id) {
+				return A2($author$project$Route$Kifu, id, 0);
+			},
+			A2(
+				$elm$url$Url$Parser$slash,
+				$elm$url$Url$Parser$s('kifu'),
+				A2(
+					$elm$url$Url$Parser$slash,
+					$elm$url$Url$Parser$string,
+					$elm$url$Url$Parser$s(''))))
 		]));
 var $elm$core$Maybe$withDefault = F2(
 	function (_default, maybe) {
@@ -6186,6 +6265,11 @@ var $author$project$Page$ConfirmSignUp$init = {
 	signUpResponse: $elm$core$Maybe$Nothing
 };
 var $author$project$Page$ForgotPassword$init = {username: ''};
+var $author$project$Page$Kifu$init = {
+	curSeq: 0,
+	kifu: {createdTs: 0, endTs: 0, firstPlayers: _List_Nil, gameName: '', handicap: '', kifuId: '', note: '', otherFields: _List_Nil, secondPlayers: _List_Nil, sfen: '', startTs: 0, steps: _List_Nil, userId: ''},
+	len: 0
+};
 var $author$project$Page$ResendConfirm$init = {username: ''};
 var $author$project$Page$SignIn$init = {
 	params: {password: '', username: ''},
@@ -6201,8 +6285,51 @@ var $author$project$Page$Upload$init = function (repeat) {
 		request: {encoding: 'UTF-8', format: 'KIF', payload: ''}
 	};
 };
-var $elm$core$Platform$Cmd$batch = _Platform_batch;
-var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
+var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
+var $elm$url$Url$addPort = F2(
+	function (maybePort, starter) {
+		if (maybePort.$ === 'Nothing') {
+			return starter;
+		} else {
+			var port_ = maybePort.a;
+			return starter + (':' + $elm$core$String$fromInt(port_));
+		}
+	});
+var $elm$url$Url$addPrefixed = F3(
+	function (prefix, maybeSegment, starter) {
+		if (maybeSegment.$ === 'Nothing') {
+			return starter;
+		} else {
+			var segment = maybeSegment.a;
+			return _Utils_ap(
+				starter,
+				_Utils_ap(prefix, segment));
+		}
+	});
+var $elm$url$Url$toString = function (url) {
+	var http = function () {
+		var _v0 = url.protocol;
+		if (_v0.$ === 'Http') {
+			return 'http://';
+		} else {
+			return 'https://';
+		}
+	}();
+	return A3(
+		$elm$url$Url$addPrefixed,
+		'#',
+		url.fragment,
+		A3(
+			$elm$url$Url$addPrefixed,
+			'?',
+			url.query,
+			_Utils_ap(
+				A2(
+					$elm$url$Url$addPort,
+					url.port_,
+					_Utils_ap(http, url.host)),
+				url.path)));
+};
 var $author$project$Main$init = F3(
 	function (flags, url, key) {
 		var authToken = function () {
@@ -6224,6 +6351,7 @@ var $author$project$Main$init = F3(
 				errorMessage: $elm$core$Maybe$Nothing,
 				forgotPasswordModel: $author$project$Page$ForgotPassword$init,
 				key: key,
+				kifuModel: $author$project$Page$Kifu$init,
 				prevState: $author$project$Main$PrevNone,
 				recentKifu: _List_Nil,
 				resendConfirmModel: $author$project$Page$ResendConfirm$init,
@@ -6232,7 +6360,10 @@ var $author$project$Main$init = F3(
 				signUpModel: $author$project$Page$SignUp$init,
 				uploadModel: $author$project$Page$Upload$init(false)
 			},
-			$elm$core$Platform$Cmd$none);
+			A2(
+				$elm$browser$Browser$Navigation$pushUrl,
+				key,
+				$elm$url$Url$toString(url)));
 	});
 var $elm$json$Json$Decode$null = _Json_decodeNull;
 var $elm$json$Json$Decode$oneOf = _Json_oneOf;
@@ -6268,6 +6399,9 @@ var $author$project$Proto$Api$RequestConfirmSignUp = function (a) {
 var $author$project$Proto$Api$RequestForgotPassword = function (a) {
 	return {$: 'RequestForgotPassword', a: a};
 };
+var $author$project$Proto$Api$RequestGetKifu = function (a) {
+	return {$: 'RequestGetKifu', a: a};
+};
 var $author$project$Proto$Api$RequestPostKifu = function (a) {
 	return {$: 'RequestPostKifu', a: a};
 };
@@ -6287,6 +6421,8 @@ var $author$project$Proto$Api$RequestTokenRefresh = function (a) {
 	return {$: 'RequestTokenRefresh', a: a};
 };
 var $elm$core$Debug$log = _Debug_log;
+var $elm$core$Platform$Cmd$batch = _Platform_batch;
+var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$url$Url$Builder$toQueryPair = function (_v0) {
 	var key = _v0.a;
 	var value = _v0.b;
@@ -6358,11 +6494,22 @@ var $author$project$Route$path = function (route) {
 				_List_fromArray(
 					['upload']),
 				_List_Nil);
+		case 'Kifu':
+			var kifuId = route.a;
+			var seq = route.b;
+			return A2(
+				$elm$url$Url$Builder$absolute,
+				_List_fromArray(
+					[
+						'kifu',
+						kifuId,
+						$elm$core$String$fromInt(seq)
+					]),
+				_List_Nil);
 		default:
 			return A2($elm$url$Url$Builder$absolute, _List_Nil, _List_Nil);
 	}
 };
-var $elm$browser$Browser$Navigation$pushUrl = _Browser_pushUrl;
 var $author$project$Api$AuthResponse = function (a) {
 	return {$: 'AuthResponse', a: a};
 };
@@ -7854,6 +8001,92 @@ var $author$project$Main$signInAndReturn = F4(
 						])));
 		}
 	});
+var $elm$core$List$sortBy = _List_sortBy;
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Main$elem = F2(
+	function (list, n) {
+		return $elm$core$List$head(
+			A2($elm$core$List$drop, n, list));
+	});
+var $elm$core$Basics$ge = _Utils_ge;
+var $author$project$Main$updateBoard = _Platform_outgoingPort(
+	'updateBoard',
+	function ($) {
+		var a = $.a;
+		var b = $.b;
+		return A2(
+			$elm$json$Json$Encode$list,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					$elm$json$Json$Encode$string(a),
+					$elm$json$Json$Encode$string(b)
+				]));
+	});
+var $author$project$Main$updateKifuPage = F4(
+	function (model, kifuModel, kifuId, seq) {
+		if (seq >= 0) {
+			var _v0 = A2($author$project$Main$elem, kifuModel.kifu.steps, seq);
+			if (_v0.$ === 'Just') {
+				var step = _v0.a;
+				return _Utils_Tuple2(
+					_Utils_update(
+						model,
+						{
+							kifuModel: _Utils_update(
+								kifuModel,
+								{curSeq: seq})
+						}),
+					$author$project$Main$updateBoard(
+						_Utils_Tuple2('shogi', step.position)));
+			} else {
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$elm$browser$Browser$Navigation$pushUrl,
+						model.key,
+						$author$project$Route$path(
+							A2($author$project$Route$Kifu, kifuId, kifuModel.curSeq))));
+			}
+		} else {
+			return _Utils_Tuple2(
+				model,
+				A2(
+					$elm$browser$Browser$Navigation$pushUrl,
+					model.key,
+					$author$project$Route$path(
+						A2($author$project$Route$Kifu, kifuId, 0))));
+		}
+	});
 var $author$project$Main$apiResponse = F3(
 	function (model, req, res) {
 		switch (res.$) {
@@ -7989,6 +8222,37 @@ var $author$project$Main$apiResponse = F3(
 										model.key,
 										$author$project$Route$path(
 											model.uploadModel.repeat ? $author$project$Route$Upload : $author$project$Route$Index)));
+							case 'ResponseGetKifu':
+								var r = _v4.a;
+								var kifu = _Utils_update(
+									r,
+									{
+										steps: A2(
+											$elm$core$List$sortBy,
+											function (s) {
+												return s.seq;
+											},
+											r.steps)
+									});
+								var curSeq = function () {
+									var _v5 = model.route;
+									if (_v5.$ === 'Kifu') {
+										var seq = _v5.b;
+										return seq;
+									} else {
+										return 0;
+									}
+								}();
+								var model_ = _Utils_update(
+									model,
+									{
+										kifuModel: {
+											curSeq: curSeq,
+											kifu: kifu,
+											len: $elm$core$List$length(kifu.steps)
+										}
+									});
+								return A4($author$project$Main$updateKifuPage, model_, model_.kifuModel, r.kifuId, curSeq);
 							default:
 								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 						}
@@ -8001,56 +8265,12 @@ var $author$project$Main$apiResponse = F3(
 					req,
 					result,
 					function (r) {
-						var _v5 = A2($elm$core$Debug$log, 'HelloResponse', r);
+						var _v6 = A2($elm$core$Debug$log, 'HelloResponse', r);
 						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 					});
 		}
 	});
 var $elm$browser$Browser$Navigation$load = _Browser_load;
-var $elm$url$Url$addPort = F2(
-	function (maybePort, starter) {
-		if (maybePort.$ === 'Nothing') {
-			return starter;
-		} else {
-			var port_ = maybePort.a;
-			return starter + (':' + $elm$core$String$fromInt(port_));
-		}
-	});
-var $elm$url$Url$addPrefixed = F3(
-	function (prefix, maybeSegment, starter) {
-		if (maybeSegment.$ === 'Nothing') {
-			return starter;
-		} else {
-			var segment = maybeSegment.a;
-			return _Utils_ap(
-				starter,
-				_Utils_ap(prefix, segment));
-		}
-	});
-var $elm$url$Url$toString = function (url) {
-	var http = function () {
-		var _v0 = url.protocol;
-		if (_v0.$ === 'Http') {
-			return 'http://';
-		} else {
-			return 'https://';
-		}
-	}();
-	return A3(
-		$elm$url$Url$addPrefixed,
-		'#',
-		url.fragment,
-		A3(
-			$elm$url$Url$addPrefixed,
-			'?',
-			url.query,
-			_Utils_ap(
-				A2(
-					$elm$url$Url$addPort,
-					url.port_,
-					_Utils_ap(http, url.host)),
-				url.path)));
-};
 var $elm$core$Basics$not = _Basics_not;
 var $author$project$Page$ConfirmForgotPassword$update = F2(
 	function (msg, model) {
@@ -8227,7 +8447,7 @@ var $author$project$Main$update = F2(
 			},
 			model.authToken);
 		switch (msg.$) {
-			case 'LinkClicked':
+			case 'UrlRequest':
 				var urlRequest = msg.a;
 				if (urlRequest.$ === 'Internal') {
 					var url = urlRequest.a;
@@ -8288,6 +8508,20 @@ var $author$project$Main$update = F2(
 									$author$project$Proto$Api$KifuRequest(
 										$author$project$Proto$Api$RequestRecentKifu(
 											{limit: 10})))));
+					case 'Kifu':
+						var kifuId = _v2.a;
+						var seq = _v2.b;
+						var km = model_.kifuModel;
+						return _Utils_eq(km.kifu.kifuId, kifuId) ? A4($author$project$Main$updateKifuPage, model_, model_.kifuModel, kifuId, seq) : _Utils_Tuple2(
+							model_,
+							A3(
+								$author$project$Api$request,
+								$author$project$Main$ApiResponse,
+								authToken,
+								$author$project$Api$KifuRequest(
+									$author$project$Proto$Api$KifuRequest(
+										$author$project$Proto$Api$RequestGetKifu(
+											{kifuId: kifuId})))));
 					case 'Upload':
 						return _Utils_Tuple2(
 							_Utils_update(
@@ -8429,12 +8663,23 @@ var $author$project$Main$update = F2(
 							}),
 						$elm$core$Platform$Cmd$none);
 				}
+			case 'KifuMsg':
+				var kifuMsg = msg.a;
+				var kifuId = kifuMsg.a;
+				var seq = kifuMsg.b;
+				return _Utils_Tuple2(
+					model,
+					A2(
+						$elm$browser$Browser$Navigation$pushUrl,
+						model.key,
+						$author$project$Route$path(
+							A2($author$project$Route$Kifu, kifuId, seq))));
 			case 'HelloRequest':
 				return _Utils_Tuple2(
 					model,
 					A3($author$project$Api$request, $author$project$Main$ApiResponse, authToken, $author$project$Api$HelloRequest));
 			default:
-				var _v9 = A2(
+				var _v10 = A2(
 					$elm$core$Debug$log,
 					$elm$core$Debug$toString(msg),
 					msg);
@@ -12897,7 +13142,6 @@ var $mdgriffith$elm_ui$Internal$Model$renderWidth = function (w) {
 	}
 };
 var $mdgriffith$elm_ui$Internal$Flag$borderWidth = $mdgriffith$elm_ui$Internal$Flag$flag(27);
-var $elm$core$Basics$ge = _Utils_ge;
 var $mdgriffith$elm_ui$Internal$Model$skippable = F2(
 	function (flag, style) {
 		if (_Utils_eq(flag, $mdgriffith$elm_ui$Internal$Flag$borderWidth)) {
@@ -13876,6 +14120,9 @@ var $author$project$Main$ForgotPasswordMsg = function (a) {
 	return {$: 'ForgotPasswordMsg', a: a};
 };
 var $author$project$Main$HelloRequest = {$: 'HelloRequest'};
+var $author$project$Main$KifuMsg = function (a) {
+	return {$: 'KifuMsg', a: a};
+};
 var $author$project$Main$ResendConfirmMsg = function (a) {
 	return {$: 'ResendConfirmMsg', a: a};
 };
@@ -14683,15 +14930,6 @@ var $mdgriffith$elm_ui$Element$Input$getHeight = function (attr) {
 	if (attr.$ === 'Height') {
 		var h = attr.a;
 		return $elm$core$Maybe$Just(h);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
-var $elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return $elm$core$Maybe$Just(x);
 	} else {
 		return $elm$core$Maybe$Nothing;
 	}
@@ -15560,7 +15798,7 @@ var $author$project$Page$ConfirmSignUp$view = F2(
 			]);
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
-			_List_Nil,
+			$author$project$Style$mainColumn,
 			function () {
 				var _v0 = model.signUpResponse;
 				if (_v0.$ === 'Just') {
@@ -15585,7 +15823,7 @@ var $author$project$Page$ForgotPassword$view = F2(
 	function (msg, model) {
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
-			_List_Nil,
+			$author$project$Style$mainColumn,
 			_List_fromArray(
 				[
 					A2(
@@ -15610,6 +15848,514 @@ var $author$project$Page$ForgotPassword$view = F2(
 					})
 				]));
 	});
+var $author$project$Page$Kifu$UpdateBoard = F2(
+	function (a, b) {
+		return {$: 'UpdateBoard', a: a, b: b};
+	});
+var $mdgriffith$elm_ui$Internal$Model$Top = {$: 'Top'};
+var $mdgriffith$elm_ui$Element$alignTop = $mdgriffith$elm_ui$Internal$Model$AlignY($mdgriffith$elm_ui$Internal$Model$Top);
+var $elm$html$Html$canvas = _VirtualDom_node('canvas');
+var $mdgriffith$elm_ui$Internal$Flag$borderStyle = $mdgriffith$elm_ui$Internal$Flag$flag(11);
+var $mdgriffith$elm_ui$Element$Border$solid = A2($mdgriffith$elm_ui$Internal$Model$Class, $mdgriffith$elm_ui$Internal$Flag$borderStyle, $mdgriffith$elm_ui$Internal$Style$classes.borderSolid);
+var $author$project$Style$button = _List_fromArray(
+	[
+		$mdgriffith$elm_ui$Element$Border$rounded(3),
+		$mdgriffith$elm_ui$Element$Border$color(
+		A3($mdgriffith$elm_ui$Element$rgb, 0, 0, 0)),
+		$mdgriffith$elm_ui$Element$Border$solid,
+		$mdgriffith$elm_ui$Element$Border$width(2),
+		$mdgriffith$elm_ui$Element$padding(3)
+	]);
+var $mdgriffith$elm_ui$Element$row = F2(
+	function (attrs, children) {
+		return A4(
+			$mdgriffith$elm_ui$Internal$Model$element,
+			$mdgriffith$elm_ui$Internal$Model$asRow,
+			$mdgriffith$elm_ui$Internal$Model$div,
+			A2(
+				$elm$core$List$cons,
+				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
+				A2(
+					$elm$core$List$cons,
+					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
+					A2(
+						$elm$core$List$cons,
+						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
+						attrs))),
+			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
+	});
+var $author$project$Page$Kifu$control = F3(
+	function (msg, seq, len) {
+		return A2(
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$spacing(10)
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$Input$button,
+					$author$project$Style$button,
+					{
+						label: $mdgriffith$elm_ui$Element$text('初形'),
+						onPress: $elm$core$Maybe$Just(
+							msg(0))
+					}),
+					A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$Input$button,
+							$author$project$Style$button,
+							{
+								label: $mdgriffith$elm_ui$Element$text('前'),
+								onPress: $elm$core$Maybe$Just(
+									msg(seq - 1))
+							})
+						])),
+					A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$Input$button,
+							$author$project$Style$button,
+							{
+								label: $mdgriffith$elm_ui$Element$text('次'),
+								onPress: $elm$core$Maybe$Just(
+									msg(seq + 1))
+							})
+						])),
+					A2(
+					$mdgriffith$elm_ui$Element$row,
+					_List_Nil,
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$Input$button,
+							$author$project$Style$button,
+							{
+								label: $mdgriffith$elm_ui$Element$text('終局'),
+								onPress: $elm$core$Maybe$Just(
+									msg(len - 1))
+							})
+						]))
+				]));
+	});
+var $author$project$Page$Kifu$elem = function (n) {
+	return A2(
+		$elm$core$Basics$composeL,
+		$elm$core$List$head,
+		$elm$core$List$drop(n));
+};
+var $elm$html$Html$dl = _VirtualDom_node('dl');
+var $elm$html$Html$dd = _VirtualDom_node('dd');
+var $elm$html$Html$dt = _VirtualDom_node('dt');
+var $author$project$Page$Kifu$dlelem = F2(
+	function (t, d) {
+		return _List_fromArray(
+			[
+				A2(
+				$elm$html$Html$dt,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(t)
+					])),
+				A2(
+				$elm$html$Html$dd,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$elm$html$Html$text(d)
+					]))
+			]);
+	});
+var $author$project$Page$Kifu$handicap = function (code) {
+	switch (code) {
+		case 'NONE':
+			return '平手';
+		case 'DROP_L':
+			return '香落ち';
+		case 'DROP_L_R':
+			return '右香落ち';
+		case 'DROP_B':
+			return '角落ち';
+		case 'DROP_R':
+			return '飛車落ち';
+		case 'DROP_RL':
+			return '飛香落ち';
+		case 'DROP_TWO':
+			return '二枚落ち';
+		case 'DROP_THREE':
+			return '三枚落ち';
+		case 'DROP_FOUR':
+			return '四枚落ち';
+		case 'DROP_FIVE':
+			return '五枚落ち';
+		case 'DROP_FIVE_L':
+			return '左五枚落ち';
+		case 'DROP_SIX':
+			return '六枚落ち';
+		case 'DROP_EIGHT':
+			return '八枚落ち';
+		case 'DROP_TEN':
+			return '十枚落ち';
+		default:
+			return 'その他';
+	}
+};
+var $elm$core$List$intersperse = F2(
+	function (sep, xs) {
+		if (!xs.b) {
+			return _List_Nil;
+		} else {
+			var hd = xs.a;
+			var tl = xs.b;
+			var step = F2(
+				function (x, rest) {
+					return A2(
+						$elm$core$List$cons,
+						sep,
+						A2($elm$core$List$cons, x, rest));
+				});
+			var spersed = A3($elm$core$List$foldr, step, _List_Nil, tl);
+			return A2($elm$core$List$cons, hd, spersed);
+		}
+	});
+var $author$project$Page$Kifu$gameInfo = function (model) {
+	var names = A2(
+		$elm$core$Basics$composeL,
+		A2(
+			$elm$core$Basics$composeL,
+			$elm$core$String$concat,
+			$elm$core$List$intersperse(', ')),
+		$elm$core$List$map(
+			function (p) {
+				return p.name;
+			}));
+	var _v0 = (model.kifu.handicap === 'NONE') ? _Utils_Tuple2('先手', '後手') : _Utils_Tuple2('上手', '下手');
+	var fstLabel = _v0.a;
+	var sndLabel = _v0.b;
+	return A2(
+		$mdgriffith$elm_ui$Element$el,
+		_List_fromArray(
+			[$mdgriffith$elm_ui$Element$alignTop]),
+		$mdgriffith$elm_ui$Element$html(
+			A2(
+				$elm$html$Html$dl,
+				_List_fromArray(
+					[
+						$elm$html$Html$Attributes$class('kifuinfo')
+					]),
+				$elm$core$List$concat(
+					_List_fromArray(
+						[
+							A2($author$project$Page$Kifu$dlelem, '棋戦', model.kifu.gameName),
+							A2(
+							$author$project$Page$Kifu$dlelem,
+							'手割合',
+							$author$project$Page$Kifu$handicap(model.kifu.handicap)),
+							A2(
+							$author$project$Page$Kifu$dlelem,
+							fstLabel,
+							names(model.kifu.firstPlayers)),
+							A2(
+							$author$project$Page$Kifu$dlelem,
+							sndLabel,
+							names(model.kifu.secondPlayers)),
+							A2($author$project$Page$Kifu$dlelem, '備考', model.kifu.note)
+						])))));
+};
+var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
+var $author$project$Page$Kifu$maybe = F2(
+	function (def, f) {
+		return A2(
+			$elm$core$Basics$composeL,
+			$elm$core$Maybe$withDefault(def),
+			$elm$core$Maybe$map(f));
+	});
+var $elm$html$Html$li = _VirtualDom_node('li');
+var $author$project$Page$Kifu$secToString = function (sec) {
+	var min = (sec / 60) | 0;
+	return $elm$core$String$concat(
+		(!min) ? _List_fromArray(
+			[
+				$elm$core$String$fromInt(sec),
+				'秒'
+			]) : _List_fromArray(
+			[
+				$elm$core$String$fromInt(min),
+				'分',
+				$elm$core$String$fromInt(sec),
+				'秒'
+			]));
+};
+var $mdgriffith$elm_ui$Element$spacingXY = F2(
+	function (x, y) {
+		return A2(
+			$mdgriffith$elm_ui$Internal$Model$StyleClass,
+			$mdgriffith$elm_ui$Internal$Flag$spacing,
+			A3(
+				$mdgriffith$elm_ui$Internal$Model$SpacingStyle,
+				A2($mdgriffith$elm_ui$Internal$Model$spacingName, x, y),
+				x,
+				y));
+	});
+var $author$project$Page$Kifu$dstToString = function (pos) {
+	var y = function () {
+		var _v0 = pos.y;
+		switch (_v0) {
+			case 1:
+				return '一';
+			case 2:
+				return '二';
+			case 3:
+				return '三';
+			case 4:
+				return '四';
+			case 5:
+				return '五';
+			case 6:
+				return '六';
+			case 7:
+				return '七';
+			case 8:
+				return '八';
+			case 9:
+				return '九';
+			default:
+				return 'X';
+		}
+	}();
+	var x = $elm$core$String$fromInt(pos.x);
+	return _Utils_ap(x, y);
+};
+var $author$project$Page$Kifu$finishedToString = function (finished) {
+	switch (finished.$) {
+		case 'FinishedStatus_Suspend':
+			return '中断';
+		case 'FinishedStatus_Surrender':
+			return '投了';
+		case 'FinishedStatus_Draw':
+			return '引き分け';
+		case 'FinishedStatus_RepetitionDraw':
+			return '千日手';
+		case 'FinishedStatus_Checkmate':
+			return '詰み';
+		case 'FinishedStatus_OverTimeLimit':
+			return '時間切れ';
+		case 'FinishedStatus_FoulLoss':
+			return '反則負け';
+		case 'FinishedStatus_FoulWin':
+			return '反則勝ち';
+		case 'FinishedStatus_NyugyokuWin':
+			return '入玉勝ち';
+		default:
+			return '';
+	}
+};
+var $author$project$Page$Kifu$pieceToString = function (p) {
+	switch (p.$) {
+		case 'Piece_Gyoku':
+			return '玉';
+		case 'Piece_Hisha':
+			return '飛';
+		case 'Piece_Ryu':
+			return '竜';
+		case 'Piece_Kaku':
+			return '角';
+		case 'Piece_Uma':
+			return '馬';
+		case 'Piece_Kin':
+			return '金';
+		case 'Piece_Gin':
+			return '銀';
+		case 'Piece_NariGin':
+			return '成銀';
+		case 'Piece_Kei':
+			return '桂';
+		case 'Piece_NariKei':
+			return '成桂';
+		case 'Piece_Kyou':
+			return '香';
+		case 'Piece_NariKyou':
+			return '成香';
+		case 'Piece_Fu':
+			return '歩';
+		case 'Piece_To':
+			return 'と';
+		default:
+			return '';
+	}
+};
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $author$project$Page$Kifu$odd = function (i) {
+	return !(!A2($elm$core$Basics$modBy, 2, i));
+};
+var $author$project$Page$Kifu$playerSymbol = function (seq) {
+	return $author$project$Page$Kifu$odd(seq) ? '☗' : '☖';
+};
+var $author$project$Page$Kifu$srcToString = function (pos) {
+	return $elm$core$String$concat(
+		A2(
+			$elm$core$List$map,
+			$elm$core$String$fromInt,
+			_List_fromArray(
+				[pos.x, pos.y])));
+};
+var $author$project$Page$Kifu$stepOpToString = function (step) {
+	return $elm$core$String$concat(
+		function () {
+			var _v0 = step.op;
+			switch (_v0.$) {
+				case 'Move':
+					var move = _v0.a;
+					return _List_fromArray(
+						[
+							$author$project$Page$Kifu$playerSymbol(step.seq),
+							A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, move.dst),
+							$author$project$Page$Kifu$pieceToString(move.piece),
+							step.promoted ? '成' : '',
+							'(',
+							A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$srcToString, move.src),
+							')'
+						]);
+				case 'Drop':
+					var drop = _v0.a;
+					return _List_fromArray(
+						[
+							$author$project$Page$Kifu$playerSymbol(step.seq),
+							A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, drop.dst),
+							$author$project$Page$Kifu$pieceToString(drop.piece),
+							'打'
+						]);
+				case 'Finish':
+					var finished = _v0.a;
+					return _List_fromArray(
+						[
+							$author$project$Page$Kifu$finishedToString(finished)
+						]);
+				default:
+					return _List_Nil;
+			}
+		}());
+};
+var $author$project$Page$Kifu$stepInfo = function (step) {
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$spacing(10)
+			]),
+		_List_fromArray(
+			[
+				(!step.seq) ? $mdgriffith$elm_ui$Element$text('開始前') : A2(
+				$mdgriffith$elm_ui$Element$row,
+				_List_fromArray(
+					[
+						A2($mdgriffith$elm_ui$Element$spacingXY, 20, 0)
+					]),
+				A2(
+					$elm$core$List$map,
+					$mdgriffith$elm_ui$Element$text,
+					_List_fromArray(
+						[
+							$elm$core$String$fromInt(step.seq) + '手目',
+							$author$project$Page$Kifu$stepOpToString(step),
+							$author$project$Page$Kifu$secToString(step.thinkingSec)
+						]))),
+				A2(
+				$mdgriffith$elm_ui$Element$column,
+				_List_Nil,
+				_List_fromArray(
+					[
+						$mdgriffith$elm_ui$Element$html(
+						A2(
+							$elm$html$Html$ul,
+							_List_fromArray(
+								[
+									A2($elm$html$Html$Attributes$style, 'list-style', 'none'),
+									A2($elm$html$Html$Attributes$style, 'padding', '0'),
+									A2($elm$html$Html$Attributes$style, 'white-space', 'normal')
+								]),
+							A2(
+								$elm$core$List$map,
+								function (t) {
+									return A2(
+										$elm$html$Html$li,
+										_List_fromArray(
+											[
+												A2($elm$html$Html$Attributes$style, 'margin-bottom', '5px')
+											]),
+										_List_fromArray(
+											[
+												$elm$html$Html$text(t)
+											]));
+								},
+								step.notes)))
+					]))
+			]));
+};
+var $author$project$Page$Kifu$view = F2(
+	function (msg, model) {
+		return A2(
+			$mdgriffith$elm_ui$Element$row,
+			_List_fromArray(
+				[
+					$mdgriffith$elm_ui$Element$spacing(20),
+					$mdgriffith$elm_ui$Element$alignTop,
+					$mdgriffith$elm_ui$Element$width(
+					$mdgriffith$elm_ui$Element$px(473))
+				]),
+			_List_fromArray(
+				[
+					A2(
+					$mdgriffith$elm_ui$Element$column,
+					_List_fromArray(
+						[
+							$mdgriffith$elm_ui$Element$spacing(20)
+						]),
+					_List_fromArray(
+						[
+							A2(
+							$mdgriffith$elm_ui$Element$el,
+							_List_fromArray(
+								[
+									$mdgriffith$elm_ui$Element$width(
+									$mdgriffith$elm_ui$Element$px(473)),
+									$mdgriffith$elm_ui$Element$height(
+									$mdgriffith$elm_ui$Element$px(528))
+								]),
+							$mdgriffith$elm_ui$Element$html(
+								A2(
+									$elm$html$Html$canvas,
+									_List_fromArray(
+										[
+											$elm$html$Html$Attributes$id('shogi')
+										]),
+									_List_Nil))),
+							A3(
+							$author$project$Page$Kifu$control,
+							A2(
+								$elm$core$Basics$composeL,
+								msg,
+								$author$project$Page$Kifu$UpdateBoard(model.kifu.kifuId)),
+							model.curSeq,
+							model.len),
+							A3(
+							$author$project$Page$Kifu$maybe,
+							$mdgriffith$elm_ui$Element$none,
+							$author$project$Page$Kifu$stepInfo,
+							A2($author$project$Page$Kifu$elem, model.curSeq, model.kifu.steps))
+						])),
+					$author$project$Page$Kifu$gameInfo(model)
+				]));
+	});
 var $author$project$Page$MyPage$label = function (kifu) {
 	var t = $elm$core$String$concat(
 		_List_fromArray(
@@ -15629,7 +16375,7 @@ var $author$project$Page$MyPage$url = function (kifu) {
 var $author$project$Page$MyPage$view = function (kifus) {
 	return A2(
 		$mdgriffith$elm_ui$Element$column,
-		_List_Nil,
+		$author$project$Style$mainColumn,
 		_List_fromArray(
 			[
 				A2(
@@ -15665,7 +16411,7 @@ var $author$project$Page$ResendConfirm$view = F2(
 	function (msg, model) {
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
-			_List_Nil,
+			$author$project$Style$mainColumn,
 			_List_fromArray(
 				[
 					A2(
@@ -15715,7 +16461,7 @@ var $author$project$Page$SignIn$view = F2(
 	function (msg, model) {
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
-			_List_Nil,
+			$author$project$Style$mainColumn,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$html(
@@ -15806,7 +16552,7 @@ var $author$project$Page$SignUp$view = F2(
 	function (msg, model) {
 		return A2(
 			$mdgriffith$elm_ui$Element$column,
-			_List_Nil,
+			$author$project$Style$mainColumn,
 			_List_fromArray(
 				[
 					$mdgriffith$elm_ui$Element$html(
@@ -15975,6 +16721,10 @@ var $author$project$Main$content = function (model) {
 			return $author$project$Page$MyPage$view(model.recentKifu);
 		case 'Upload':
 			return A2($author$project$Page$Upload$view, $author$project$Main$UploadMsg, model.uploadModel);
+		case 'Kifu':
+			var kifuId = _v0.a;
+			var seq = _v0.b;
+			return A2($author$project$Page$Kifu$view, $author$project$Main$KifuMsg, model.kifuModel);
 		case 'NotFound':
 			return A2(
 				$mdgriffith$elm_ui$Element$column,
@@ -16035,24 +16785,6 @@ var $author$project$Main$headerAttrs = _List_fromArray(
 	[
 		$mdgriffith$elm_ui$Element$spacing(10)
 	]);
-var $mdgriffith$elm_ui$Element$row = F2(
-	function (attrs, children) {
-		return A4(
-			$mdgriffith$elm_ui$Internal$Model$element,
-			$mdgriffith$elm_ui$Internal$Model$asRow,
-			$mdgriffith$elm_ui$Internal$Model$div,
-			A2(
-				$elm$core$List$cons,
-				$mdgriffith$elm_ui$Internal$Model$htmlClass($mdgriffith$elm_ui$Internal$Style$classes.contentLeft + (' ' + $mdgriffith$elm_ui$Internal$Style$classes.contentCenterY)),
-				A2(
-					$elm$core$List$cons,
-					$mdgriffith$elm_ui$Element$width($mdgriffith$elm_ui$Element$shrink),
-					A2(
-						$elm$core$List$cons,
-						$mdgriffith$elm_ui$Element$height($mdgriffith$elm_ui$Element$shrink),
-						attrs))),
-			$mdgriffith$elm_ui$Internal$Model$Unkeyed(children));
-	});
 var $author$project$Main$userInfo = function (model) {
 	return _Utils_eq(model.authToken, $elm$core$Maybe$Nothing) ? A2(
 		$mdgriffith$elm_ui$Element$row,
@@ -16379,6 +17111,18 @@ var $author$project$Main$routeToTitle = function (route) {
 			return 'MyPage';
 		case 'Upload':
 			return 'Upload';
+		case 'Kifu':
+			var kifuId = route.a;
+			var seq = route.b;
+			return $elm$core$String$concat(
+				_List_fromArray(
+					[
+						'棋譜: ',
+						$elm$core$String$fromInt(seq),
+						'手目 (',
+						kifuId,
+						')'
+					]));
 		default:
 			return 'NotFound';
 	}
@@ -16414,7 +17158,7 @@ var $author$project$Main$view = function (model) {
 	};
 };
 var $author$project$Main$main = $elm$browser$Browser$application(
-	{init: $author$project$Main$init, onUrlChange: $author$project$Main$UrlChanged, onUrlRequest: $author$project$Main$LinkClicked, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
+	{init: $author$project$Main$init, onUrlChange: $author$project$Main$UrlChanged, onUrlRequest: $author$project$Main$UrlRequest, subscriptions: $author$project$Main$subscriptions, update: $author$project$Main$update, view: $author$project$Main$view});
 _Platform_export({'Main':{'init':$author$project$Main$main(
 	A2(
 		$elm$json$Json$Decode$andThen,

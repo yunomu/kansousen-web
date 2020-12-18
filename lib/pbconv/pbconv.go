@@ -97,34 +97,58 @@ func stepToMove(p *sfen.Surface, step *ptypes.Step, move string) *document.Move 
 func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) {
 	p := sfen.NewSurfaceStartpos()
 	var steps []*document.Step
-	for _, step := range k.Steps {
-		var buf strings.Builder
-		p.SetStep(1)
-		if err := p.PrintSFEN(&buf); err != nil {
-			return nil, err
-		}
 
-		move := kif.StepToMove(step)
-		steps = append(steps, &document.Step{
+	var buf strings.Builder
+	if err := p.PrintSFEN(&buf); err != nil {
+		return nil, err
+	}
+	steps = append(steps, &document.Step{
+		UserId: userId,
+		KifuId: kifuId,
+		Seq:    0,
+
+		Position:     buf.String(),
+		Move:         nil,
+		TimestampSec: 0,
+		ThinkingSec:  0,
+		Finished:     0,
+		Notes:        nil,
+	})
+
+	for _, step := range k.Steps {
+		s := &document.Step{
 			UserId: userId,
 			KifuId: kifuId,
 			Seq:    step.GetSeq(),
 
-			Position:     buf.String(),
-			Move:         stepToMove(p, step, move),
 			TimestampSec: step.GetElapsedSec(),
 			ThinkingSec:  step.GetThinkingSec(),
 			Finished:     KifFinishedStatusToStatus(step.FinishedStatus),
 			Notes:        step.GetNotes(),
-		})
+		}
 
-		if step.FinishedStatus != ptypes.FinishedStatus_NOT_FINISHED {
+		if step.FinishedStatus == ptypes.FinishedStatus_NOT_FINISHED {
+			move := kif.StepToMove(step)
+			s.Move = stepToMove(p, step, move)
+
+			if err := p.Move(move); err != nil {
+				return nil, err
+			}
+
+			buf.Reset()
+			p.SetStep(1)
+			if err := p.PrintSFEN(&buf); err != nil {
+				return nil, err
+			}
+			s.Position = buf.String()
+
+			steps = append(steps, s)
+		} else {
+			s.Position = buf.String()
+			steps = append(steps, s)
 			break
 		}
 
-		if err := p.Move(move); err != nil {
-			return nil, err
-		}
 	}
 
 	return steps, nil
@@ -133,6 +157,10 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 func StepsToPositions(steps []*document.Step) []*document.Position {
 	var moves []*document.Move
 	for _, step := range steps {
+		if step.Seq == 0 {
+			// and pos = startpos
+			continue
+		}
 		if step.Move == nil {
 			break
 		}
@@ -141,13 +169,16 @@ func StepsToPositions(steps []*document.Step) []*document.Position {
 
 	var positions []*document.Position
 	for i, step := range steps {
+		if step.Seq == 0 {
+			continue
+		}
 		positions = append(positions, &document.Position{
 			UserId:   step.UserId,
 			Position: step.Position,
 			KifuId:   step.KifuId,
 			Seq:      step.Seq,
 
-			Moves: moves[i:],
+			Moves: moves[i-1:],
 		})
 	}
 

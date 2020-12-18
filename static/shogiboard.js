@@ -38,7 +38,7 @@ var shogiboard = shogiboard || {};
   
   const NUMBER = " 123456789";
   
-  function onloadDraw(ctx, img, sfen) {
+  function drawBoard(ctx, img, sfen) {
     for (let i = 0; i <= 11; i++) {
       for (let j = 0; j <= 11; j++) {
         ctx.drawImage(img, KOMA[""].sx, KOMA[""].sy, W, H, i*W, j*H, W, H);
@@ -74,35 +74,37 @@ var shogiboard = shogiboard || {};
       }
     });
   
-    ctx.font = "20px serif";
-    var bidx = 0;
-    var widx = 0;
-    var prev = null;
-    var num = "";
-    c.split('').forEach((k) => {
-      let n = NUMBER.indexOf(k);
-      if (n !== -1) {
-        num = num + k;
-        return;
-      }
-  
-      koma = KOMA[k];
-      if (koma.b) {
-        ctx.drawImage(img, koma.sx, koma.sy, W, H, (bidx+1)*W, 10*H, W, H);
-        if (num !== "") {
-          ctx.fillText(num, (bidx+1.7)*W, 11*H);
+    if (c !== "-") {
+      ctx.font = "20px serif";
+      var bidx = 0;
+      var widx = 0;
+      var prev = null;
+      var num = "";
+      c.split('').forEach((k) => {
+        let n = NUMBER.indexOf(k);
+        if (n !== -1) {
+          num = num + k;
+          return;
         }
-        bidx++;
-      } else {
-        ctx.drawImage(img, koma.sx, koma.sy, W, H, (widx+1)*W, 0, W, H);
-        if (num !== "") {
-          ctx.fillText(num, (widx+1.7)*W, H);
+    
+        koma = KOMA[k];
+        if (koma.b) {
+          ctx.drawImage(img, koma.sx, koma.sy, W, H, (bidx+1)*W, 10*H, W, H);
+          if (num !== "") {
+            ctx.fillText(num, (bidx+1.7)*W, 11*H);
+          }
+          bidx++;
+        } else {
+          ctx.drawImage(img, koma.sx, koma.sy, W, H, (widx+1)*W, 0, W, H);
+          if (num !== "") {
+            ctx.fillText(num, (widx+1.7)*W, H);
+          }
+          widx++;
         }
-        widx++;
-      }
-      num = "";
-      prev = koma;
-    });
+        num = "";
+        prev = koma;
+      });
+    }
   
     ctx.beginPath();
     ctx.strokeStyle = GRID_COLOR;
@@ -130,18 +132,14 @@ var shogiboard = shogiboard || {};
     ctx.stroke();
   }
   
-  _.draw = function(id, komafile, sfen) {
+  _.draw = function(id, komaimg, sfen) {
     const canvas = document.getElementById(id);
     canvas.width = W * 11;
     canvas.height = H * 11;
   
     const ctx = canvas.getContext('2d');
   
-    const img = new Image();
-    img.onload = function(e) {
-      onloadDraw(ctx, img, sfen);
-    }
-    img.src = komafile + '?' + new Date().getTime();
+    drawBoard(ctx, komaimg, sfen);
   
     return ctx;
   };

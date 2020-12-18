@@ -3,6 +3,7 @@ module Page.MyPage exposing (view)
 import Element exposing (Element)
 import Proto.Api as PB
 import Route
+import Style
 
 
 type alias Kifu =

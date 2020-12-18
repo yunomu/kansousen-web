@@ -2,7 +2,7 @@ module Route exposing (Route(..), fromUrl, path)
 
 import Url exposing (Url)
 import Url.Builder as UrlBuilder
-import Url.Parser as UrlParser exposing ((</>), Parser, s)
+import Url.Parser as P exposing ((</>), Parser, s)
 
 
 type Route
@@ -15,22 +15,26 @@ type Route
     | SignIn
     | MyPage
     | Upload
+    | Kifu String Int
     | NotFound
 
 
 parser : Parser (Route -> a) a
 parser =
-    UrlParser.oneOf
-        [ UrlParser.map Index UrlParser.top
-        , UrlParser.map Index <| s "index.html"
-        , UrlParser.map SignUp <| s "signup"
-        , UrlParser.map ConfirmSignUp <| s "confirm_signup"
-        , UrlParser.map ResendConfirm <| s "resend_confirm"
-        , UrlParser.map SignIn <| s "signin"
-        , UrlParser.map ForgotPassword <| s "forgot_password"
-        , UrlParser.map ConfirmForgotPassword <| s "confirm_forgot_password"
-        , UrlParser.map MyPage <| s "my"
-        , UrlParser.map Upload <| s "upload"
+    P.oneOf
+        [ P.map Index P.top
+        , P.map Index <| s "index.html"
+        , P.map SignUp <| s "signup"
+        , P.map ConfirmSignUp <| s "confirm_signup"
+        , P.map ResendConfirm <| s "resend_confirm"
+        , P.map SignIn <| s "signin"
+        , P.map ForgotPassword <| s "forgot_password"
+        , P.map ConfirmForgotPassword <| s "confirm_forgot_password"
+        , P.map MyPage <| s "my"
+        , P.map Upload <| s "upload"
+        , P.map Kifu <| s "kifu" </> P.string </> P.int
+        , P.map (\id -> Kifu id 0) <| s "kifu" </> P.string
+        , P.map (\id -> Kifu id 0) <| s "kifu" </> P.string </> s ""
         ]
 
 
@@ -64,10 +68,13 @@ path route =
         Upload ->
             UrlBuilder.absolute [ "upload" ] []
 
+        Kifu kifuId seq ->
+            UrlBuilder.absolute [ "kifu", kifuId, String.fromInt seq ] []
+
         NotFound ->
             UrlBuilder.absolute [] []
 
 
 fromUrl : Url -> Route
 fromUrl url =
-    Maybe.withDefault NotFound (UrlParser.parse parser url)
+    Maybe.withDefault NotFound (P.parse parser url)

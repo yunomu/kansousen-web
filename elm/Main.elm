@@ -12,6 +12,7 @@ import Http
 import Page.ConfirmForgotPassword as ConfirmForgotPassword
 import Page.ConfirmSignUp as ConfirmSignUp
 import Page.ForgotPassword as ForgotPassword
+import Page.Kifu as Kifu
 import Page.MyPage as MyPage
 import Page.ResendConfirm as ResendConfirm
 import Page.SignIn as SignIn
@@ -29,6 +30,9 @@ port storeToken : String -> Cmd msg
 port storeTokens : ( String, String ) -> Cmd msg
 
 
+port updateBoard : ( String, String ) -> Cmd msg
+
+
 type alias Flags =
     { token : Maybe String
     , refreshToken : Maybe String
@@ -36,7 +40,7 @@ type alias Flags =
 
 
 type Msg
-    = LinkClicked Browser.UrlRequest
+    = UrlRequest Browser.UrlRequest
     | UrlChanged Url
     | SignUpMsg SignUp.Msg
     | ConfirmSignUpMsg ConfirmSignUp.Msg
@@ -46,6 +50,7 @@ type Msg
     | ConfirmForgotPasswordMsg ConfirmForgotPassword.Msg
     | ApiResponse Api.Request Api.Response
     | UploadMsg Upload.Msg
+    | KifuMsg Kifu.Msg
     | HelloRequest
     | NOP
 
@@ -68,6 +73,7 @@ type alias Model =
     , errorMessage : Maybe String
     , prevState : PreviousState
     , recentKifu : List PB.RecentKifuResponse_Kifu
+    , kifuModel : Kifu.Model
     , uploadModel : Upload.Model
     }
 
@@ -80,7 +86,7 @@ main =
         , update = update
         , subscriptions = subscriptions
         , onUrlChange = UrlChanged
-        , onUrlRequest = LinkClicked
+        , onUrlRequest = UrlRequest
         }
 
 
@@ -107,9 +113,10 @@ init flags url key =
       , errorMessage = Nothing
       , prevState = PrevNone
       , recentKifu = []
+      , kifuModel = Kifu.init
       , uploadModel = Upload.init False
       }
-    , Cmd.none
+    , Nav.pushUrl key (Url.toString url)
     )
 
 
@@ -195,6 +202,35 @@ authorizedResponse model req result f =
 
         Err err ->
             Debug.log (Debug.toString err) ( model, Cmd.none )
+
+
+elem : List a -> Int -> Maybe a
+elem list n =
+    List.head <| List.drop n list
+
+
+updateKifuPage : Model -> Kifu.Model -> String -> Int -> ( Model, Cmd Msg )
+updateKifuPage model kifuModel kifuId seq =
+    if seq >= 0 then
+        case elem kifuModel.kifu.steps seq of
+            Just step ->
+                ( { model | kifuModel = { kifuModel | curSeq = seq } }
+                , updateBoard ( "shogi", step.position )
+                )
+
+            Nothing ->
+                ( model
+                , Nav.pushUrl
+                    model.key
+                    (Route.path <| Route.Kifu kifuId kifuModel.curSeq)
+                )
+
+    else
+        ( model
+        , Nav.pushUrl
+            model.key
+            (Route.path <| Route.Kifu kifuId 0)
+        )
 
 
 apiResponse : Model -> Api.Request -> Api.Response -> ( Model, Cmd Msg )
@@ -290,6 +326,30 @@ apiResponse model req res =
                                         Route.Index
                             )
 
+                        PB.ResponseGetKifu r ->
+                            let
+                                curSeq =
+                                    case model.route of
+                                        Route.Kifu _ seq ->
+                                            seq
+
+                                        _ ->
+                                            0
+
+                                kifu =
+                                    { r | steps = List.sortBy (\s -> s.seq) r.steps }
+
+                                model_ =
+                                    { model
+                                        | kifuModel =
+                                            { kifu = kifu
+                                            , curSeq = curSeq
+                                            , len = List.length kifu.steps
+                                            }
+                                    }
+                            in
+                            updateKifuPage model_ model_.kifuModel r.kifuId curSeq
+
                         _ ->
                             ( model, Cmd.none )
 
@@ -310,7 +370,7 @@ update msg model =
             Maybe.map (\at -> at.token) model.authToken
     in
     case msg of
-        LinkClicked urlRequest ->
+        UrlRequest urlRequest ->
             case urlRequest of
                 Browser.Internal url ->
                     ( model, Nav.pushUrl model.key (Url.toString url) )
@@ -356,6 +416,24 @@ update msg model =
                                     { limit = 10
                                     }
                     )
+
+                Route.Kifu kifuId seq ->
+                    let
+                        km =
+                            model_.kifuModel
+                    in
+                    if km.kifu.kifuId == kifuId then
+                        updateKifuPage model_ model_.kifuModel kifuId seq
+
+                    else
+                        ( model_
+                        , Api.request ApiResponse authToken <|
+                            Api.KifuRequest <|
+                                PB.KifuRequest <|
+                                    PB.RequestGetKifu
+                                        { kifuId = kifuId
+                                        }
+                        )
 
                 Route.Upload ->
                     ( { model_ | uploadModel = Upload.init model.uploadModel.repeat }
@@ -458,6 +536,13 @@ update msg model =
                     , Cmd.none
                     )
 
+        KifuMsg kifuMsg ->
+            case kifuMsg of
+                Kifu.UpdateBoard kifuId seq ->
+                    ( model
+                    , Nav.pushUrl model.key (Route.path <| Route.Kifu kifuId seq)
+                    )
+
         HelloRequest ->
             ( model
             , Api.request ApiResponse authToken Api.HelloRequest
@@ -506,6 +591,15 @@ routeToTitle route =
         Route.Upload ->
             "Upload"
 
+        Route.Kifu kifuId seq ->
+            String.concat
+                [ "棋譜: "
+                , String.fromInt seq
+                , "手目 ("
+                , kifuId
+                , ")"
+                ]
+
         Route.NotFound ->
             "NotFound"
 
@@ -536,6 +630,9 @@ content model =
 
         Route.Upload ->
             Upload.view UploadMsg model.uploadModel
+
+        Route.Kifu kifuId seq ->
+            Kifu.view KifuMsg model.kifuModel
 
         Route.NotFound ->
             Element.column []

@@ -202,7 +202,9 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 
 		m := step.GetMove()
 		switch {
-		case step.GetMove().GetDrop():
+		case m == nil:
+			// do nothing
+		case m.GetDrop():
 			dst := m.GetDst()
 			resStep.Op = &apipb.GetKifuResponse_Step_Drop{
 				Drop: &apipb.GetKifuResponse_Drop{
