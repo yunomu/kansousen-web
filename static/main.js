@@ -6952,6 +6952,19 @@ var $author$project$Proto$Api$getKifuRequestEncoder = function (v) {
 					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'kifuId', $elm$json$Json$Encode$string, '', v.kifuId)
 				])));
 };
+var $elm$json$Json$Encode$int = _Json_wrap;
+var $author$project$Proto$Api$getSamePositionsRequestEncoder = function (v) {
+	return $elm$json$Json$Encode$object(
+		A2(
+			$elm$core$List$filterMap,
+			$elm$core$Basics$identity,
+			_List_fromArray(
+				[
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'userId', $elm$json$Json$Encode$string, '', v.userId),
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'position', $elm$json$Json$Encode$string, '', v.position),
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'steps', $elm$json$Json$Encode$int, 0, v.steps)
+				])));
+};
 var $author$project$Proto$Api$postKifuRequestEncoder = function (v) {
 	return $elm$json$Json$Encode$object(
 		A2(
@@ -6964,7 +6977,6 @@ var $author$project$Proto$Api$postKifuRequestEncoder = function (v) {
 					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'encoding', $elm$json$Json$Encode$string, '', v.encoding)
 				])));
 };
-var $elm$json$Json$Encode$int = _Json_wrap;
 var $author$project$Proto$Api$recentKifuRequestEncoder = function (v) {
 	return $elm$json$Json$Encode$object(
 		A2(
@@ -6997,12 +7009,18 @@ var $author$project$Proto$Api$kifuRequestSelectEncoder = function (v) {
 				_Utils_Tuple2(
 					'requestDeleteKifu',
 					$author$project$Proto$Api$deleteKifuRequestEncoder(x)));
-		default:
+		case 'RequestGetKifu':
 			var x = v.a;
 			return $elm$core$Maybe$Just(
 				_Utils_Tuple2(
 					'requestGetKifu',
 					$author$project$Proto$Api$getKifuRequestEncoder(x)));
+		default:
+			var x = v.a;
+			return $elm$core$Maybe$Just(
+				_Utils_Tuple2(
+					'requstGetSamePositions',
+					$author$project$Proto$Api$getSamePositionsRequestEncoder(x)));
 	}
 };
 var $author$project$Proto$Api$kifuRequestEncoder = function (v) {
@@ -7024,6 +7042,9 @@ var $author$project$Proto$Api$ResponseDeleteKifu = function (a) {
 };
 var $author$project$Proto$Api$ResponseGetKifu = function (a) {
 	return {$: 'ResponseGetKifu', a: a};
+};
+var $author$project$Proto$Api$ResponseGetSamePositions = function (a) {
+	return {$: 'ResponseGetSamePositions', a: a};
 };
 var $author$project$Proto$Api$ResponsePostKifu = function (a) {
 	return {$: 'ResponsePostKifu', a: a};
@@ -7081,11 +7102,6 @@ var $author$project$Proto$Api$getKifuResponse_PlayerDecoder = $elm$json$Json$Dec
 				'',
 				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Player)));
 	});
-var $author$project$Proto$Api$GetKifuResponse_Step = F8(
-	function (seq, position, promoted, captured, timestampSec, thinkingSec, notes, op) {
-		return {captured: captured, notes: notes, op: op, position: position, promoted: promoted, seq: seq, thinkingSec: thinkingSec, timestampSec: timestampSec};
-	});
-var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $elm$json$Json$Decode$fail = _Json_fail;
 var $tiziano88$elm_protobuf$Protobuf$fromMaybe = F2(
 	function (error, maybe) {
@@ -7109,16 +7125,44 @@ var $tiziano88$elm_protobuf$Protobuf$intDecoder = $elm$json$Json$Decode$oneOf(
 				$tiziano88$elm_protobuf$Protobuf$fromMaybe('could not convert string to integer')),
 			$elm$json$Json$Decode$string)
 		]));
-var $author$project$Proto$Api$Drop = function (a) {
-	return {$: 'Drop', a: a};
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $tiziano88$elm_protobuf$Protobuf$repeated = F3(
+	function (name, decoder, d) {
+		return A2(
+			$tiziano88$elm_protobuf$Protobuf$field,
+			A2(
+				$tiziano88$elm_protobuf$Protobuf$withDefault,
+				_List_Nil,
+				A2(
+					$elm$json$Json$Decode$field,
+					name,
+					$elm$json$Json$Decode$list(decoder))),
+			d);
+	});
+var $author$project$Proto$Api$Step = function (seq) {
+	return function (position) {
+		return function (src) {
+			return function (dst) {
+				return function (piece) {
+					return function (finishedStatus) {
+						return function (promoted) {
+							return function (captured) {
+								return function (timestampSec) {
+									return function (thinkingSec) {
+										return function (notes) {
+											return {captured: captured, dst: dst, finishedStatus: finishedStatus, notes: notes, piece: piece, position: position, promoted: promoted, seq: seq, src: src, thinkingSec: thinkingSec, timestampSec: timestampSec};
+										};
+									};
+								};
+							};
+						};
+					};
+				};
+			};
+		};
+	};
 };
-var $author$project$Proto$Api$Finish = function (a) {
-	return {$: 'Finish', a: a};
-};
-var $author$project$Proto$Api$Move = function (a) {
-	return {$: 'Move', a: a};
-};
-var $author$project$Proto$Api$OpUnspecified = {$: 'OpUnspecified'};
+var $elm$json$Json$Decode$bool = _Json_decodeBool;
 var $author$project$Proto$Api$FinishedStatus_Checkmate = {$: 'FinishedStatus_Checkmate'};
 var $author$project$Proto$Api$FinishedStatus_Draw = {$: 'FinishedStatus_Draw'};
 var $author$project$Proto$Api$FinishedStatus_FoulLoss = {$: 'FinishedStatus_FoulLoss'};
@@ -7158,10 +7202,7 @@ var $author$project$Proto$Api$finishedStatus_IdDecoder = function () {
 	};
 	return A2($elm$json$Json$Decode$map, lookup, $elm$json$Json$Decode$string);
 }();
-var $author$project$Proto$Api$GetKifuResponse_Drop = F2(
-	function (dst, piece) {
-		return {dst: dst, piece: piece};
-	});
+var $author$project$Proto$Api$finishedStatus_IdDefault = $author$project$Proto$Api$FinishedStatus_NotFinished;
 var $elm$json$Json$Decode$maybe = function (decoder) {
 	return $elm$json$Json$Decode$oneOf(
 		_List_fromArray(
@@ -7251,114 +7292,61 @@ var $author$project$Proto$Api$posDecoder = $elm$json$Json$Decode$lazy(
 				0,
 				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$Pos)));
 	});
-var $author$project$Proto$Api$getKifuResponse_DropDecoder = $elm$json$Json$Decode$lazy(
+var $author$project$Proto$Api$stepDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
-		return A4(
-			$tiziano88$elm_protobuf$Protobuf$required,
-			'piece',
-			$author$project$Proto$Api$piece_IdDecoder,
-			$author$project$Proto$Api$piece_IdDefault,
-			A3(
-				$tiziano88$elm_protobuf$Protobuf$optional,
-				'dst',
-				$author$project$Proto$Api$posDecoder,
-				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Drop)));
-	});
-var $author$project$Proto$Api$GetKifuResponse_Move = F3(
-	function (src, dst, piece) {
-		return {dst: dst, piece: piece, src: src};
-	});
-var $author$project$Proto$Api$getKifuResponse_MoveDecoder = $elm$json$Json$Decode$lazy(
-	function (_v0) {
-		return A4(
-			$tiziano88$elm_protobuf$Protobuf$required,
-			'piece',
-			$author$project$Proto$Api$piece_IdDecoder,
-			$author$project$Proto$Api$piece_IdDefault,
-			A3(
-				$tiziano88$elm_protobuf$Protobuf$optional,
-				'dst',
-				$author$project$Proto$Api$posDecoder,
-				A3(
-					$tiziano88$elm_protobuf$Protobuf$optional,
-					'src',
-					$author$project$Proto$Api$posDecoder,
-					$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Move))));
-	});
-var $author$project$Proto$Api$opDecoder = $elm$json$Json$Decode$lazy(
-	function (_v0) {
-		return $elm$json$Json$Decode$oneOf(
-			_List_fromArray(
-				[
-					A2(
-					$elm$json$Json$Decode$map,
-					$author$project$Proto$Api$Move,
-					A2($elm$json$Json$Decode$field, 'move', $author$project$Proto$Api$getKifuResponse_MoveDecoder)),
-					A2(
-					$elm$json$Json$Decode$map,
-					$author$project$Proto$Api$Drop,
-					A2($elm$json$Json$Decode$field, 'drop', $author$project$Proto$Api$getKifuResponse_DropDecoder)),
-					A2(
-					$elm$json$Json$Decode$map,
-					$author$project$Proto$Api$Finish,
-					A2($elm$json$Json$Decode$field, 'finish', $author$project$Proto$Api$finishedStatus_IdDecoder)),
-					$elm$json$Json$Decode$succeed($author$project$Proto$Api$OpUnspecified)
-				]));
-	});
-var $elm$json$Json$Decode$list = _Json_decodeList;
-var $tiziano88$elm_protobuf$Protobuf$repeated = F3(
-	function (name, decoder, d) {
-		return A2(
-			$tiziano88$elm_protobuf$Protobuf$field,
-			A2(
-				$tiziano88$elm_protobuf$Protobuf$withDefault,
-				_List_Nil,
-				A2(
-					$elm$json$Json$Decode$field,
-					name,
-					$elm$json$Json$Decode$list(decoder))),
-			d);
-	});
-var $author$project$Proto$Api$getKifuResponse_StepDecoder = $elm$json$Json$Decode$lazy(
-	function (_v0) {
-		return A2(
-			$tiziano88$elm_protobuf$Protobuf$field,
-			$author$project$Proto$Api$opDecoder,
-			A3(
-				$tiziano88$elm_protobuf$Protobuf$repeated,
-				'notes',
-				$elm$json$Json$Decode$string,
+		return A3(
+			$tiziano88$elm_protobuf$Protobuf$repeated,
+			'notes',
+			$elm$json$Json$Decode$string,
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'thinkingSec',
+				$tiziano88$elm_protobuf$Protobuf$intDecoder,
+				0,
 				A4(
 					$tiziano88$elm_protobuf$Protobuf$required,
-					'thinkingSec',
+					'timestampSec',
 					$tiziano88$elm_protobuf$Protobuf$intDecoder,
 					0,
 					A4(
 						$tiziano88$elm_protobuf$Protobuf$required,
-						'timestampSec',
-						$tiziano88$elm_protobuf$Protobuf$intDecoder,
-						0,
+						'captured',
+						$author$project$Proto$Api$piece_IdDecoder,
+						$author$project$Proto$Api$piece_IdDefault,
 						A4(
 							$tiziano88$elm_protobuf$Protobuf$required,
-							'captured',
-							$author$project$Proto$Api$piece_IdDecoder,
-							$author$project$Proto$Api$piece_IdDefault,
+							'promoted',
+							$elm$json$Json$Decode$bool,
+							false,
 							A4(
 								$tiziano88$elm_protobuf$Protobuf$required,
-								'promoted',
-								$elm$json$Json$Decode$bool,
-								false,
+								'finishedStatus',
+								$author$project$Proto$Api$finishedStatus_IdDecoder,
+								$author$project$Proto$Api$finishedStatus_IdDefault,
 								A4(
 									$tiziano88$elm_protobuf$Protobuf$required,
-									'position',
-									$elm$json$Json$Decode$string,
-									'',
-									A4(
-										$tiziano88$elm_protobuf$Protobuf$required,
-										'seq',
-										$tiziano88$elm_protobuf$Protobuf$intDecoder,
-										0,
-										$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Step)))))))));
+									'piece',
+									$author$project$Proto$Api$piece_IdDecoder,
+									$author$project$Proto$Api$piece_IdDefault,
+									A3(
+										$tiziano88$elm_protobuf$Protobuf$optional,
+										'dst',
+										$author$project$Proto$Api$posDecoder,
+										A3(
+											$tiziano88$elm_protobuf$Protobuf$optional,
+											'src',
+											$author$project$Proto$Api$posDecoder,
+											A4(
+												$tiziano88$elm_protobuf$Protobuf$required,
+												'position',
+												$elm$json$Json$Decode$string,
+												'',
+												A4(
+													$tiziano88$elm_protobuf$Protobuf$required,
+													'seq',
+													$tiziano88$elm_protobuf$Protobuf$intDecoder,
+													0,
+													$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$Step))))))))))));
 	});
 var $author$project$Proto$Api$Value = F2(
 	function (name, value) {
@@ -7388,7 +7376,7 @@ var $author$project$Proto$Api$getKifuResponseDecoder = $elm$json$Json$Decode$laz
 			A3(
 				$tiziano88$elm_protobuf$Protobuf$repeated,
 				'steps',
-				$author$project$Proto$Api$getKifuResponse_StepDecoder,
+				$author$project$Proto$Api$stepDecoder,
 				A4(
 					$tiziano88$elm_protobuf$Protobuf$required,
 					'createdTs',
@@ -7442,6 +7430,46 @@ var $author$project$Proto$Api$getKifuResponseDecoder = $elm$json$Json$Decode$laz
 															$elm$json$Json$Decode$string,
 															'',
 															$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse))))))))))))));
+	});
+var $author$project$Proto$Api$GetSamePositionsResponse = F3(
+	function (userId, position, kifus) {
+		return {kifus: kifus, position: position, userId: userId};
+	});
+var $author$project$Proto$Api$GetSamePositionsResponse_Kifu = F2(
+	function (kifuId, seq) {
+		return {kifuId: kifuId, seq: seq};
+	});
+var $author$project$Proto$Api$getSamePositionsResponse_KifuDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A4(
+			$tiziano88$elm_protobuf$Protobuf$required,
+			'seq',
+			$tiziano88$elm_protobuf$Protobuf$intDecoder,
+			0,
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'kifuId',
+				$elm$json$Json$Decode$string,
+				'',
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Kifu)));
+	});
+var $author$project$Proto$Api$getSamePositionsResponseDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A3(
+			$tiziano88$elm_protobuf$Protobuf$repeated,
+			'kifus',
+			$author$project$Proto$Api$getSamePositionsResponse_KifuDecoder,
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'position',
+				$elm$json$Json$Decode$string,
+				'',
+				A4(
+					$tiziano88$elm_protobuf$Protobuf$required,
+					'userId',
+					$elm$json$Json$Decode$string,
+					'',
+					$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse))));
 	});
 var $author$project$Proto$Api$PostKifuResponse = F2(
 	function (kifuId, duplicated) {
@@ -7558,6 +7586,10 @@ var $author$project$Proto$Api$kifuResponseSelectDecoder = $elm$json$Json$Decode$
 					$elm$json$Json$Decode$map,
 					$author$project$Proto$Api$ResponseGetKifu,
 					A2($elm$json$Json$Decode$field, 'responseGetKifu', $author$project$Proto$Api$getKifuResponseDecoder)),
+					A2(
+					$elm$json$Json$Decode$map,
+					$author$project$Proto$Api$ResponseGetSamePositions,
+					A2($elm$json$Json$Decode$field, 'responseGetSamePositions', $author$project$Proto$Api$getSamePositionsResponseDecoder)),
 					$elm$json$Json$Decode$succeed($author$project$Proto$Api$KifuResponseSelectUnspecified)
 				]));
 	});
@@ -16208,42 +16240,33 @@ var $author$project$Page$Kifu$srcToString = function (pos) {
 			_List_fromArray(
 				[pos.x, pos.y])));
 };
-var $author$project$Page$Kifu$stepOpToString = function (step) {
-	return $elm$core$String$concat(
-		function () {
-			var _v0 = step.op;
-			switch (_v0.$) {
-				case 'Move':
-					var move = _v0.a;
-					return _List_fromArray(
-						[
-							$author$project$Page$Kifu$playerSymbol(step.seq),
-							A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, move.dst),
-							$author$project$Page$Kifu$pieceToString(move.piece),
-							step.promoted ? '成' : '',
-							'(',
-							A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$srcToString, move.src),
-							')'
-						]);
-				case 'Drop':
-					var drop = _v0.a;
-					return _List_fromArray(
-						[
-							$author$project$Page$Kifu$playerSymbol(step.seq),
-							A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, drop.dst),
-							$author$project$Page$Kifu$pieceToString(drop.piece),
-							'打'
-						]);
-				case 'Finish':
-					var finished = _v0.a;
-					return _List_fromArray(
-						[
-							$author$project$Page$Kifu$finishedToString(finished)
-						]);
-				default:
-					return _List_Nil;
-			}
-		}());
+var $author$project$Page$Kifu$stepToString = function (step) {
+	return (!_Utils_eq(step.finishedStatus, $author$project$Proto$Api$FinishedStatus_NotFinished)) ? $author$project$Page$Kifu$finishedToString(step.finishedStatus) : $elm$core$String$concat(
+		A2(
+			$elm$core$List$cons,
+			$author$project$Page$Kifu$playerSymbol(step.seq),
+			A2(
+				$elm$core$List$cons,
+				A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, step.dst),
+				A2(
+					$elm$core$List$cons,
+					$author$project$Page$Kifu$pieceToString(step.piece),
+					function () {
+						var _v0 = step.src;
+						if (_v0.$ === 'Just') {
+							var src = _v0.a;
+							return _List_fromArray(
+								[
+									step.promoted ? '成' : '',
+									'(',
+									$author$project$Page$Kifu$srcToString(src),
+									')'
+								]);
+						} else {
+							return _List_fromArray(
+								['打']);
+						}
+					}()))));
 };
 var $author$project$Page$Kifu$stepInfo = function (step) {
 	return A2(
@@ -16266,7 +16289,7 @@ var $author$project$Page$Kifu$stepInfo = function (step) {
 					_List_fromArray(
 						[
 							$elm$core$String$fromInt(step.seq) + '手目',
-							$author$project$Page$Kifu$stepOpToString(step),
+							$author$project$Page$Kifu$stepToString(step),
 							$author$project$Page$Kifu$secToString(step.thinkingSec)
 						]))),
 				A2(

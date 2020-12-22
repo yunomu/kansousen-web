@@ -187,6 +187,20 @@ message Value {
   string value = 2;
 }
 
+message Step {
+  int32 seq = 1;
+  string position = 2;
+  Pos src = 3;
+  Pos dst = 4;
+  Piece.Id piece = 5;
+  FinishedStatus.Id finished_status = 6;
+  bool promoted = 7;
+  Piece.Id captured = 8;
+  int32 timestamp_sec = 9;
+  int32 thinking_sec = 10;
+  repeated string notes = 11;
+}
+
 message GetKifuResponse {
   string user_id = 1;
   string kifu_id = 2;
@@ -204,31 +218,28 @@ message GetKifuResponse {
   repeated Value other_fields = 9;
   string sfen = 10;
   int64 created_ts = 11;
-  message Move {
-    Pos src = 1;
-    Pos dst = 2;
-    Piece.Id piece = 3;
-  }
-  message Drop {
-    Pos dst = 1;
-    Piece.Id piece = 2;
-  }
-  message Step {
-    int32 seq = 1;
-    string position = 2;
-    oneof op {
-      Move move = 3;
-      Drop drop = 4;
-      FinishedStatus.Id finish = 5;
-    }
-    bool promoted = 6;
-    Piece.Id captured = 7;
-    int32 timestamp_sec = 8;
-    int32 thinking_sec = 9;
-    repeated string notes = 10;
-  }
   repeated Step steps = 12;
   string note = 13;
+}
+
+message GetSamePositionsRequest {
+  string user_id = 1;
+  string position = 2;
+
+  int32 steps = 3;
+}
+
+message GetSamePositionsResponse {
+  string user_id = 1;
+  string position = 2;
+
+  message Kifu {
+    string kifu_id = 1;
+    int32 seq = 2;
+
+    //repeated Move moves = 3;
+  }
+  repeated Kifu kifus = 3;
 }
 
 message KifuRequest {
@@ -237,6 +248,7 @@ message KifuRequest {
     PostKifuRequest request_post_kifu = 2;
     DeleteKifuRequest request_delete_kifu = 3;
     GetKifuRequest request_get_kifu = 4;
+    GetSamePositionsRequest requst_get_same_positions = 5;
   }
 }
 
@@ -247,6 +259,7 @@ message KifuResponse {
     PostKifuResponse response_post_kifu = 2;
     DeleteKifuResponse response_delete_kifu = 3;
     GetKifuResponse response_get_kifu = 4;
+    GetSamePositionsResponse response_get_same_positions = 5;
   }
 }
 

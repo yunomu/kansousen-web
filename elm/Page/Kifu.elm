@@ -308,37 +308,31 @@ playerSymbol seq =
         "☖"
 
 
-stepOpToString : PB.GetKifuResponse_Step -> String
-stepOpToString step =
-    String.concat <|
-        case step.op of
-            PB.Move move ->
-                [ playerSymbol step.seq
-                , maybe "" dstToString move.dst
-                , pieceToString move.piece
-                , if step.promoted then
-                    "成"
+stepToString : PB.Step -> String
+stepToString step =
+    if step.finishedStatus /= PB.FinishedStatus_NotFinished then
+        finishedToString step.finishedStatus
 
-                  else
-                    ""
-                , "("
-                , maybe "" srcToString move.src
-                , ")"
-                ]
+    else
+        String.concat <|
+            playerSymbol step.seq
+                :: maybe "" dstToString step.dst
+                :: pieceToString step.piece
+                :: (case step.src of
+                        Just src ->
+                            [ if step.promoted then
+                                "成"
 
-            PB.Drop drop ->
-                [ playerSymbol step.seq
-                , maybe "" dstToString drop.dst
-                , pieceToString drop.piece
-                , "打"
-                ]
+                              else
+                                ""
+                            , "("
+                            , srcToString src
+                            , ")"
+                            ]
 
-            PB.Finish finished ->
-                [ finishedToString finished
-                ]
-
-            _ ->
-                []
+                        Nothing ->
+                            [ "打" ]
+                   )
 
 
 secToString : Int -> String
@@ -361,7 +355,7 @@ secToString sec =
             ]
 
 
-stepInfo : PB.GetKifuResponse_Step -> Element msg
+stepInfo : PB.Step -> Element msg
 stepInfo step =
     Element.column [ Element.spacing 10 ]
         [ if step.seq == 0 then
@@ -371,7 +365,7 @@ stepInfo step =
             Element.row [ Element.spacingXY 20 0 ] <|
                 List.map Element.text
                     [ String.fromInt step.seq ++ "手目"
-                    , stepOpToString step
+                    , stepToString step
                     , secToString step.thinkingSec
                     ]
         , Element.column []

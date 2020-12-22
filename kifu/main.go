@@ -186,11 +186,11 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 		return nil, err
 	}
 
-	var resSteps []*apipb.GetKifuResponse_Step
+	var resSteps []*apipb.Step
 	for _, step := range steps {
-		var resStep *apipb.GetKifuResponse_Step
+		var resStep *apipb.Step
 
-		resStep = &apipb.GetKifuResponse_Step{
+		resStep = &apipb.Step{
 			Seq:          step.GetSeq(),
 			Position:     step.GetPosition(),
 			Promoted:     step.GetMove().GetPromote(),
@@ -198,42 +198,22 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 			TimestampSec: step.GetTimestampSec(),
 			ThinkingSec:  step.GetThinkingSec(),
 			Notes:        step.Notes,
+
+			FinishedStatus: apipb.FinishedStatus_Id(step.Finished),
 		}
 
 		m := step.GetMove()
-		switch {
-		case m == nil:
-			// do nothing
-		case m.GetDrop():
-			dst := m.GetDst()
-			resStep.Op = &apipb.GetKifuResponse_Step_Drop{
-				Drop: &apipb.GetKifuResponse_Drop{
-					Dst: &apipb.Pos{
-						X: dst.GetX(),
-						Y: dst.GetY(),
-					},
-					Piece: apipb.Piece_Id(m.GetPiece()),
-				},
-			}
-		case step.Finished != documentpb.FinishedStatus_NOT_FINISHED:
-			resStep.Op = &apipb.GetKifuResponse_Step_Finish{
-				Finish: apipb.FinishedStatus_Id(step.Finished),
-			}
-		default:
-			src := m.GetSrc()
-			dst := m.GetDst()
-			resStep.Op = &apipb.GetKifuResponse_Step_Move{
-				Move: &apipb.GetKifuResponse_Move{
-					Src: &apipb.Pos{
-						X: src.GetX(),
-						Y: src.GetY(),
-					},
-					Dst: &apipb.Pos{
-						X: dst.GetX(),
-						Y: dst.GetY(),
-					},
-					Piece: apipb.Piece_Id(m.GetPiece()),
-				},
+		dst := m.GetDst()
+		resStep.Dst = &apipb.Pos{
+			X: dst.GetX(),
+			Y: dst.GetY(),
+		}
+		resStep.Piece = apipb.Piece_Id(m.GetPiece())
+		src := m.GetSrc()
+		if src != nil {
+			resStep.Src = &apipb.Pos{
+				X: src.GetX(),
+				Y: src.GetY(),
 			}
 		}
 

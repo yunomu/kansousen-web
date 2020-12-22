@@ -135,7 +135,6 @@ message Position {
   int64 version = 5;
 
   repeated Move moves = 6;
-  repeated string notes = 7;
 }
 
 message KifuSignature {
