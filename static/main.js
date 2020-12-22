@@ -16225,13 +16225,6 @@ var $author$project$Page$Kifu$pieceToString = function (p) {
 			return '';
 	}
 };
-var $elm$core$Basics$modBy = _Basics_modBy;
-var $author$project$Page$Kifu$odd = function (i) {
-	return !(!A2($elm$core$Basics$modBy, 2, i));
-};
-var $author$project$Page$Kifu$playerSymbol = function (seq) {
-	return $author$project$Page$Kifu$odd(seq) ? '☗' : '☖';
-};
 var $author$project$Page$Kifu$srcToString = function (pos) {
 	return $elm$core$String$concat(
 		A2(
@@ -16241,32 +16234,61 @@ var $author$project$Page$Kifu$srcToString = function (pos) {
 				[pos.x, pos.y])));
 };
 var $author$project$Page$Kifu$stepToString = function (step) {
-	return (!_Utils_eq(step.finishedStatus, $author$project$Proto$Api$FinishedStatus_NotFinished)) ? $author$project$Page$Kifu$finishedToString(step.finishedStatus) : $elm$core$String$concat(
-		A2(
-			$elm$core$List$cons,
-			$author$project$Page$Kifu$playerSymbol(step.seq),
-			A2(
-				$elm$core$List$cons,
-				A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, step.dst),
-				A2(
-					$elm$core$List$cons,
-					$author$project$Page$Kifu$pieceToString(step.piece),
-					function () {
-						var _v0 = step.src;
-						if (_v0.$ === 'Just') {
-							var src = _v0.a;
-							return _List_fromArray(
-								[
-									step.promoted ? '成' : '',
-									'(',
-									$author$project$Page$Kifu$srcToString(src),
-									')'
-								]);
-						} else {
-							return _List_fromArray(
-								['打']);
-						}
-					}()))));
+	var _v0 = _Utils_Tuple3(step.finishedStatus, step.dst, step.src);
+	if (_v0.b.$ === 'Nothing') {
+		if (_v0.a.$ === 'FinishedStatus_NotFinished') {
+			var _v1 = _v0.a;
+			var _v2 = _v0.b;
+			return 'error data';
+		} else {
+			var finishedStatus = _v0.a;
+			var _v3 = _v0.b;
+			return $author$project$Page$Kifu$finishedToString(step.finishedStatus);
+		}
+	} else {
+		if (_v0.c.$ === 'Just') {
+			var finishedStatus = _v0.a;
+			var dst = _v0.b.a;
+			var src = _v0.c.a;
+			return $elm$core$String$concat(
+				_List_fromArray(
+					[
+						$author$project$Page$Kifu$dstToString(dst),
+						$author$project$Page$Kifu$pieceToString(step.piece),
+						step.promoted ? '成' : '',
+						'(',
+						$author$project$Page$Kifu$srcToString(src),
+						')',
+						_Utils_eq(finishedStatus, $author$project$Proto$Api$FinishedStatus_NotFinished) ? '' : $elm$core$String$concat(
+						_List_fromArray(
+							[
+								' (',
+								$author$project$Page$Kifu$finishedToString(finishedStatus),
+								')'
+							]))
+					]));
+		} else {
+			var finishedStatus = _v0.a;
+			var dst = _v0.b.a;
+			var _v4 = _v0.c;
+			return $elm$core$String$concat(
+				_List_fromArray(
+					[
+						$author$project$Page$Kifu$dstToString(dst),
+						$author$project$Page$Kifu$pieceToString(step.piece),
+						'打 (',
+						$author$project$Page$Kifu$finishedToString(step.finishedStatus),
+						')',
+						_Utils_eq(finishedStatus, $author$project$Proto$Api$FinishedStatus_NotFinished) ? '' : $elm$core$String$concat(
+						_List_fromArray(
+							[
+								' (',
+								$author$project$Page$Kifu$finishedToString(finishedStatus),
+								')'
+							]))
+					]));
+		}
+	}
 };
 var $author$project$Page$Kifu$stepInfo = function (step) {
 	return A2(

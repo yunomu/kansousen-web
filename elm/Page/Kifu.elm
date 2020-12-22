@@ -310,29 +310,54 @@ playerSymbol seq =
 
 stepToString : PB.Step -> String
 stepToString step =
-    if step.finishedStatus /= PB.FinishedStatus_NotFinished then
-        finishedToString step.finishedStatus
+    case ( step.finishedStatus, step.dst, step.src ) of
+        ( PB.FinishedStatus_NotFinished, Nothing, _ ) ->
+            -- error
+            "error data"
 
-    else
-        String.concat <|
-            playerSymbol step.seq
-                :: maybe "" dstToString step.dst
-                :: pieceToString step.piece
-                :: (case step.src of
-                        Just src ->
-                            [ if step.promoted then
-                                "成"
+        ( finishedStatus, Nothing, _ ) ->
+            finishedToString step.finishedStatus
 
-                              else
-                                ""
-                            , "("
-                            , srcToString src
-                            , ")"
-                            ]
+        ( finishedStatus, Just dst, Just src ) ->
+            String.concat
+                [ dstToString dst
+                , pieceToString step.piece
+                , if step.promoted then
+                    "成"
 
-                        Nothing ->
-                            [ "打" ]
-                   )
+                  else
+                    ""
+                , "("
+                , srcToString src
+                , ")"
+                , if finishedStatus == PB.FinishedStatus_NotFinished then
+                    ""
+
+                  else
+                    String.concat
+                        [ " ("
+                        , finishedToString finishedStatus
+                        , ")"
+                        ]
+                ]
+
+        ( finishedStatus, Just dst, Nothing ) ->
+            String.concat
+                [ dstToString dst
+                , pieceToString step.piece
+                , "打 ("
+                , finishedToString step.finishedStatus
+                , ")"
+                , if finishedStatus == PB.FinishedStatus_NotFinished then
+                    ""
+
+                  else
+                    String.concat
+                        [ " ("
+                        , finishedToString finishedStatus
+                        , ")"
+                        ]
+                ]
 
 
 secToString : Int -> String
