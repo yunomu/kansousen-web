@@ -30,7 +30,9 @@ dl.kifuinfo dd {
         node: document.getElementById("app"),
         flags: {
             "token": localStorage.getItem('token'),
-            "refreshToken": localStorage.getItem('refresh_token')
+            "refreshToken": localStorage.getItem('refresh_token'),
+            "windowWidth": window.innerWidth,
+            "windowHeight": window.innerHeight
         }
     });
     app.ports.storeToken.subscribe((req)=>{

@@ -2,6 +2,7 @@ port module Main exposing (main)
 
 import Api
 import Browser
+import Browser.Events
 import Browser.Navigation as Nav
 import Debug
 import Element exposing (Attribute, Element)
@@ -36,12 +37,15 @@ port updateBoard : ( String, String ) -> Cmd msg
 type alias Flags =
     { token : Maybe String
     , refreshToken : Maybe String
+    , windowWidth : Int
+    , windowHeight : Int
     }
 
 
 type Msg
     = UrlRequest Browser.UrlRequest
     | UrlChanged Url
+    | OnResize Int Int
     | SignUpMsg SignUp.Msg
     | ConfirmSignUpMsg ConfirmSignUp.Msg
     | ResendConfirmMsg ResendConfirm.Msg
@@ -63,6 +67,7 @@ type PreviousState
 type alias Model =
     { key : Nav.Key
     , route : Route
+    , windowSize : ( Int, Int )
     , signUpModel : SignUp.Model
     , confirmSignUpModel : ConfirmSignUp.Model
     , resendConfirmModel : ResendConfirm.Model
@@ -103,6 +108,7 @@ init flags url key =
     in
     ( { key = key
       , route = Route.fromUrl url
+      , windowSize = ( flags.windowWidth, flags.windowHeight )
       , signUpModel = SignUp.init
       , confirmSignUpModel = ConfirmSignUp.init
       , resendConfirmModel = ResendConfirm.init
@@ -548,6 +554,9 @@ update msg model =
             , Api.request ApiResponse authToken Api.HelloRequest
             )
 
+        OnResize w h ->
+            ( { model | windowSize = ( w, h ) }, Cmd.none )
+
         _ ->
             let
                 _ =
@@ -558,7 +567,7 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Browser.Events.onResize OnResize
 
 
 routeToTitle : Route -> String
