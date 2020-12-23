@@ -248,7 +248,7 @@ message KifuRequest {
     PostKifuRequest request_post_kifu = 2;
     DeleteKifuRequest request_delete_kifu = 3;
     GetKifuRequest request_get_kifu = 4;
-    GetSamePositionsRequest requst_get_same_positions = 5;
+    GetSamePositionsRequest request_get_same_positions = 5;
   }
 }
 

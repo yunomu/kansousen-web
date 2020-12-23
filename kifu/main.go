@@ -271,6 +271,10 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 	}, nil
 }
 
+func (s *server) getSamePositions(ctx context.Context, userId string, req *apipb.GetSamePositionsRequest) (*apipb.KifuResponse, error) {
+	return nil, nil
+}
+
 func (s *server) Serve(ctx context.Context, m proto.Message) (proto.Message, error) {
 	userId := lambda.GetUserId(ctx)
 	if userId == "" {
@@ -287,6 +291,8 @@ func (s *server) Serve(ctx context.Context, m proto.Message) (proto.Message, err
 		return s.deleteKifu(ctx, userId, t.RequestDeleteKifu)
 	case *apipb.KifuRequest_RequestGetKifu:
 		return s.getKifu(ctx, userId, t.RequestGetKifu)
+	case *apipb.KifuRequest_RequestGetSamePositions:
+		return s.getSamePositions(ctx, userId, t.RequestGetSamePositions)
 	default:
 		return nil, status.Error(codes.InvalidArgument, "unknown request")
 	}

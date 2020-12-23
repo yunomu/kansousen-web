@@ -1099,7 +1099,7 @@ type KifuRequestSelect
     | RequestPostKifu PostKifuRequest
     | RequestDeleteKifu DeleteKifuRequest
     | RequestGetKifu GetKifuRequest
-    | RequstGetSamePositions GetSamePositionsRequest
+    | RequestGetSamePositions GetSamePositionsRequest
 
 
 kifuRequestSelectDecoder : JD.Decoder KifuRequestSelect
@@ -1109,7 +1109,7 @@ kifuRequestSelectDecoder =
         , JD.map RequestPostKifu (JD.field "requestPostKifu" postKifuRequestDecoder)
         , JD.map RequestDeleteKifu (JD.field "requestDeleteKifu" deleteKifuRequestDecoder)
         , JD.map RequestGetKifu (JD.field "requestGetKifu" getKifuRequestDecoder)
-        , JD.map RequstGetSamePositions (JD.field "requstGetSamePositions" getSamePositionsRequestDecoder)
+        , JD.map RequestGetSamePositions (JD.field "requestGetSamePositions" getSamePositionsRequestDecoder)
         , JD.succeed KifuRequestSelectUnspecified
         ]
 
@@ -1127,8 +1127,8 @@ kifuRequestSelectEncoder v =
             Just ( "requestDeleteKifu", deleteKifuRequestEncoder x )
         RequestGetKifu x ->
             Just ( "requestGetKifu", getKifuRequestEncoder x )
-        RequstGetSamePositions x ->
-            Just ( "requstGetSamePositions", getSamePositionsRequestEncoder x )
+        RequestGetSamePositions x ->
+            Just ( "requestGetSamePositions", getSamePositionsRequestEncoder x )
 
 
 kifuRequestDecoder : JD.Decoder KifuRequest
