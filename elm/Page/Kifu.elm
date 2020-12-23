@@ -308,19 +308,17 @@ playerSymbol seq =
         "☖"
 
 
+emptyPos : Maybe PB.Pos -> Bool
+emptyPos =
+    maybe True <| \p -> p.x == 0 || p.y == 0
+
+
 stepToString : PB.Step -> String
 stepToString step =
-    case ( step.finishedStatus, step.dst, step.src ) of
-        ( PB.FinishedStatus_NotFinished, Nothing, _ ) ->
-            -- error
-            "error data"
-
-        ( finishedStatus, Nothing, _ ) ->
-            finishedToString step.finishedStatus
-
-        ( finishedStatus, Just dst, Just src ) ->
+    case ( step.finishedStatus == PB.FinishedStatus_NotFinished, emptyPos step.dst, emptyPos step.src ) of
+        ( notFin, False, False ) ->
             String.concat
-                [ dstToString dst
+                [ maybe "" dstToString step.dst
                 , pieceToString step.piece
                 , if step.promoted then
                     "成"
@@ -328,36 +326,40 @@ stepToString step =
                   else
                     ""
                 , "("
-                , srcToString src
+                , maybe "" srcToString step.src
                 , ")"
-                , if finishedStatus == PB.FinishedStatus_NotFinished then
+                , if notFin then
                     ""
 
                   else
                     String.concat
                         [ " ("
-                        , finishedToString finishedStatus
+                        , finishedToString step.finishedStatus
                         , ")"
                         ]
                 ]
 
-        ( finishedStatus, Just dst, Nothing ) ->
+        ( notFin, False, True ) ->
             String.concat
-                [ dstToString dst
+                [ maybe "" dstToString step.dst
                 , pieceToString step.piece
-                , "打 ("
-                , finishedToString step.finishedStatus
-                , ")"
-                , if finishedStatus == PB.FinishedStatus_NotFinished then
+                , "打"
+                , if notFin then
                     ""
 
                   else
                     String.concat
                         [ " ("
-                        , finishedToString finishedStatus
+                        , finishedToString step.finishedStatus
                         , ")"
                         ]
                 ]
+
+        ( False, True, _ ) ->
+            finishedToString step.finishedStatus
+
+        ( True, True, _ ) ->
+            "error data"
 
 
 secToString : Int -> String

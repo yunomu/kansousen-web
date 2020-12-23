@@ -653,11 +653,13 @@ content model =
                 ]
 
         Route.Index ->
+            let
+                url =
+                    "http://shineleckoma.web.fc2.com/"
+            in
             Element.column Style.mainColumn
-                [ Element.text "index"
-                , Element.link
-                    [ Events.onClick HelloRequest ]
-                    { url = "", label = Element.text "test" }
+                [ Element.text "駒画像はしんえれ外部駒のものを使用しています。"
+                , Element.link [] { url = url, label = Element.text url }
                 ]
 
 

@@ -203,14 +203,14 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 		}
 
 		m := step.GetMove()
-		dst := m.GetDst()
-		resStep.Dst = &apipb.Pos{
-			X: dst.GetX(),
-			Y: dst.GetY(),
+		if dst := m.GetDst(); dst != nil {
+			resStep.Dst = &apipb.Pos{
+				X: dst.GetX(),
+				Y: dst.GetY(),
+			}
 		}
 		resStep.Piece = apipb.Piece_Id(m.GetPiece())
-		src := m.GetSrc()
-		if src != nil {
+		if src := m.GetSrc(); src != nil {
 			resStep.Src = &apipb.Pos{
 				X: src.GetX(),
 				Y: src.GetY(),

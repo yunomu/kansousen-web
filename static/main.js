@@ -14447,7 +14447,6 @@ var $author$project$Main$ConfirmSignUpMsg = function (a) {
 var $author$project$Main$ForgotPasswordMsg = function (a) {
 	return {$: 'ForgotPasswordMsg', a: a};
 };
-var $author$project$Main$HelloRequest = {$: 'HelloRequest'};
 var $author$project$Main$KifuMsg = function (a) {
 	return {$: 'KifuMsg', a: a};
 };
@@ -14534,24 +14533,6 @@ var $author$project$Style$mainColumn = _List_fromArray(
 	[
 		$mdgriffith$elm_ui$Element$spacing(5)
 	]);
-var $elm$virtual_dom$VirtualDom$Normal = function (a) {
-	return {$: 'Normal', a: a};
-};
-var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
-var $elm$html$Html$Events$on = F2(
-	function (event, decoder) {
-		return A2(
-			$elm$virtual_dom$VirtualDom$on,
-			event,
-			$elm$virtual_dom$VirtualDom$Normal(decoder));
-	});
-var $elm$html$Html$Events$onClick = function (msg) {
-	return A2(
-		$elm$html$Html$Events$on,
-		'click',
-		$elm$json$Json$Decode$succeed(msg));
-};
-var $mdgriffith$elm_ui$Element$Events$onClick = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onClick);
 var $mdgriffith$elm_ui$Internal$Model$Text = function (a) {
 	return {$: 'Text', a: a};
 };
@@ -14597,6 +14578,24 @@ var $mdgriffith$elm_ui$Element$Input$hasFocusStyle = function (attr) {
 var $mdgriffith$elm_ui$Element$Input$focusDefault = function (attrs) {
 	return A2($elm$core$List$any, $mdgriffith$elm_ui$Element$Input$hasFocusStyle, attrs) ? $mdgriffith$elm_ui$Internal$Model$NoAttribute : $mdgriffith$elm_ui$Internal$Model$htmlClass('focusable');
 };
+var $elm$virtual_dom$VirtualDom$Normal = function (a) {
+	return {$: 'Normal', a: a};
+};
+var $elm$virtual_dom$VirtualDom$on = _VirtualDom_on;
+var $elm$html$Html$Events$on = F2(
+	function (event, decoder) {
+		return A2(
+			$elm$virtual_dom$VirtualDom$on,
+			event,
+			$elm$virtual_dom$VirtualDom$Normal(decoder));
+	});
+var $elm$html$Html$Events$onClick = function (msg) {
+	return A2(
+		$elm$html$Html$Events$on,
+		'click',
+		$elm$json$Json$Decode$succeed(msg));
+};
+var $mdgriffith$elm_ui$Element$Events$onClick = A2($elm$core$Basics$composeL, $mdgriffith$elm_ui$Internal$Model$Attr, $elm$html$Html$Events$onClick);
 var $elm$virtual_dom$VirtualDom$MayPreventDefault = function (a) {
 	return {$: 'MayPreventDefault', a: a};
 };
@@ -16463,6 +16462,12 @@ var $author$project$Page$Kifu$dstToString = function (pos) {
 	var x = $elm$core$String$fromInt(pos.x);
 	return _Utils_ap(x, y);
 };
+var $author$project$Page$Kifu$emptyPos = A2(
+	$author$project$Page$Kifu$maybe,
+	true,
+	function (p) {
+		return (!p.x) || (!p.y);
+	});
 var $author$project$Page$Kifu$finishedToString = function (finished) {
 	switch (finished.$) {
 		case 'FinishedStatus_Suspend':
@@ -16530,59 +16535,52 @@ var $author$project$Page$Kifu$srcToString = function (pos) {
 				[pos.x, pos.y])));
 };
 var $author$project$Page$Kifu$stepToString = function (step) {
-	var _v0 = _Utils_Tuple3(step.finishedStatus, step.dst, step.src);
-	if (_v0.b.$ === 'Nothing') {
-		if (_v0.a.$ === 'FinishedStatus_NotFinished') {
-			var _v1 = _v0.a;
-			var _v2 = _v0.b;
-			return 'error data';
-		} else {
-			var finishedStatus = _v0.a;
-			var _v3 = _v0.b;
-			return $author$project$Page$Kifu$finishedToString(step.finishedStatus);
-		}
-	} else {
-		if (_v0.c.$ === 'Just') {
-			var finishedStatus = _v0.a;
-			var dst = _v0.b.a;
-			var src = _v0.c.a;
+	var _v0 = _Utils_Tuple3(
+		_Utils_eq(step.finishedStatus, $author$project$Proto$Api$FinishedStatus_NotFinished),
+		$author$project$Page$Kifu$emptyPos(step.dst),
+		$author$project$Page$Kifu$emptyPos(step.src));
+	if (!_v0.b) {
+		if (!_v0.c) {
+			var notFin = _v0.a;
 			return $elm$core$String$concat(
 				_List_fromArray(
 					[
-						$author$project$Page$Kifu$dstToString(dst),
+						A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, step.dst),
 						$author$project$Page$Kifu$pieceToString(step.piece),
 						step.promoted ? '成' : '',
 						'(',
-						$author$project$Page$Kifu$srcToString(src),
+						A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$srcToString, step.src),
 						')',
-						_Utils_eq(finishedStatus, $author$project$Proto$Api$FinishedStatus_NotFinished) ? '' : $elm$core$String$concat(
+						notFin ? '' : $elm$core$String$concat(
 						_List_fromArray(
 							[
 								' (',
-								$author$project$Page$Kifu$finishedToString(finishedStatus),
+								$author$project$Page$Kifu$finishedToString(step.finishedStatus),
 								')'
 							]))
 					]));
 		} else {
-			var finishedStatus = _v0.a;
-			var dst = _v0.b.a;
-			var _v4 = _v0.c;
+			var notFin = _v0.a;
 			return $elm$core$String$concat(
 				_List_fromArray(
 					[
-						$author$project$Page$Kifu$dstToString(dst),
+						A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, step.dst),
 						$author$project$Page$Kifu$pieceToString(step.piece),
-						'打 (',
-						$author$project$Page$Kifu$finishedToString(step.finishedStatus),
-						')',
-						_Utils_eq(finishedStatus, $author$project$Proto$Api$FinishedStatus_NotFinished) ? '' : $elm$core$String$concat(
+						'打',
+						notFin ? '' : $elm$core$String$concat(
 						_List_fromArray(
 							[
 								' (',
-								$author$project$Page$Kifu$finishedToString(finishedStatus),
+								$author$project$Page$Kifu$finishedToString(step.finishedStatus),
 								')'
 							]))
 					]));
+		}
+	} else {
+		if (!_v0.a) {
+			return $author$project$Page$Kifu$finishedToString(step.finishedStatus);
+		} else {
+			return 'error data';
 		}
 	}
 };
@@ -17092,21 +17090,19 @@ var $author$project$Main$content = function (model) {
 								])))
 					]));
 		default:
+			var url = 'http://shineleckoma.web.fc2.com/';
 			return A2(
 				$mdgriffith$elm_ui$Element$column,
 				$author$project$Style$mainColumn,
 				_List_fromArray(
 					[
-						$mdgriffith$elm_ui$Element$text('index'),
+						$mdgriffith$elm_ui$Element$text('駒画像はしんえれ外部駒のものを使用しています。'),
 						A2(
 						$mdgriffith$elm_ui$Element$link,
-						_List_fromArray(
-							[
-								$mdgriffith$elm_ui$Element$Events$onClick($author$project$Main$HelloRequest)
-							]),
+						_List_Nil,
 						{
-							label: $mdgriffith$elm_ui$Element$text('test'),
-							url: ''
+							label: $mdgriffith$elm_ui$Element$text(url),
+							url: url
 						})
 					]));
 	}
