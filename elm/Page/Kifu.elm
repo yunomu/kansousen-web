@@ -313,7 +313,7 @@ emptyPos =
     maybe True <| \p -> p.x == 0 || p.y == 0
 
 
-stepToString : PB.Step -> String
+stepToString : PB.GetKifuResponse_Step -> String
 stepToString step =
     case ( step.finishedStatus == PB.FinishedStatus_NotFinished, emptyPos step.dst, emptyPos step.src ) of
         ( notFin, False, False ) ->
@@ -382,7 +382,7 @@ secToString sec =
             ]
 
 
-stepInfo : PB.Step -> Element msg
+stepInfo : PB.GetKifuResponse_Step -> Element msg
 stepInfo step =
     Element.column [ Element.spacing 10 ]
         [ if step.seq == 0 then

@@ -7248,7 +7248,6 @@ var $author$project$Proto$Api$getSamePositionsRequestEncoder = function (v) {
 			$elm$core$Basics$identity,
 			_List_fromArray(
 				[
-					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'userId', $elm$json$Json$Encode$string, '', v.userId),
 					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'position', $elm$json$Json$Encode$string, '', v.position),
 					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'steps', $elm$json$Json$Encode$int, 0, v.steps)
 				])));
@@ -7307,7 +7306,7 @@ var $author$project$Proto$Api$kifuRequestSelectEncoder = function (v) {
 			var x = v.a;
 			return $elm$core$Maybe$Just(
 				_Utils_Tuple2(
-					'requstGetSamePositions',
+					'requestGetSamePositions',
 					$author$project$Proto$Api$getSamePositionsRequestEncoder(x)));
 	}
 };
@@ -7390,43 +7389,7 @@ var $author$project$Proto$Api$getKifuResponse_PlayerDecoder = $elm$json$Json$Dec
 				'',
 				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Player)));
 	});
-var $elm$json$Json$Decode$fail = _Json_fail;
-var $tiziano88$elm_protobuf$Protobuf$fromMaybe = F2(
-	function (error, maybe) {
-		if (maybe.$ === 'Just') {
-			var v1 = maybe.a;
-			return $elm$json$Json$Decode$succeed(v1);
-		} else {
-			return $elm$json$Json$Decode$fail(error);
-		}
-	});
-var $tiziano88$elm_protobuf$Protobuf$intDecoder = $elm$json$Json$Decode$oneOf(
-	_List_fromArray(
-		[
-			$elm$json$Json$Decode$int,
-			A2(
-			$elm$json$Json$Decode$andThen,
-			A2(
-				$elm$core$Basics$composeR,
-				$elm$core$String$toInt,
-				$tiziano88$elm_protobuf$Protobuf$fromMaybe('could not convert string to integer')),
-			$elm$json$Json$Decode$string)
-		]));
-var $elm$json$Json$Decode$list = _Json_decodeList;
-var $tiziano88$elm_protobuf$Protobuf$repeated = F3(
-	function (name, decoder, d) {
-		return A2(
-			$tiziano88$elm_protobuf$Protobuf$field,
-			A2(
-				$tiziano88$elm_protobuf$Protobuf$withDefault,
-				_List_Nil,
-				A2(
-					$elm$json$Json$Decode$field,
-					name,
-					$elm$json$Json$Decode$list(decoder))),
-			d);
-	});
-var $author$project$Proto$Api$Step = function (seq) {
+var $author$project$Proto$Api$GetKifuResponse_Step = function (seq) {
 	return function (position) {
 		return function (src) {
 			return function (dst) {
@@ -7490,6 +7453,28 @@ var $author$project$Proto$Api$finishedStatus_IdDecoder = function () {
 	return A2($elm$json$Json$Decode$map, lookup, $elm$json$Json$Decode$string);
 }();
 var $author$project$Proto$Api$finishedStatus_IdDefault = $author$project$Proto$Api$FinishedStatus_NotFinished;
+var $elm$json$Json$Decode$fail = _Json_fail;
+var $tiziano88$elm_protobuf$Protobuf$fromMaybe = F2(
+	function (error, maybe) {
+		if (maybe.$ === 'Just') {
+			var v1 = maybe.a;
+			return $elm$json$Json$Decode$succeed(v1);
+		} else {
+			return $elm$json$Json$Decode$fail(error);
+		}
+	});
+var $tiziano88$elm_protobuf$Protobuf$intDecoder = $elm$json$Json$Decode$oneOf(
+	_List_fromArray(
+		[
+			$elm$json$Json$Decode$int,
+			A2(
+			$elm$json$Json$Decode$andThen,
+			A2(
+				$elm$core$Basics$composeR,
+				$elm$core$String$toInt,
+				$tiziano88$elm_protobuf$Protobuf$fromMaybe('could not convert string to integer')),
+			$elm$json$Json$Decode$string)
+		]));
 var $elm$json$Json$Decode$maybe = function (decoder) {
 	return $elm$json$Json$Decode$oneOf(
 		_List_fromArray(
@@ -7579,7 +7564,21 @@ var $author$project$Proto$Api$posDecoder = $elm$json$Json$Decode$lazy(
 				0,
 				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$Pos)));
 	});
-var $author$project$Proto$Api$stepDecoder = $elm$json$Json$Decode$lazy(
+var $elm$json$Json$Decode$list = _Json_decodeList;
+var $tiziano88$elm_protobuf$Protobuf$repeated = F3(
+	function (name, decoder, d) {
+		return A2(
+			$tiziano88$elm_protobuf$Protobuf$field,
+			A2(
+				$tiziano88$elm_protobuf$Protobuf$withDefault,
+				_List_Nil,
+				A2(
+					$elm$json$Json$Decode$field,
+					name,
+					$elm$json$Json$Decode$list(decoder))),
+			d);
+	});
+var $author$project$Proto$Api$getKifuResponse_StepDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
 		return A3(
 			$tiziano88$elm_protobuf$Protobuf$repeated,
@@ -7633,7 +7632,7 @@ var $author$project$Proto$Api$stepDecoder = $elm$json$Json$Decode$lazy(
 													'seq',
 													$tiziano88$elm_protobuf$Protobuf$intDecoder,
 													0,
-													$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$Step))))))))))));
+													$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse_Step))))))))))));
 	});
 var $author$project$Proto$Api$Value = F2(
 	function (name, value) {
@@ -7663,7 +7662,7 @@ var $author$project$Proto$Api$getKifuResponseDecoder = $elm$json$Json$Decode$laz
 			A3(
 				$tiziano88$elm_protobuf$Protobuf$repeated,
 				'steps',
-				$author$project$Proto$Api$stepDecoder,
+				$author$project$Proto$Api$getKifuResponse_StepDecoder,
 				A4(
 					$tiziano88$elm_protobuf$Protobuf$required,
 					'createdTs',

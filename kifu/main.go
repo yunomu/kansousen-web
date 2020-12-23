@@ -186,11 +186,11 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 		return nil, err
 	}
 
-	var resSteps []*apipb.Step
+	var resSteps []*apipb.GetKifuResponse_Step
 	for _, step := range steps {
-		var resStep *apipb.Step
+		var resStep *apipb.GetKifuResponse_Step
 
-		resStep = &apipb.Step{
+		resStep = &apipb.GetKifuResponse_Step{
 			Seq:          step.GetSeq(),
 			Position:     step.GetPosition(),
 			Promoted:     step.GetMove().GetPromote(),
@@ -272,6 +272,15 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 }
 
 func (s *server) getSamePositions(ctx context.Context, userId string, req *apipb.GetSamePositionsRequest) (*apipb.KifuResponse, error) {
+	ps, err := s.table.GetSamePositions(ctx, []string{userId}, req.Position)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "GetSamePositions: %v", err)
+	}
+
+	for _, p := range ps {
+		var _ = p
+	}
+
 	return nil, nil
 }
 

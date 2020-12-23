@@ -896,54 +896,6 @@ valueEncoder v =
         ]
 
 
-type alias Step =
-    { seq : Int -- 1
-    , position : String -- 2
-    , src : Maybe Pos -- 3
-    , dst : Maybe Pos -- 4
-    , piece : Piece_Id -- 5
-    , finishedStatus : FinishedStatus_Id -- 6
-    , promoted : Bool -- 7
-    , captured : Piece_Id -- 8
-    , timestampSec : Int -- 9
-    , thinkingSec : Int -- 10
-    , notes : List String -- 11
-    }
-
-
-stepDecoder : JD.Decoder Step
-stepDecoder =
-    JD.lazy <| \_ -> decode Step
-        |> required "seq" intDecoder 0
-        |> required "position" JD.string ""
-        |> optional "src" posDecoder
-        |> optional "dst" posDecoder
-        |> required "piece" piece_IdDecoder piece_IdDefault
-        |> required "finishedStatus" finishedStatus_IdDecoder finishedStatus_IdDefault
-        |> required "promoted" JD.bool False
-        |> required "captured" piece_IdDecoder piece_IdDefault
-        |> required "timestampSec" intDecoder 0
-        |> required "thinkingSec" intDecoder 0
-        |> repeated "notes" JD.string
-
-
-stepEncoder : Step -> JE.Value
-stepEncoder v =
-    JE.object <| List.filterMap identity <|
-        [ (requiredFieldEncoder "seq" JE.int 0 v.seq)
-        , (requiredFieldEncoder "position" JE.string "" v.position)
-        , (optionalEncoder "src" posEncoder v.src)
-        , (optionalEncoder "dst" posEncoder v.dst)
-        , (requiredFieldEncoder "piece" piece_IdEncoder piece_IdDefault v.piece)
-        , (requiredFieldEncoder "finishedStatus" finishedStatus_IdEncoder finishedStatus_IdDefault v.finishedStatus)
-        , (requiredFieldEncoder "promoted" JE.bool False v.promoted)
-        , (requiredFieldEncoder "captured" piece_IdEncoder piece_IdDefault v.captured)
-        , (requiredFieldEncoder "timestampSec" JE.int 0 v.timestampSec)
-        , (requiredFieldEncoder "thinkingSec" JE.int 0 v.thinkingSec)
-        , (repeatedFieldEncoder "notes" JE.string v.notes)
-        ]
-
-
 type alias GetKifuResponse =
     { userId : String -- 1
     , kifuId : String -- 2
@@ -956,7 +908,7 @@ type alias GetKifuResponse =
     , otherFields : List Value -- 9
     , sfen : String -- 10
     , createdTs : Int -- 11
-    , steps : List Step -- 12
+    , steps : List GetKifuResponse_Step -- 12
     , note : String -- 13
     }
 
@@ -975,7 +927,7 @@ getKifuResponseDecoder =
         |> repeated "otherFields" valueDecoder
         |> required "sfen" JD.string ""
         |> required "createdTs" intDecoder 0
-        |> repeated "steps" stepDecoder
+        |> repeated "steps" getKifuResponse_StepDecoder
         |> required "note" JD.string ""
 
 
@@ -993,7 +945,7 @@ getKifuResponseEncoder v =
         , (repeatedFieldEncoder "otherFields" valueEncoder v.otherFields)
         , (requiredFieldEncoder "sfen" JE.string "" v.sfen)
         , (requiredFieldEncoder "createdTs" numericStringEncoder 0 v.createdTs)
-        , (repeatedFieldEncoder "steps" stepEncoder v.steps)
+        , (repeatedFieldEncoder "steps" getKifuResponse_StepEncoder v.steps)
         , (requiredFieldEncoder "note" JE.string "" v.note)
         ]
 
@@ -1019,17 +971,63 @@ getKifuResponse_PlayerEncoder v =
         ]
 
 
-type alias GetSamePositionsRequest =
-    { userId : String -- 1
+type alias GetKifuResponse_Step =
+    { seq : Int -- 1
     , position : String -- 2
-    , steps : Int -- 3
+    , src : Maybe Pos -- 3
+    , dst : Maybe Pos -- 4
+    , piece : Piece_Id -- 5
+    , finishedStatus : FinishedStatus_Id -- 6
+    , promoted : Bool -- 7
+    , captured : Piece_Id -- 8
+    , timestampSec : Int -- 9
+    , thinkingSec : Int -- 10
+    , notes : List String -- 11
+    }
+
+
+getKifuResponse_StepDecoder : JD.Decoder GetKifuResponse_Step
+getKifuResponse_StepDecoder =
+    JD.lazy <| \_ -> decode GetKifuResponse_Step
+        |> required "seq" intDecoder 0
+        |> required "position" JD.string ""
+        |> optional "src" posDecoder
+        |> optional "dst" posDecoder
+        |> required "piece" piece_IdDecoder piece_IdDefault
+        |> required "finishedStatus" finishedStatus_IdDecoder finishedStatus_IdDefault
+        |> required "promoted" JD.bool False
+        |> required "captured" piece_IdDecoder piece_IdDefault
+        |> required "timestampSec" intDecoder 0
+        |> required "thinkingSec" intDecoder 0
+        |> repeated "notes" JD.string
+
+
+getKifuResponse_StepEncoder : GetKifuResponse_Step -> JE.Value
+getKifuResponse_StepEncoder v =
+    JE.object <| List.filterMap identity <|
+        [ (requiredFieldEncoder "seq" JE.int 0 v.seq)
+        , (requiredFieldEncoder "position" JE.string "" v.position)
+        , (optionalEncoder "src" posEncoder v.src)
+        , (optionalEncoder "dst" posEncoder v.dst)
+        , (requiredFieldEncoder "piece" piece_IdEncoder piece_IdDefault v.piece)
+        , (requiredFieldEncoder "finishedStatus" finishedStatus_IdEncoder finishedStatus_IdDefault v.finishedStatus)
+        , (requiredFieldEncoder "promoted" JE.bool False v.promoted)
+        , (requiredFieldEncoder "captured" piece_IdEncoder piece_IdDefault v.captured)
+        , (requiredFieldEncoder "timestampSec" JE.int 0 v.timestampSec)
+        , (requiredFieldEncoder "thinkingSec" JE.int 0 v.thinkingSec)
+        , (repeatedFieldEncoder "notes" JE.string v.notes)
+        ]
+
+
+type alias GetSamePositionsRequest =
+    { position : String -- 1
+    , steps : Int -- 2
     }
 
 
 getSamePositionsRequestDecoder : JD.Decoder GetSamePositionsRequest
 getSamePositionsRequestDecoder =
     JD.lazy <| \_ -> decode GetSamePositionsRequest
-        |> required "userId" JD.string ""
         |> required "position" JD.string ""
         |> required "steps" intDecoder 0
 
@@ -1037,8 +1035,7 @@ getSamePositionsRequestDecoder =
 getSamePositionsRequestEncoder : GetSamePositionsRequest -> JE.Value
 getSamePositionsRequestEncoder v =
     JE.object <| List.filterMap identity <|
-        [ (requiredFieldEncoder "userId" JE.string "" v.userId)
-        , (requiredFieldEncoder "position" JE.string "" v.position)
+        [ (requiredFieldEncoder "position" JE.string "" v.position)
         , (requiredFieldEncoder "steps" JE.int 0 v.steps)
         ]
 
@@ -1067,9 +1064,40 @@ getSamePositionsResponseEncoder v =
         ]
 
 
+type alias GetSamePositionsResponse_Step =
+    { seq : Int -- 1
+    , src : Maybe Pos -- 2
+    , dst : Maybe Pos -- 3
+    , piece : Piece_Id -- 4
+    , promoted : Bool -- 5
+    }
+
+
+getSamePositionsResponse_StepDecoder : JD.Decoder GetSamePositionsResponse_Step
+getSamePositionsResponse_StepDecoder =
+    JD.lazy <| \_ -> decode GetSamePositionsResponse_Step
+        |> required "seq" intDecoder 0
+        |> optional "src" posDecoder
+        |> optional "dst" posDecoder
+        |> required "piece" piece_IdDecoder piece_IdDefault
+        |> required "promoted" JD.bool False
+
+
+getSamePositionsResponse_StepEncoder : GetSamePositionsResponse_Step -> JE.Value
+getSamePositionsResponse_StepEncoder v =
+    JE.object <| List.filterMap identity <|
+        [ (requiredFieldEncoder "seq" JE.int 0 v.seq)
+        , (optionalEncoder "src" posEncoder v.src)
+        , (optionalEncoder "dst" posEncoder v.dst)
+        , (requiredFieldEncoder "piece" piece_IdEncoder piece_IdDefault v.piece)
+        , (requiredFieldEncoder "promoted" JE.bool False v.promoted)
+        ]
+
+
 type alias GetSamePositionsResponse_Kifu =
     { kifuId : String -- 1
     , seq : Int -- 2
+    , steps : List GetSamePositionsResponse_Step -- 3
     }
 
 
@@ -1078,6 +1106,7 @@ getSamePositionsResponse_KifuDecoder =
     JD.lazy <| \_ -> decode GetSamePositionsResponse_Kifu
         |> required "kifuId" JD.string ""
         |> required "seq" intDecoder 0
+        |> repeated "steps" getSamePositionsResponse_StepDecoder
 
 
 getSamePositionsResponse_KifuEncoder : GetSamePositionsResponse_Kifu -> JE.Value
@@ -1085,6 +1114,7 @@ getSamePositionsResponse_KifuEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
         , (requiredFieldEncoder "seq" JE.int 0 v.seq)
+        , (repeatedFieldEncoder "steps" getSamePositionsResponse_StepEncoder v.steps)
         ]
 
 
