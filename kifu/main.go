@@ -271,17 +271,68 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 	}, nil
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
+
 func (s *server) getSamePositions(ctx context.Context, userId string, req *apipb.GetSamePositionsRequest) (*apipb.KifuResponse, error) {
 	ps, err := s.table.GetSamePositions(ctx, []string{userId}, req.Position)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "GetSamePositions: %v", err)
 	}
 
-	for _, p := range ps {
-		var _ = p
+	maxSteps := int(req.Steps)
+	if maxSteps == 0 {
+		maxSteps = 5
 	}
 
-	return nil, nil
+	var kifus []*apipb.GetSamePositionsResponse_Kifu
+	for _, p := range ps {
+		var steps []*apipb.GetSamePositionsResponse_Step
+		for i, m := range p.Moves[:min(maxSteps, len(p.Moves))] {
+			var src, dst *apipb.Pos
+			if m.Dst != nil {
+				dst = &apipb.Pos{
+					X: m.Dst.X,
+					Y: m.Dst.Y,
+				}
+			}
+			if m.Src != nil {
+				src = &apipb.Pos{
+					X: m.Src.X,
+					Y: m.Src.Y,
+				}
+			}
+			steps = append(steps, &apipb.GetSamePositionsResponse_Step{
+				Seq:      p.Seq + int32(i) + 1,
+				Dst:      dst,
+				Src:      src,
+				Piece:    apipb.Piece_Id(m.GetPiece()),
+				Promoted: m.Promote,
+			})
+		}
+
+		kifus = append(kifus, &apipb.GetSamePositionsResponse_Kifu{
+			KifuId: p.KifuId,
+			Seq:    p.Seq,
+			Steps:  steps,
+		})
+	}
+
+	return &apipb.KifuResponse{
+		KifuResponseSelect: &apipb.KifuResponse_ResponseGetSamePositions{
+			ResponseGetSamePositions: &apipb.GetSamePositionsResponse{
+				UserId:   userId,
+				Position: req.Position,
+
+				Kifus: kifus,
+			},
+		},
+	}, nil
 }
 
 func (s *server) Serve(ctx context.Context, m proto.Message) (proto.Message, error) {
