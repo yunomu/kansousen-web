@@ -7721,23 +7721,58 @@ var $author$project$Proto$Api$GetSamePositionsResponse = F3(
 	function (userId, position, kifus) {
 		return {kifus: kifus, position: position, userId: userId};
 	});
-var $author$project$Proto$Api$GetSamePositionsResponse_Kifu = F2(
-	function (kifuId, seq) {
-		return {kifuId: kifuId, seq: seq};
+var $author$project$Proto$Api$GetSamePositionsResponse_Kifu = F3(
+	function (kifuId, seq, steps) {
+		return {kifuId: kifuId, seq: seq, steps: steps};
 	});
-var $author$project$Proto$Api$getSamePositionsResponse_KifuDecoder = $elm$json$Json$Decode$lazy(
+var $author$project$Proto$Api$GetSamePositionsResponse_Step = F5(
+	function (seq, src, dst, piece, promoted) {
+		return {dst: dst, piece: piece, promoted: promoted, seq: seq, src: src};
+	});
+var $author$project$Proto$Api$getSamePositionsResponse_StepDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
 		return A4(
 			$tiziano88$elm_protobuf$Protobuf$required,
-			'seq',
-			$tiziano88$elm_protobuf$Protobuf$intDecoder,
-			0,
+			'promoted',
+			$elm$json$Json$Decode$bool,
+			false,
 			A4(
 				$tiziano88$elm_protobuf$Protobuf$required,
-				'kifuId',
-				$elm$json$Json$Decode$string,
-				'',
-				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Kifu)));
+				'piece',
+				$author$project$Proto$Api$piece_IdDecoder,
+				$author$project$Proto$Api$piece_IdDefault,
+				A3(
+					$tiziano88$elm_protobuf$Protobuf$optional,
+					'dst',
+					$author$project$Proto$Api$posDecoder,
+					A3(
+						$tiziano88$elm_protobuf$Protobuf$optional,
+						'src',
+						$author$project$Proto$Api$posDecoder,
+						A4(
+							$tiziano88$elm_protobuf$Protobuf$required,
+							'seq',
+							$tiziano88$elm_protobuf$Protobuf$intDecoder,
+							0,
+							$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Step))))));
+	});
+var $author$project$Proto$Api$getSamePositionsResponse_KifuDecoder = $elm$json$Json$Decode$lazy(
+	function (_v0) {
+		return A3(
+			$tiziano88$elm_protobuf$Protobuf$repeated,
+			'steps',
+			$author$project$Proto$Api$getSamePositionsResponse_StepDecoder,
+			A4(
+				$tiziano88$elm_protobuf$Protobuf$required,
+				'seq',
+				$tiziano88$elm_protobuf$Protobuf$intDecoder,
+				0,
+				A4(
+					$tiziano88$elm_protobuf$Protobuf$required,
+					'kifuId',
+					$elm$json$Json$Decode$string,
+					'',
+					$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Kifu))));
 	});
 var $author$project$Proto$Api$getSamePositionsResponseDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
@@ -8588,6 +8623,12 @@ var $author$project$Main$apiResponse = F3(
 		}
 	});
 var $elm$browser$Browser$Navigation$load = _Browser_load;
+var $elm$json$Json$Encode$null = _Json_encodeNull;
+var $author$project$Main$removeTokens = _Platform_outgoingPort(
+	'removeTokens',
+	function ($) {
+		return $elm$json$Json$Encode$null;
+	});
 var $elm$core$Basics$not = _Basics_not;
 var $author$project$Page$ConfirmForgotPassword$update = F2(
 	function (msg, model) {
@@ -9005,6 +9046,10 @@ var $author$project$Main$update = F2(
 							windowSize: _Utils_Tuple2(w, h)
 						}),
 					$elm$core$Platform$Cmd$none);
+			case 'Logout':
+				return _Utils_Tuple2(
+					model,
+					$author$project$Main$removeTokens(_Utils_Tuple0));
 			default:
 				var _v10 = A2(
 					$elm$core$Debug$log,
@@ -17121,6 +17166,7 @@ var $author$project$Main$headerAttrs = _List_fromArray(
 	[
 		$mdgriffith$elm_ui$Element$spacing(10)
 	]);
+var $author$project$Main$Logout = {$: 'Logout'};
 var $author$project$Main$userInfo = function (model) {
 	return _Utils_eq(model.authToken, $elm$core$Maybe$Nothing) ? A2(
 		$mdgriffith$elm_ui$Element$row,
@@ -17155,7 +17201,13 @@ var $author$project$Main$userInfo = function (model) {
 					url: $author$project$Route$path($author$project$Route$MyPage)
 				}),
 				$author$project$Style$border,
-				$mdgriffith$elm_ui$Element$text('Logout')
+				A2(
+				$mdgriffith$elm_ui$Element$Input$button,
+				_List_Nil,
+				{
+					label: $mdgriffith$elm_ui$Element$text('Logout'),
+					onPress: $elm$core$Maybe$Just($author$project$Main$Logout)
+				})
 			]));
 };
 var $author$project$Main$header = function (model) {

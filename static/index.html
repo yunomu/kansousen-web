@@ -42,6 +42,10 @@ dl.kifuinfo dd {
         localStorage.setItem('token',req[0]);
         localStorage.setItem('refresh_token',req[1]);
     });
+    app.ports.removeTokens.subscribe((req)=>{
+        localStorage.removeItem('token');
+        localStorage.removeItem('refresh_token');
+    });
     app.ports.updateBoard.subscribe((req)=>{
         const ctx = shogiboard.draw(req[0], img, req[1]);
     });

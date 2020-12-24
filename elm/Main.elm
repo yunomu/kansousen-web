@@ -7,6 +7,7 @@ import Browser.Navigation as Nav
 import Debug
 import Element exposing (Attribute, Element)
 import Element.Events as Events
+import Element.Input as Input
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Http
@@ -29,6 +30,9 @@ port storeToken : String -> Cmd msg
 
 
 port storeTokens : ( String, String ) -> Cmd msg
+
+
+port removeTokens : () -> Cmd msg
 
 
 port updateBoard : ( String, String ) -> Cmd msg
@@ -56,6 +60,7 @@ type Msg
     | UploadMsg Upload.Msg
     | KifuMsg Kifu.Msg
     | HelloRequest
+    | Logout
     | NOP
 
 
@@ -557,6 +562,9 @@ update msg model =
         OnResize w h ->
             ( { model | windowSize = ( w, h ) }, Cmd.none )
 
+        Logout ->
+            ( model, removeTokens () )
+
         _ ->
             let
                 _ =
@@ -669,7 +677,7 @@ headerAttrs =
     ]
 
 
-userInfo : Model -> Element msg
+userInfo : Model -> Element Msg
 userInfo model =
     if model.authToken == Nothing then
         Element.row headerAttrs
@@ -682,11 +690,11 @@ userInfo model =
         Element.row headerAttrs
             [ Element.link [] { url = Route.path Route.MyPage, label = Element.text "My page" }
             , Style.border
-            , Element.text "Logout"
+            , Input.button [] { onPress = Just Logout, label = Element.text "Logout" }
             ]
 
 
-header : Model -> Element msg
+header : Model -> Element Msg
 header model =
     Element.row headerAttrs
         [ Element.link [] { url = Route.path Route.Index, label = Element.text "Index" }
