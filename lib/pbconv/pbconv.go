@@ -172,13 +172,17 @@ func StepsToPositions(steps []*document.Step) []*document.Position {
 		if step.Seq == 0 {
 			continue
 		}
+		var ms []*document.Move
+		if i < len(moves) {
+			ms = moves[i:]
+		}
 		positions = append(positions, &document.Position{
 			UserId:   step.UserId,
 			Position: step.Position,
 			KifuId:   step.KifuId,
 			Seq:      step.Seq,
 
-			Moves: moves[i-1:],
+			Moves: ms,
 		})
 	}
 
