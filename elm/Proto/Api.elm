@@ -1041,16 +1041,14 @@ getSamePositionsRequestEncoder v =
 
 
 type alias GetSamePositionsResponse =
-    { userId : String -- 1
-    , position : String -- 2
-    , kifus : List GetSamePositionsResponse_Kifu -- 3
+    { position : String -- 1
+    , kifus : List GetSamePositionsResponse_Kifu -- 2
     }
 
 
 getSamePositionsResponseDecoder : JD.Decoder GetSamePositionsResponse
 getSamePositionsResponseDecoder =
     JD.lazy <| \_ -> decode GetSamePositionsResponse
-        |> required "userId" JD.string ""
         |> required "position" JD.string ""
         |> repeated "kifus" getSamePositionsResponse_KifuDecoder
 
@@ -1058,8 +1056,7 @@ getSamePositionsResponseDecoder =
 getSamePositionsResponseEncoder : GetSamePositionsResponse -> JE.Value
 getSamePositionsResponseEncoder v =
     JE.object <| List.filterMap identity <|
-        [ (requiredFieldEncoder "userId" JE.string "" v.userId)
-        , (requiredFieldEncoder "position" JE.string "" v.position)
+        [ (requiredFieldEncoder "position" JE.string "" v.position)
         , (repeatedFieldEncoder "kifus" getSamePositionsResponse_KifuEncoder v.kifus)
         ]
 
@@ -1095,15 +1092,17 @@ getSamePositionsResponse_StepEncoder v =
 
 
 type alias GetSamePositionsResponse_Kifu =
-    { kifuId : String -- 1
-    , seq : Int -- 2
-    , steps : List GetSamePositionsResponse_Step -- 3
+    { userId : String -- 1
+    , kifuId : String -- 2
+    , seq : Int -- 3
+    , steps : List GetSamePositionsResponse_Step -- 4
     }
 
 
 getSamePositionsResponse_KifuDecoder : JD.Decoder GetSamePositionsResponse_Kifu
 getSamePositionsResponse_KifuDecoder =
     JD.lazy <| \_ -> decode GetSamePositionsResponse_Kifu
+        |> required "userId" JD.string ""
         |> required "kifuId" JD.string ""
         |> required "seq" intDecoder 0
         |> repeated "steps" getSamePositionsResponse_StepDecoder
@@ -1112,7 +1111,8 @@ getSamePositionsResponse_KifuDecoder =
 getSamePositionsResponse_KifuEncoder : GetSamePositionsResponse_Kifu -> JE.Value
 getSamePositionsResponse_KifuEncoder v =
     JE.object <| List.filterMap identity <|
-        [ (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
+        [ (requiredFieldEncoder "userId" JE.string "" v.userId)
+        , (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
         , (requiredFieldEncoder "seq" JE.int 0 v.seq)
         , (repeatedFieldEncoder "steps" getSamePositionsResponse_StepEncoder v.steps)
         ]

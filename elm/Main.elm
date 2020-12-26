@@ -222,11 +222,24 @@ elem list n =
 
 updateKifuPage : Model -> Kifu.Model -> String -> Int -> ( Model, Cmd Msg )
 updateKifuPage model kifuModel kifuId seq =
+    let
+        authToken =
+            Maybe.map (\at -> at.token) model.authToken
+    in
     if seq >= 0 then
         case elem kifuModel.kifu.steps seq of
             Just step ->
                 ( { model | kifuModel = { kifuModel | curSeq = seq } }
-                , updateBoard ( "shogi", step.position )
+                , Cmd.batch
+                    [ updateBoard ( "shogi", step.position )
+                    , Api.request ApiResponse authToken <|
+                        Api.KifuRequest <|
+                            PB.KifuRequest <|
+                                PB.RequestGetSamePositions
+                                    { position = step.position
+                                    , steps = 10
+                                    }
+                    ]
                 )
 
             Nothing ->
@@ -350,16 +363,26 @@ apiResponse model req res =
                                 kifu =
                                     { r | steps = List.sortBy (\s -> s.seq) r.steps }
 
-                                model_ =
-                                    { model
-                                        | kifuModel =
-                                            { kifu = kifu
-                                            , curSeq = curSeq
-                                            , len = List.length kifu.steps
-                                            }
+                                kifuModel =
+                                    { kifu = kifu
+                                    , curSeq = curSeq
+                                    , len = List.length kifu.steps
+                                    , samePos = []
                                     }
+
+                                model_ =
+                                    { model | kifuModel = kifuModel }
                             in
-                            updateKifuPage model_ model_.kifuModel r.kifuId curSeq
+                            updateKifuPage model_ kifuModel r.kifuId curSeq
+
+                        PB.ResponseGetSamePositions r ->
+                            let
+                                kifuModel =
+                                    model.kifuModel
+                            in
+                            ( { model | kifuModel = { kifuModel | samePos = r.kifus } }
+                            , Cmd.none
+                            )
 
                         _ ->
                             ( model, Cmd.none )

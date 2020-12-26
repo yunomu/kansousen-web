@@ -227,8 +227,7 @@ message GetSamePositionsRequest {
 }
 
 message GetSamePositionsResponse {
-  string user_id = 1;
-  string position = 2;
+  string position = 1;
 
   message Step {
     int32 seq = 1;
@@ -238,12 +237,13 @@ message GetSamePositionsResponse {
     bool promoted = 5;
   }
   message Kifu {
-    string kifu_id = 1;
-    int32 seq = 2;
+    string user_id = 1;
+    string kifu_id = 2;
+    int32 seq = 3;
 
-    repeated Step steps = 3;
+    repeated Step steps = 4;
   }
-  repeated Kifu kifus = 3;
+  repeated Kifu kifus = 2;
 }
 
 message KifuRequest {

@@ -12,6 +12,7 @@ type alias Model =
     { kifu : PB.GetKifuResponse
     , curSeq : Int
     , len : Int
+    , samePos : List PB.GetSamePositionsResponse_Kifu
     }
 
 
@@ -34,6 +35,7 @@ init =
         }
     , curSeq = 0
     , len = 0
+    , samePos = []
     }
 
 

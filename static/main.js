@@ -6268,7 +6268,8 @@ var $author$project$Page$ForgotPassword$init = {username: ''};
 var $author$project$Page$Kifu$init = {
 	curSeq: 0,
 	kifu: {createdTs: 0, endTs: 0, firstPlayers: _List_Nil, gameName: '', handicap: '', kifuId: '', note: '', otherFields: _List_Nil, secondPlayers: _List_Nil, sfen: '', startTs: 0, steps: _List_Nil, userId: ''},
-	len: 0
+	len: 0,
+	samePos: _List_Nil
 };
 var $author$project$Page$ResendConfirm$init = {username: ''};
 var $author$project$Page$SignIn$init = {
@@ -7717,13 +7718,13 @@ var $author$project$Proto$Api$getKifuResponseDecoder = $elm$json$Json$Decode$laz
 															'',
 															$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetKifuResponse))))))))))))));
 	});
-var $author$project$Proto$Api$GetSamePositionsResponse = F3(
-	function (userId, position, kifus) {
-		return {kifus: kifus, position: position, userId: userId};
+var $author$project$Proto$Api$GetSamePositionsResponse = F2(
+	function (position, kifus) {
+		return {kifus: kifus, position: position};
 	});
-var $author$project$Proto$Api$GetSamePositionsResponse_Kifu = F3(
-	function (kifuId, seq, steps) {
-		return {kifuId: kifuId, seq: seq, steps: steps};
+var $author$project$Proto$Api$GetSamePositionsResponse_Kifu = F4(
+	function (userId, kifuId, seq, steps) {
+		return {kifuId: kifuId, seq: seq, steps: steps, userId: userId};
 	});
 var $author$project$Proto$Api$GetSamePositionsResponse_Step = F5(
 	function (seq, src, dst, piece, promoted) {
@@ -7772,7 +7773,12 @@ var $author$project$Proto$Api$getSamePositionsResponse_KifuDecoder = $elm$json$J
 					'kifuId',
 					$elm$json$Json$Decode$string,
 					'',
-					$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Kifu))));
+					A4(
+						$tiziano88$elm_protobuf$Protobuf$required,
+						'userId',
+						$elm$json$Json$Decode$string,
+						'',
+						$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Kifu)))));
 	});
 var $author$project$Proto$Api$getSamePositionsResponseDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
@@ -7785,12 +7791,7 @@ var $author$project$Proto$Api$getSamePositionsResponseDecoder = $elm$json$Json$D
 				'position',
 				$elm$json$Json$Decode$string,
 				'',
-				A4(
-					$tiziano88$elm_protobuf$Protobuf$required,
-					'userId',
-					$elm$json$Json$Decode$string,
-					'',
-					$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse))));
+				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse)));
 	});
 var $author$project$Proto$Api$PostKifuResponse = F2(
 	function (kifuId, duplicated) {
@@ -8354,6 +8355,9 @@ var $author$project$Main$signInAndReturn = F4(
 		}
 	});
 var $elm$core$List$sortBy = _List_sortBy;
+var $author$project$Proto$Api$RequestGetSamePositions = function (a) {
+	return {$: 'RequestGetSamePositions', a: a};
+};
 var $elm$core$List$drop = F2(
 	function (n, list) {
 		drop:
@@ -8406,6 +8410,12 @@ var $author$project$Main$updateBoard = _Platform_outgoingPort(
 	});
 var $author$project$Main$updateKifuPage = F4(
 	function (model, kifuModel, kifuId, seq) {
+		var authToken = A2(
+			$elm$core$Maybe$map,
+			function (at) {
+				return at.token;
+			},
+			model.authToken);
 		if (seq >= 0) {
 			var _v0 = A2($author$project$Main$elem, kifuModel.kifu.steps, seq);
 			if (_v0.$ === 'Just') {
@@ -8418,8 +8428,20 @@ var $author$project$Main$updateKifuPage = F4(
 								kifuModel,
 								{curSeq: seq})
 						}),
-					$author$project$Main$updateBoard(
-						_Utils_Tuple2('shogi', step.position)));
+					$elm$core$Platform$Cmd$batch(
+						_List_fromArray(
+							[
+								$author$project$Main$updateBoard(
+								_Utils_Tuple2('shogi', step.position)),
+								A3(
+								$author$project$Api$request,
+								$author$project$Main$ApiResponse,
+								authToken,
+								$author$project$Api$KifuRequest(
+									$author$project$Proto$Api$KifuRequest(
+										$author$project$Proto$Api$RequestGetSamePositions(
+											{position: step.position, steps: 10}))))
+							])));
 			} else {
 				return _Utils_Tuple2(
 					model,
@@ -8595,16 +8617,28 @@ var $author$project$Main$apiResponse = F3(
 										return 0;
 									}
 								}();
+								var kifuModel = {
+									curSeq: curSeq,
+									kifu: kifu,
+									len: $elm$core$List$length(kifu.steps),
+									samePos: _List_Nil
+								};
 								var model_ = _Utils_update(
 									model,
-									{
-										kifuModel: {
-											curSeq: curSeq,
-											kifu: kifu,
-											len: $elm$core$List$length(kifu.steps)
-										}
-									});
-								return A4($author$project$Main$updateKifuPage, model_, model_.kifuModel, r.kifuId, curSeq);
+									{kifuModel: kifuModel});
+								return A4($author$project$Main$updateKifuPage, model_, kifuModel, r.kifuId, curSeq);
+							case 'ResponseGetSamePositions':
+								var r = _v4.a;
+								var kifuModel = model.kifuModel;
+								return _Utils_Tuple2(
+									_Utils_update(
+										model,
+										{
+											kifuModel: _Utils_update(
+												kifuModel,
+												{samePos: r.kifus})
+										}),
+									$elm$core$Platform$Cmd$none);
 							default:
 								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 						}
