@@ -220,41 +220,22 @@ elem list n =
     List.head <| List.drop n list
 
 
-updateKifuPage : Model -> Kifu.Model -> String -> Int -> ( Model, Cmd Msg )
-updateKifuPage model kifuModel kifuId seq =
+updateKifuPage : Maybe String -> Kifu.Model -> Cmd Msg
+updateKifuPage authToken kifuModel =
     let
-        authToken =
-            Maybe.map (\at -> at.token) model.authToken
+        position =
+            kifuModel.curStep.position
     in
-    if seq >= 0 then
-        case elem kifuModel.kifu.steps seq of
-            Just step ->
-                ( { model | kifuModel = { kifuModel | curSeq = seq } }
-                , Cmd.batch
-                    [ updateBoard ( "shogi", step.position )
-                    , Api.request ApiResponse authToken <|
-                        Api.KifuRequest <|
-                            PB.KifuRequest <|
-                                PB.RequestGetSamePositions
-                                    { position = step.position
-                                    , steps = 10
-                                    }
-                    ]
-                )
-
-            Nothing ->
-                ( model
-                , Nav.pushUrl
-                    model.key
-                    (Route.path <| Route.Kifu kifuId kifuModel.curSeq)
-                )
-
-    else
-        ( model
-        , Nav.pushUrl
-            model.key
-            (Route.path <| Route.Kifu kifuId 0)
-        )
+    Cmd.batch
+        [ updateBoard ( "shogi", position )
+        , Api.request ApiResponse authToken <|
+            Api.KifuRequest <|
+                PB.KifuRequest <|
+                    PB.RequestGetSamePositions
+                        { position = position
+                        , steps = 10
+                        }
+        ]
 
 
 apiResponse : Model -> Api.Request -> Api.Response -> ( Model, Cmd Msg )
@@ -365,15 +346,22 @@ apiResponse model req res =
 
                                 kifuModel =
                                     { kifu = kifu
-                                    , curSeq = curSeq
+                                    , curStep =
+                                        Maybe.withDefault Kifu.initStep <|
+                                            elem kifu.steps curSeq
                                     , len = List.length kifu.steps
                                     , samePos = []
                                     }
 
                                 model_ =
                                     { model | kifuModel = kifuModel }
+
+                                authToken =
+                                    Maybe.map (\at -> at.token) model.authToken
                             in
-                            updateKifuPage model_ kifuModel r.kifuId curSeq
+                            ( model_
+                            , updateKifuPage authToken kifuModel
+                            )
 
                         PB.ResponseGetSamePositions r ->
                             let
@@ -457,7 +445,9 @@ update msg model =
                             model_.kifuModel
                     in
                     if km.kifu.kifuId == kifuId then
-                        updateKifuPage model_ model_.kifuModel kifuId seq
+                        ( model_
+                        , updateKifuPage authToken model_.kifuModel
+                        )
 
                     else
                         ( model_

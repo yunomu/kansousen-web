@@ -6265,8 +6265,11 @@ var $author$project$Page$ConfirmSignUp$init = {
 	signUpResponse: $elm$core$Maybe$Nothing
 };
 var $author$project$Page$ForgotPassword$init = {username: ''};
+var $author$project$Proto$Api$FinishedStatus_NotFinished = {$: 'FinishedStatus_NotFinished'};
+var $author$project$Proto$Api$Piece_Null = {$: 'Piece_Null'};
+var $author$project$Page$Kifu$initStep = {captured: $author$project$Proto$Api$Piece_Null, dst: $elm$core$Maybe$Nothing, finishedStatus: $author$project$Proto$Api$FinishedStatus_NotFinished, notes: _List_Nil, piece: $author$project$Proto$Api$Piece_Null, position: '', promoted: false, seq: 0, src: $elm$core$Maybe$Nothing, thinkingSec: 0, timestampSec: 0};
 var $author$project$Page$Kifu$init = {
-	curSeq: 0,
+	curStep: $author$project$Page$Kifu$initStep,
 	kifu: {createdTs: 0, endTs: 0, firstPlayers: _List_Nil, gameName: '', handicap: '', kifuId: '', note: '', otherFields: _List_Nil, secondPlayers: _List_Nil, sfen: '', startTs: 0, steps: _List_Nil, userId: ''},
 	len: 0,
 	samePos: _List_Nil
@@ -7418,7 +7421,6 @@ var $author$project$Proto$Api$FinishedStatus_Checkmate = {$: 'FinishedStatus_Che
 var $author$project$Proto$Api$FinishedStatus_Draw = {$: 'FinishedStatus_Draw'};
 var $author$project$Proto$Api$FinishedStatus_FoulLoss = {$: 'FinishedStatus_FoulLoss'};
 var $author$project$Proto$Api$FinishedStatus_FoulWin = {$: 'FinishedStatus_FoulWin'};
-var $author$project$Proto$Api$FinishedStatus_NotFinished = {$: 'FinishedStatus_NotFinished'};
 var $author$project$Proto$Api$FinishedStatus_NyugyokuWin = {$: 'FinishedStatus_NyugyokuWin'};
 var $author$project$Proto$Api$FinishedStatus_OverTimeLimit = {$: 'FinishedStatus_OverTimeLimit'};
 var $author$project$Proto$Api$FinishedStatus_RepetitionDraw = {$: 'FinishedStatus_RepetitionDraw'};
@@ -7503,7 +7505,6 @@ var $author$project$Proto$Api$Piece_Kyou = {$: 'Piece_Kyou'};
 var $author$project$Proto$Api$Piece_NariGin = {$: 'Piece_NariGin'};
 var $author$project$Proto$Api$Piece_NariKei = {$: 'Piece_NariKei'};
 var $author$project$Proto$Api$Piece_NariKyou = {$: 'Piece_NariKyou'};
-var $author$project$Proto$Api$Piece_Null = {$: 'Piece_Null'};
 var $author$project$Proto$Api$Piece_Ryu = {$: 'Piece_Ryu'};
 var $author$project$Proto$Api$Piece_To = {$: 'Piece_To'};
 var $author$project$Proto$Api$Piece_Uma = {$: 'Piece_Uma'};
@@ -8230,6 +8231,41 @@ var $author$project$Main$authorizedResponse = F4(
 			}
 		}
 	});
+var $elm$core$List$drop = F2(
+	function (n, list) {
+		drop:
+		while (true) {
+			if (n <= 0) {
+				return list;
+			} else {
+				if (!list.b) {
+					return list;
+				} else {
+					var x = list.a;
+					var xs = list.b;
+					var $temp$n = n - 1,
+						$temp$list = xs;
+					n = $temp$n;
+					list = $temp$list;
+					continue drop;
+				}
+			}
+		}
+	});
+var $elm$core$List$head = function (list) {
+	if (list.b) {
+		var x = list.a;
+		var xs = list.b;
+		return $elm$core$Maybe$Just(x);
+	} else {
+		return $elm$core$Maybe$Nothing;
+	}
+};
+var $author$project$Main$elem = F2(
+	function (list, n) {
+		return $elm$core$List$head(
+			A2($elm$core$List$drop, n, list));
+	});
 var $elm$core$String$concat = function (strings) {
 	return A2($elm$core$String$join, '', strings);
 };
@@ -8358,42 +8394,6 @@ var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Proto$Api$RequestGetSamePositions = function (a) {
 	return {$: 'RequestGetSamePositions', a: a};
 };
-var $elm$core$List$drop = F2(
-	function (n, list) {
-		drop:
-		while (true) {
-			if (n <= 0) {
-				return list;
-			} else {
-				if (!list.b) {
-					return list;
-				} else {
-					var x = list.a;
-					var xs = list.b;
-					var $temp$n = n - 1,
-						$temp$list = xs;
-					n = $temp$n;
-					list = $temp$list;
-					continue drop;
-				}
-			}
-		}
-	});
-var $elm$core$List$head = function (list) {
-	if (list.b) {
-		var x = list.a;
-		var xs = list.b;
-		return $elm$core$Maybe$Just(x);
-	} else {
-		return $elm$core$Maybe$Nothing;
-	}
-};
-var $author$project$Main$elem = F2(
-	function (list, n) {
-		return $elm$core$List$head(
-			A2($elm$core$List$drop, n, list));
-	});
-var $elm$core$Basics$ge = _Utils_ge;
 var $author$project$Main$updateBoard = _Platform_outgoingPort(
 	'updateBoard',
 	function ($) {
@@ -8408,58 +8408,23 @@ var $author$project$Main$updateBoard = _Platform_outgoingPort(
 					$elm$json$Json$Encode$string(b)
 				]));
 	});
-var $author$project$Main$updateKifuPage = F4(
-	function (model, kifuModel, kifuId, seq) {
-		var authToken = A2(
-			$elm$core$Maybe$map,
-			function (at) {
-				return at.token;
-			},
-			model.authToken);
-		if (seq >= 0) {
-			var _v0 = A2($author$project$Main$elem, kifuModel.kifu.steps, seq);
-			if (_v0.$ === 'Just') {
-				var step = _v0.a;
-				return _Utils_Tuple2(
-					_Utils_update(
-						model,
-						{
-							kifuModel: _Utils_update(
-								kifuModel,
-								{curSeq: seq})
-						}),
-					$elm$core$Platform$Cmd$batch(
-						_List_fromArray(
-							[
-								$author$project$Main$updateBoard(
-								_Utils_Tuple2('shogi', step.position)),
-								A3(
-								$author$project$Api$request,
-								$author$project$Main$ApiResponse,
-								authToken,
-								$author$project$Api$KifuRequest(
-									$author$project$Proto$Api$KifuRequest(
-										$author$project$Proto$Api$RequestGetSamePositions(
-											{position: step.position, steps: 10}))))
-							])));
-			} else {
-				return _Utils_Tuple2(
-					model,
-					A2(
-						$elm$browser$Browser$Navigation$pushUrl,
-						model.key,
-						$author$project$Route$path(
-							A2($author$project$Route$Kifu, kifuId, kifuModel.curSeq))));
-			}
-		} else {
-			return _Utils_Tuple2(
-				model,
-				A2(
-					$elm$browser$Browser$Navigation$pushUrl,
-					model.key,
-					$author$project$Route$path(
-						A2($author$project$Route$Kifu, kifuId, 0))));
-		}
+var $author$project$Main$updateKifuPage = F2(
+	function (authToken, kifuModel) {
+		var position = kifuModel.curStep.position;
+		return $elm$core$Platform$Cmd$batch(
+			_List_fromArray(
+				[
+					$author$project$Main$updateBoard(
+					_Utils_Tuple2('shogi', position)),
+					A3(
+					$author$project$Api$request,
+					$author$project$Main$ApiResponse,
+					authToken,
+					$author$project$Api$KifuRequest(
+						$author$project$Proto$Api$KifuRequest(
+							$author$project$Proto$Api$RequestGetSamePositions(
+								{position: position, steps: 10}))))
+				]));
 	});
 var $author$project$Main$apiResponse = F3(
 	function (model, req, res) {
@@ -8618,7 +8583,10 @@ var $author$project$Main$apiResponse = F3(
 									}
 								}();
 								var kifuModel = {
-									curSeq: curSeq,
+									curStep: A2(
+										$elm$core$Maybe$withDefault,
+										$author$project$Page$Kifu$initStep,
+										A2($author$project$Main$elem, kifu.steps, curSeq)),
 									kifu: kifu,
 									len: $elm$core$List$length(kifu.steps),
 									samePos: _List_Nil
@@ -8626,7 +8594,15 @@ var $author$project$Main$apiResponse = F3(
 								var model_ = _Utils_update(
 									model,
 									{kifuModel: kifuModel});
-								return A4($author$project$Main$updateKifuPage, model_, kifuModel, r.kifuId, curSeq);
+								var authToken = A2(
+									$elm$core$Maybe$map,
+									function (at) {
+										return at.token;
+									},
+									model.authToken);
+								return _Utils_Tuple2(
+									model_,
+									A2($author$project$Main$updateKifuPage, authToken, kifuModel));
 							case 'ResponseGetSamePositions':
 								var r = _v4.a;
 								var kifuModel = model.kifuModel;
@@ -8904,7 +8880,9 @@ var $author$project$Main$update = F2(
 						var kifuId = _v2.a;
 						var seq = _v2.b;
 						var km = model_.kifuModel;
-						return _Utils_eq(km.kifu.kifuId, kifuId) ? A4($author$project$Main$updateKifuPage, model_, model_.kifuModel, kifuId, seq) : _Utils_Tuple2(
+						return _Utils_eq(km.kifu.kifuId, kifuId) ? _Utils_Tuple2(
+							model_,
+							A2($author$project$Main$updateKifuPage, authToken, model_.kifuModel)) : _Utils_Tuple2(
 							model_,
 							A3(
 								$author$project$Api$request,
@@ -13548,6 +13526,7 @@ var $mdgriffith$elm_ui$Internal$Model$renderWidth = function (w) {
 	}
 };
 var $mdgriffith$elm_ui$Internal$Flag$borderWidth = $mdgriffith$elm_ui$Internal$Flag$flag(27);
+var $elm$core$Basics$ge = _Utils_ge;
 var $mdgriffith$elm_ui$Internal$Model$skippable = F2(
 	function (flag, style) {
 		if (_Utils_eq(flag, $mdgriffith$elm_ui$Internal$Flag$borderWidth)) {
@@ -16271,6 +16250,14 @@ var $author$project$Style$button = _List_fromArray(
 		$mdgriffith$elm_ui$Element$Border$width(2),
 		$mdgriffith$elm_ui$Element$padding(3)
 	]);
+var $author$project$Page$Kifu$max = F2(
+	function (a, b) {
+		return (_Utils_cmp(a, b) < 0) ? b : a;
+	});
+var $author$project$Page$Kifu$min = F2(
+	function (a, b) {
+		return (_Utils_cmp(a, b) < 0) ? a : b;
+	});
 var $mdgriffith$elm_ui$Element$row = F2(
 	function (attrs, children) {
 		return A4(
@@ -16318,7 +16305,8 @@ var $author$project$Page$Kifu$control = F3(
 							{
 								label: $mdgriffith$elm_ui$Element$text('前'),
 								onPress: $elm$core$Maybe$Just(
-									msg(seq - 1))
+									msg(
+										A2($author$project$Page$Kifu$max, 0, seq - 1)))
 							})
 						])),
 					A2(
@@ -16332,7 +16320,8 @@ var $author$project$Page$Kifu$control = F3(
 							{
 								label: $mdgriffith$elm_ui$Element$text('次'),
 								onPress: $elm$core$Maybe$Just(
-									msg(seq + 1))
+									msg(
+										A2($author$project$Page$Kifu$min, len - 1, seq + 1)))
 							})
 						])),
 					A2(
@@ -16351,12 +16340,6 @@ var $author$project$Page$Kifu$control = F3(
 						]))
 				]));
 	});
-var $author$project$Page$Kifu$elem = function (n) {
-	return A2(
-		$elm$core$Basics$composeL,
-		$elm$core$List$head,
-		$elm$core$List$drop(n));
-};
 var $elm$html$Html$dl = _VirtualDom_node('dl');
 var $elm$html$Html$dd = _VirtualDom_node('dd');
 var $elm$html$Html$dt = _VirtualDom_node('dt');
@@ -16477,24 +16460,17 @@ var $author$project$Page$Kifu$gameInfo = function (model) {
 						])))));
 };
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
-var $author$project$Page$Kifu$maybe = F2(
-	function (def, f) {
-		return A2(
-			$elm$core$Basics$composeL,
-			$elm$core$Maybe$withDefault(def),
-			$elm$core$Maybe$map(f));
-	});
 var $elm$html$Html$li = _VirtualDom_node('li');
 var $author$project$Page$Kifu$secToString = function (sec) {
-	var min = (sec / 60) | 0;
+	var minute = (sec / 60) | 0;
 	return $elm$core$String$concat(
-		(!min) ? _List_fromArray(
+		(!minute) ? _List_fromArray(
 			[
 				$elm$core$String$fromInt(sec),
 				'秒'
 			]) : _List_fromArray(
 			[
-				$elm$core$String$fromInt(min),
+				$elm$core$String$fromInt(minute),
 				'分',
 				$elm$core$String$fromInt(sec),
 				'秒'
@@ -16540,6 +16516,13 @@ var $author$project$Page$Kifu$dstToString = function (pos) {
 	var x = $elm$core$String$fromInt(pos.x);
 	return _Utils_ap(x, y);
 };
+var $author$project$Page$Kifu$maybe = F2(
+	function (def, f) {
+		return A2(
+			$elm$core$Basics$composeL,
+			$elm$core$Maybe$withDefault(def),
+			$elm$core$Maybe$map(f));
+	});
 var $author$project$Page$Kifu$emptyPos = A2(
 	$author$project$Page$Kifu$maybe,
 	true,
@@ -16762,13 +16745,9 @@ var $author$project$Page$Kifu$view = F2(
 								$elm$core$Basics$composeL,
 								msg,
 								$author$project$Page$Kifu$UpdateBoard(model.kifu.kifuId)),
-							model.curSeq,
+							model.curStep.seq,
 							model.len),
-							A3(
-							$author$project$Page$Kifu$maybe,
-							$mdgriffith$elm_ui$Element$none,
-							$author$project$Page$Kifu$stepInfo,
-							A2($author$project$Page$Kifu$elem, model.curSeq, model.kifu.steps))
+							$author$project$Page$Kifu$stepInfo(model.curStep)
 						])),
 					$author$project$Page$Kifu$gameInfo(model)
 				]));

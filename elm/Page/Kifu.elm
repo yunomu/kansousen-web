@@ -1,4 +1,4 @@
-module Page.Kifu exposing (Model, Msg(..), init, update, view)
+module Page.Kifu exposing (Model, Msg(..), init, initStep, update, view)
 
 import Element exposing (Element)
 import Element.Input as Input
@@ -10,9 +10,25 @@ import Style
 
 type alias Model =
     { kifu : PB.GetKifuResponse
-    , curSeq : Int
+    , curStep : PB.GetKifuResponse_Step
     , len : Int
     , samePos : List PB.GetSamePositionsResponse_Kifu
+    }
+
+
+initStep : PB.GetKifuResponse_Step
+initStep =
+    { seq = 0
+    , position = ""
+    , src = Nothing
+    , dst = Nothing
+    , piece = PB.Piece_Null
+    , finishedStatus = PB.FinishedStatus_NotFinished
+    , promoted = False
+    , captured = PB.Piece_Null
+    , timestampSec = 0
+    , thinkingSec = 0
+    , notes = []
     }
 
 
@@ -33,7 +49,7 @@ init =
         , steps = []
         , note = ""
         }
-    , curSeq = 0
+    , curStep = initStep
     , len = 0
     , samePos = []
     }
@@ -48,6 +64,24 @@ update msg model =
     model
 
 
+max : Int -> Int -> Int
+max a b =
+    if a < b then
+        b
+
+    else
+        a
+
+
+min : Int -> Int -> Int
+min a b =
+    if a < b then
+        a
+
+    else
+        b
+
+
 control : (Int -> msg) -> Int -> Int -> Element msg
 control msg seq len =
     Element.row [ Element.spacing 10 ]
@@ -57,13 +91,13 @@ control msg seq len =
             }
         , Element.row []
             [ Input.button Style.button
-                { onPress = Just <| msg (seq - 1)
+                { onPress = Just <| msg <| max 0 (seq - 1)
                 , label = Element.text "前"
                 }
             ]
         , Element.row []
             [ Input.button Style.button
-                { onPress = Just <| msg (seq + 1)
+                { onPress = Just <| msg <| min (len - 1) (seq + 1)
                 , label = Element.text "次"
                 }
             ]
@@ -155,11 +189,6 @@ gameInfo model =
                     , dlelem sndLabel <| names model.kifu.secondPlayers
                     , dlelem "備考" model.kifu.note
                     ]
-
-
-elem : Int -> List a -> Maybe a
-elem n =
-    List.head << List.drop n
 
 
 odd : Int -> Bool
@@ -367,17 +396,17 @@ stepToString step =
 secToString : Int -> String
 secToString sec =
     let
-        min =
+        minute =
             sec // 60
     in
     String.concat <|
-        if min == 0 then
+        if minute == 0 then
             [ String.fromInt sec
             , "秒"
             ]
 
         else
-            [ String.fromInt min
+            [ String.fromInt minute
             , "分"
             , String.fromInt sec
             , "秒"
@@ -424,8 +453,8 @@ view msg model =
             [ Element.el [ Element.width (Element.px 473), Element.height (Element.px 528) ] <|
                 Element.html <|
                     Html.canvas [ Attr.id "shogi" ] []
-            , control (msg << UpdateBoard model.kifu.kifuId) model.curSeq model.len
-            , maybe Element.none stepInfo <| elem model.curSeq model.kifu.steps
+            , control (msg << UpdateBoard model.kifu.kifuId) model.curStep.seq model.len
+            , stepInfo model.curStep
             ]
         , gameInfo model
         ]
