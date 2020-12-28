@@ -344,12 +344,22 @@ emptyPos =
     maybe True <| \p -> p.x == 0 || p.y == 0
 
 
-stepToString : PB.GetKifuResponse_Step -> String
+stepToString :
+    { a
+        | seq : Int
+        , dst : Maybe PB.Pos
+        , src : Maybe PB.Pos
+        , piece : PB.Piece_Id
+        , promoted : Bool
+        , finishedStatus : PB.FinishedStatus_Id
+    }
+    -> String
 stepToString step =
     case ( step.finishedStatus == PB.FinishedStatus_NotFinished, emptyPos step.dst, emptyPos step.src ) of
         ( notFin, False, False ) ->
             String.concat
-                [ maybe "" dstToString step.dst
+                [ playerSymbol step.seq
+                , maybe "" dstToString step.dst
                 , pieceToString step.piece
                 , if step.promoted then
                     "成"
@@ -372,7 +382,8 @@ stepToString step =
 
         ( notFin, False, True ) ->
             String.concat
-                [ maybe "" dstToString step.dst
+                [ playerSymbol step.seq
+                , maybe "" dstToString step.dst
                 , pieceToString step.piece
                 , "打"
                 , if notFin then
@@ -446,6 +457,16 @@ stepInfo step =
         ]
 
 
+samePosView : List PB.GetSamePositionsResponse_Kifu -> Element msg
+samePosView ps =
+    Element.column []
+        [ Element.text "同一局面"
+        , Element.html <|
+            Html.ul [] <|
+                List.map (\p -> Html.li [] [ Html.text p.kifuId ]) ps
+        ]
+
+
 view : (Msg -> msg) -> Model -> Element msg
 view msg model =
     Element.row [ Element.spacing 20, Element.alignTop, Element.width (Element.px 473) ]
@@ -455,6 +476,12 @@ view msg model =
                     Html.canvas [ Attr.id "shogi" ] []
             , control (msg << UpdateBoard model.kifu.kifuId) model.curStep.seq model.len
             , stepInfo model.curStep
+            , case model.samePos of
+                [] ->
+                    Element.none
+
+                samePos ->
+                    samePosView model.samePos
             ]
         , gameInfo model
         ]

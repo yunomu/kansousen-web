@@ -1067,6 +1067,7 @@ type alias GetSamePositionsResponse_Step =
     , dst : Maybe Pos -- 3
     , piece : Piece_Id -- 4
     , promoted : Bool -- 5
+    , finishedStatus : FinishedStatus_Id -- 6
     }
 
 
@@ -1078,6 +1079,7 @@ getSamePositionsResponse_StepDecoder =
         |> optional "dst" posDecoder
         |> required "piece" piece_IdDecoder piece_IdDefault
         |> required "promoted" JD.bool False
+        |> required "finishedStatus" finishedStatus_IdDecoder finishedStatus_IdDefault
 
 
 getSamePositionsResponse_StepEncoder : GetSamePositionsResponse_Step -> JE.Value
@@ -1088,6 +1090,7 @@ getSamePositionsResponse_StepEncoder v =
         , (optionalEncoder "dst" posEncoder v.dst)
         , (requiredFieldEncoder "piece" piece_IdEncoder piece_IdDefault v.piece)
         , (requiredFieldEncoder "promoted" JE.bool False v.promoted)
+        , (requiredFieldEncoder "finishedStatus" finishedStatus_IdEncoder finishedStatus_IdDefault v.finishedStatus)
         ]
 
 

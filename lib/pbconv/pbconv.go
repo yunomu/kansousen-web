@@ -51,46 +51,41 @@ func posYFromInt(y int32) sfen.PosY {
 	return sfen.PosYs[y]
 }
 
-func stepToMove(p *sfen.Surface, step *ptypes.Step, move string) *document.Move {
-	if step.FinishedStatus != ptypes.FinishedStatus_NOT_FINISHED {
-		return nil
-	}
-
-	piece := p.GetPiece(posXFromInt(step.Dst.X), posYFromInt(step.Dst.Y))
+func stepToMove(p *sfen.Surface, step *ptypes.Step) *document.Move {
 	var captured document.Piece_Id
-	if piece == nil {
-		captured = document.Piece_NULL
-	} else {
-		switch piece.Type {
-		case sfen.Piece_NULL:
-			captured = document.Piece_NULL
-		case sfen.Piece_HISHA:
-			captured = document.Piece_HISHA
-		case sfen.Piece_KAKU:
-			captured = document.Piece_KAKU
-		case sfen.Piece_KIN:
-			captured = document.Piece_KIN
-		case sfen.Piece_GIN:
-			captured = document.Piece_GIN
-		case sfen.Piece_KEI:
-			captured = document.Piece_KEI
-		case sfen.Piece_KYOU:
-			captured = document.Piece_KYOU
-		case sfen.Piece_FU:
-			captured = document.Piece_FU
-		default:
-			panic("Unknown Piece type")
+	if step.FinishedStatus == ptypes.FinishedStatus_NOT_FINISHED {
+		if piece := p.GetPiece(posXFromInt(step.Dst.X), posYFromInt(step.Dst.Y)); piece != nil {
+			switch piece.Type {
+			case sfen.Piece_NULL:
+				captured = document.Piece_NULL
+			case sfen.Piece_HISHA:
+				captured = document.Piece_HISHA
+			case sfen.Piece_KAKU:
+				captured = document.Piece_KAKU
+			case sfen.Piece_KIN:
+				captured = document.Piece_KIN
+			case sfen.Piece_GIN:
+				captured = document.Piece_GIN
+			case sfen.Piece_KEI:
+				captured = document.Piece_KEI
+			case sfen.Piece_KYOU:
+				captured = document.Piece_KYOU
+			case sfen.Piece_FU:
+				captured = document.Piece_FU
+			default:
+				panic("Unknown Piece type")
+			}
 		}
 	}
 
 	return &document.Move{
-		Src:      KifPosToPos(step.Src),
-		Dst:      KifPosToPos(step.Dst),
-		Piece:    KifPieceToPiece(step.Piece),
-		Promote:  step.Modifier == ptypes.Modifier_PROMOTE,
-		Drop:     step.Modifier == ptypes.Modifier_PUTTED,
-		Captured: captured,
-		Sfen:     move,
+		Src:            KifPosToPos(step.GetSrc()),
+		Dst:            KifPosToPos(step.GetDst()),
+		Piece:          KifPieceToPiece(step.GetPiece()),
+		Promote:        step.GetModifier() == ptypes.Modifier_PROMOTE,
+		Drop:           step.GetModifier() == ptypes.Modifier_PUTTED,
+		Captured:       captured,
+		FinishedStatus: KifFinishedStatusToStatus(step.GetFinishedStatus()),
 	}
 }
 
@@ -111,7 +106,6 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 		Move:         nil,
 		TimestampSec: 0,
 		ThinkingSec:  0,
-		Finished:     0,
 		Notes:        nil,
 	})
 
@@ -123,14 +117,14 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 
 			TimestampSec: step.GetElapsedSec(),
 			ThinkingSec:  step.GetThinkingSec(),
-			Finished:     KifFinishedStatusToStatus(step.FinishedStatus),
 			Notes:        step.GetNotes(),
 		}
 
-		if step.FinishedStatus == ptypes.FinishedStatus_NOT_FINISHED {
-			move := kif.StepToMove(step)
-			s.Move = stepToMove(p, step, move)
+		move := kif.StepToMove(step)
+		s.Move = stepToMove(p, step)
+		s.Move.Sfen = move
 
+		if move != "" {
 			if err := p.Move(move); err != nil {
 				return nil, err
 			}
@@ -140,15 +134,14 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 			if err := p.PrintSFEN(&buf); err != nil {
 				return nil, err
 			}
-			s.Position = buf.String()
+		}
+		s.Position = buf.String()
 
-			steps = append(steps, s)
-		} else {
-			s.Position = buf.String()
-			steps = append(steps, s)
+		steps = append(steps, s)
+
+		if step.FinishedStatus != ptypes.FinishedStatus_NOT_FINISHED {
 			break
 		}
-
 	}
 
 	return steps, nil

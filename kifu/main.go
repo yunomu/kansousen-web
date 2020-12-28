@@ -199,7 +199,7 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 			ThinkingSec:  step.GetThinkingSec(),
 			Notes:        step.Notes,
 
-			FinishedStatus: apipb.FinishedStatus_Id(step.Finished),
+			FinishedStatus: apipb.FinishedStatus_Id(step.GetMove().GetFinishedStatus()),
 		}
 
 		m := step.GetMove()
@@ -308,15 +308,17 @@ func (s *server) getSamePositions(ctx context.Context, userId string, req *apipb
 				}
 			}
 			steps = append(steps, &apipb.GetSamePositionsResponse_Step{
-				Seq:      p.Seq + int32(i) + 1,
-				Dst:      dst,
-				Src:      src,
-				Piece:    apipb.Piece_Id(m.GetPiece()),
-				Promoted: m.Promote,
+				Seq:            p.Seq + int32(i) + 1,
+				Dst:            dst,
+				Src:            src,
+				Piece:          apipb.Piece_Id(m.GetPiece()),
+				Promoted:       m.Promote,
+				FinishedStatus: apipb.FinishedStatus_Id(m.GetFinishedStatus()),
 			})
 		}
 
 		kifus = append(kifus, &apipb.GetSamePositionsResponse_Kifu{
+			UserId: p.UserId,
 			KifuId: p.KifuId,
 			Seq:    p.Seq,
 			Steps:  steps,
@@ -326,10 +328,8 @@ func (s *server) getSamePositions(ctx context.Context, userId string, req *apipb
 	return &apipb.KifuResponse{
 		KifuResponseSelect: &apipb.KifuResponse_ResponseGetSamePositions{
 			ResponseGetSamePositions: &apipb.GetSamePositionsResponse{
-				UserId:   userId,
 				Position: req.Position,
-
-				Kifus: kifus,
+				Kifus:    kifus,
 			},
 		},
 	}, nil

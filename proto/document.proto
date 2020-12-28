@@ -92,7 +92,8 @@ message Move {
   bool promote = 4;
   bool drop = 5;
   Piece.Id captured = 6;
-  string sfen = 7;
+  FinishedStatus.Id finished_status = 7;
+  string sfen = 8;
 }
 
 message Kifu {
@@ -123,7 +124,6 @@ message Step {
   Move move = 6;
   int32 timestamp_sec = 7;
   int32 thinking_sec = 8;
-  FinishedStatus.Id finished = 9;
   repeated string notes = 10;
 }
 

@@ -235,6 +235,7 @@ message GetSamePositionsResponse {
     Pos dst = 3;
     Piece.Id piece = 4;
     bool promoted = 5;
+    FinishedStatus.Id finished_status = 6;
   }
   message Kifu {
     string user_id = 1;

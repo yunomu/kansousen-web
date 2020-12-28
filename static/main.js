@@ -8394,6 +8394,142 @@ var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Proto$Api$RequestGetSamePositions = function (a) {
 	return {$: 'RequestGetSamePositions', a: a};
 };
+var $elm$core$Task$onError = _Scheduler_onError;
+var $elm$core$Task$attempt = F2(
+	function (resultToMessage, task) {
+		return $elm$core$Task$command(
+			$elm$core$Task$Perform(
+				A2(
+					$elm$core$Task$onError,
+					A2(
+						$elm$core$Basics$composeL,
+						A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+						$elm$core$Result$Err),
+					A2(
+						$elm$core$Task$andThen,
+						A2(
+							$elm$core$Basics$composeL,
+							A2($elm$core$Basics$composeL, $elm$core$Task$succeed, resultToMessage),
+							$elm$core$Result$Ok),
+						task))));
+	});
+var $elm$core$Platform$Cmd$map = _Platform_map;
+var $elm$http$Http$stringResolver = A2(_Http_expect, '', $elm$core$Basics$identity);
+var $author$project$Api$resolverJson = function (decoder) {
+	return $elm$http$Http$stringResolver(
+		function (res) {
+			switch (res.$) {
+				case 'BadStatus_':
+					var meta = res.a;
+					return (meta.statusCode === 401) ? $elm$core$Result$Err($author$project$Api$ErrorUnauthorized) : $elm$core$Result$Err(
+						$author$project$Api$ErrorResponse(res));
+				case 'GoodStatus_':
+					var body = res.b;
+					var _v1 = A2($elm$json$Json$Decode$decodeString, decoder, body);
+					if (_v1.$ === 'Ok') {
+						var v = _v1.a;
+						return $elm$core$Result$Ok(v);
+					} else {
+						var err = _v1.a;
+						return $elm$core$Result$Err(
+							$author$project$Api$ErrorJsonDecode(err));
+					}
+				default:
+					return $elm$core$Result$Err(
+						$author$project$Api$ErrorResponse(res));
+			}
+		});
+};
+var $elm$core$Task$fail = _Scheduler_fail;
+var $elm$http$Http$resultToTask = function (result) {
+	if (result.$ === 'Ok') {
+		var a = result.a;
+		return $elm$core$Task$succeed(a);
+	} else {
+		var x = result.a;
+		return $elm$core$Task$fail(x);
+	}
+};
+var $elm$http$Http$task = function (r) {
+	return A3(
+		_Http_toTask,
+		_Utils_Tuple0,
+		$elm$http$Http$resultToTask,
+		{allowCookiesFromOtherDomains: false, body: r.body, expect: r.resolver, headers: r.headers, method: r.method, timeout: r.timeout, tracker: $elm$core$Maybe$Nothing, url: r.url});
+};
+var $author$project$Api$requestAsync = F3(
+	function (msg, token, req) {
+		return A2(
+			$elm$core$Platform$Cmd$map,
+			msg(req),
+			function () {
+				switch (req.$) {
+					case 'AuthRequest':
+						var authreq = req.a;
+						return A2(
+							$elm$core$Task$attempt,
+							$author$project$Api$AuthResponse,
+							$elm$http$Http$task(
+								{
+									body: $elm$http$Http$jsonBody(
+										$author$project$Proto$Api$authRequestEncoder(authreq)),
+									headers: $author$project$Api$headers,
+									method: 'POST',
+									resolver: $author$project$Api$resolverJson($author$project$Proto$Api$authResponseDecoder),
+									timeout: $elm$core$Maybe$Nothing,
+									url: $author$project$Api$endpoint + '/auth'
+								}));
+					case 'KifuRequest':
+						var kifuReq = req.a;
+						return A2(
+							$elm$core$Task$attempt,
+							$author$project$Api$KifuResponse,
+							$elm$http$Http$task(
+								{
+									body: $elm$http$Http$jsonBody(
+										$author$project$Proto$Api$kifuRequestEncoder(kifuReq)),
+									headers: function () {
+										if (token.$ === 'Just') {
+											var t = token.a;
+											return A2(
+												$elm$core$List$cons,
+												A2($elm$http$Http$header, 'Authorization', t),
+												$author$project$Api$headers);
+										} else {
+											return $author$project$Api$headers;
+										}
+									}(),
+									method: 'POST',
+									resolver: $author$project$Api$resolverJson($author$project$Proto$Api$kifuResponseDecoder),
+									timeout: $elm$core$Maybe$Nothing,
+									url: $author$project$Api$endpoint + '/kifu'
+								}));
+					default:
+						return A2(
+							$elm$core$Task$attempt,
+							$author$project$Api$HelloResponse,
+							$elm$http$Http$task(
+								{
+									body: A2($elm$http$Http$stringBody, 'application/json', '{}'),
+									headers: function () {
+										if (token.$ === 'Just') {
+											var t = token.a;
+											return A2(
+												$elm$core$List$cons,
+												A2($elm$http$Http$header, 'Authorization', t),
+												$author$project$Api$headers);
+										} else {
+											return $author$project$Api$headers;
+										}
+									}(),
+									method: 'POST',
+									resolver: $author$project$Api$resolverJson($author$project$Proto$Api$helloResponseDecoder),
+									timeout: $elm$core$Maybe$Nothing,
+									url: $author$project$Api$endpoint + '/hello'
+								}));
+				}
+			}());
+	});
 var $author$project$Main$updateBoard = _Platform_outgoingPort(
 	'updateBoard',
 	function ($) {
@@ -8417,13 +8553,13 @@ var $author$project$Main$updateKifuPage = F2(
 					$author$project$Main$updateBoard(
 					_Utils_Tuple2('shogi', position)),
 					A3(
-					$author$project$Api$request,
+					$author$project$Api$requestAsync,
 					$author$project$Main$ApiResponse,
 					authToken,
 					$author$project$Api$KifuRequest(
 						$author$project$Proto$Api$KifuRequest(
 							$author$project$Proto$Api$RequestGetSamePositions(
-								{position: position, steps: 10}))))
+								{position: position, steps: 5}))))
 				]));
 	});
 var $author$project$Main$apiResponse = F3(
@@ -8880,9 +9016,19 @@ var $author$project$Main$update = F2(
 						var kifuId = _v2.a;
 						var seq = _v2.b;
 						var km = model_.kifuModel;
+						var km_ = _Utils_update(
+							km,
+							{
+								curStep: A2(
+									$elm$core$Maybe$withDefault,
+									km.curStep,
+									A2($author$project$Main$elem, km.kifu.steps, seq))
+							});
 						return _Utils_eq(km.kifu.kifuId, kifuId) ? _Utils_Tuple2(
-							model_,
-							A2($author$project$Main$updateKifuPage, authToken, model_.kifuModel)) : _Utils_Tuple2(
+							_Utils_update(
+								model_,
+								{kifuModel: km_}),
+							A2($author$project$Main$updateKifuPage, authToken, km_)) : _Utils_Tuple2(
 							model_,
 							A3(
 								$author$project$Api$request,
@@ -16461,6 +16607,31 @@ var $author$project$Page$Kifu$gameInfo = function (model) {
 };
 var $elm$html$Html$Attributes$id = $elm$html$Html$Attributes$stringProperty('id');
 var $elm$html$Html$li = _VirtualDom_node('li');
+var $author$project$Page$Kifu$samePosView = function (ps) {
+	return A2(
+		$mdgriffith$elm_ui$Element$column,
+		_List_Nil,
+		_List_fromArray(
+			[
+				$mdgriffith$elm_ui$Element$text('同一局面'),
+				$mdgriffith$elm_ui$Element$html(
+				A2(
+					$elm$html$Html$ul,
+					_List_Nil,
+					A2(
+						$elm$core$List$map,
+						function (p) {
+							return A2(
+								$elm$html$Html$li,
+								_List_Nil,
+								_List_fromArray(
+									[
+										$elm$html$Html$text(p.kifuId)
+									]));
+						},
+						ps)))
+			]));
+};
 var $author$project$Page$Kifu$secToString = function (sec) {
 	var minute = (sec / 60) | 0;
 	return $elm$core$String$concat(
@@ -16587,6 +16758,13 @@ var $author$project$Page$Kifu$pieceToString = function (p) {
 			return '';
 	}
 };
+var $elm$core$Basics$modBy = _Basics_modBy;
+var $author$project$Page$Kifu$odd = function (i) {
+	return !(!A2($elm$core$Basics$modBy, 2, i));
+};
+var $author$project$Page$Kifu$playerSymbol = function (seq) {
+	return $author$project$Page$Kifu$odd(seq) ? '☗' : '☖';
+};
 var $author$project$Page$Kifu$srcToString = function (pos) {
 	return $elm$core$String$concat(
 		A2(
@@ -16606,6 +16784,7 @@ var $author$project$Page$Kifu$stepToString = function (step) {
 			return $elm$core$String$concat(
 				_List_fromArray(
 					[
+						$author$project$Page$Kifu$playerSymbol(step.seq),
 						A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, step.dst),
 						$author$project$Page$Kifu$pieceToString(step.piece),
 						step.promoted ? '成' : '',
@@ -16625,6 +16804,7 @@ var $author$project$Page$Kifu$stepToString = function (step) {
 			return $elm$core$String$concat(
 				_List_fromArray(
 					[
+						$author$project$Page$Kifu$playerSymbol(step.seq),
 						A3($author$project$Page$Kifu$maybe, '', $author$project$Page$Kifu$dstToString, step.dst),
 						$author$project$Page$Kifu$pieceToString(step.piece),
 						'打',
@@ -16747,7 +16927,16 @@ var $author$project$Page$Kifu$view = F2(
 								$author$project$Page$Kifu$UpdateBoard(model.kifu.kifuId)),
 							model.curStep.seq,
 							model.len),
-							$author$project$Page$Kifu$stepInfo(model.curStep)
+							$author$project$Page$Kifu$stepInfo(model.curStep),
+							function () {
+							var _v0 = model.samePos;
+							if (!_v0.b) {
+								return $mdgriffith$elm_ui$Element$none;
+							} else {
+								var samePos = _v0;
+								return $author$project$Page$Kifu$samePosView(model.samePos);
+							}
+						}()
 						])),
 					$author$project$Page$Kifu$gameInfo(model)
 				]));

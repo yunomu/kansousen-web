@@ -1,9 +1,10 @@
-module Api exposing (Error(..), Request(..), Response(..), errorToString, request)
+module Api exposing (Error(..), Request(..), Response(..), errorToString, request, requestAsync)
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Proto.Api as PB
+import Task
 
 
 type Request
@@ -151,3 +152,77 @@ request msg token req =
                 , timeout = Nothing
                 , tracker = Nothing
                 }
+
+
+resolverJson : Decoder a -> Http.Resolver Error a
+resolverJson decoder =
+    Http.stringResolver <|
+        \res ->
+            case res of
+                Http.BadStatus_ meta _ ->
+                    if meta.statusCode == 401 then
+                        Err ErrorUnauthorized
+
+                    else
+                        Err <| ErrorResponse res
+
+                Http.GoodStatus_ _ body ->
+                    case Decode.decodeString decoder body of
+                        Ok v ->
+                            Ok v
+
+                        Err err ->
+                            Err <| ErrorJsonDecode err
+
+                _ ->
+                    Err <| ErrorResponse res
+
+
+requestAsync : (Request -> Response -> msg) -> Maybe String -> Request -> Cmd msg
+requestAsync msg token req =
+    Cmd.map (msg req) <|
+        case req of
+            AuthRequest authreq ->
+                Task.attempt AuthResponse <|
+                    Http.task
+                        { method = "POST"
+                        , headers = headers
+                        , url = endpoint ++ "/auth"
+                        , body = Http.jsonBody <| PB.authRequestEncoder authreq
+                        , resolver = resolverJson PB.authResponseDecoder
+                        , timeout = Nothing
+                        }
+
+            KifuRequest kifuReq ->
+                Task.attempt KifuResponse <|
+                    Http.task
+                        { method = "POST"
+                        , headers =
+                            case token of
+                                Just t ->
+                                    Http.header "Authorization" t :: headers
+
+                                Nothing ->
+                                    headers
+                        , url = endpoint ++ "/kifu"
+                        , body = Http.jsonBody <| PB.kifuRequestEncoder kifuReq
+                        , resolver = resolverJson PB.kifuResponseDecoder
+                        , timeout = Nothing
+                        }
+
+            HelloRequest ->
+                Task.attempt HelloResponse <|
+                    Http.task
+                        { method = "POST"
+                        , headers =
+                            case token of
+                                Just t ->
+                                    Http.header "Authorization" t :: headers
+
+                                Nothing ->
+                                    headers
+                        , url = endpoint ++ "/hello"
+                        , body = Http.stringBody "application/json" "{}"
+                        , resolver = resolverJson PB.helloResponseDecoder
+                        , timeout = Nothing
+                        }

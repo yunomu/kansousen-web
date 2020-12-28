@@ -228,12 +228,12 @@ updateKifuPage authToken kifuModel =
     in
     Cmd.batch
         [ updateBoard ( "shogi", position )
-        , Api.request ApiResponse authToken <|
+        , Api.requestAsync ApiResponse authToken <|
             Api.KifuRequest <|
                 PB.KifuRequest <|
                     PB.RequestGetSamePositions
                         { position = position
-                        , steps = 10
+                        , steps = 5
                         }
         ]
 
@@ -443,10 +443,15 @@ update msg model =
                     let
                         km =
                             model_.kifuModel
+
+                        km_ =
+                            { km
+                                | curStep = Maybe.withDefault km.curStep <| elem km.kifu.steps seq
+                            }
                     in
                     if km.kifu.kifuId == kifuId then
-                        ( model_
-                        , updateKifuPage authToken model_.kifuModel
+                        ( { model_ | kifuModel = km_ }
+                        , updateKifuPage authToken km_
                         )
 
                     else
