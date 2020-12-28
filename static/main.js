@@ -7727,36 +7727,41 @@ var $author$project$Proto$Api$GetSamePositionsResponse_Kifu = F4(
 	function (userId, kifuId, seq, steps) {
 		return {kifuId: kifuId, seq: seq, steps: steps, userId: userId};
 	});
-var $author$project$Proto$Api$GetSamePositionsResponse_Step = F5(
-	function (seq, src, dst, piece, promoted) {
-		return {dst: dst, piece: piece, promoted: promoted, seq: seq, src: src};
+var $author$project$Proto$Api$GetSamePositionsResponse_Step = F6(
+	function (seq, src, dst, piece, promoted, finishedStatus) {
+		return {dst: dst, finishedStatus: finishedStatus, piece: piece, promoted: promoted, seq: seq, src: src};
 	});
 var $author$project$Proto$Api$getSamePositionsResponse_StepDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
 		return A4(
 			$tiziano88$elm_protobuf$Protobuf$required,
-			'promoted',
-			$elm$json$Json$Decode$bool,
-			false,
+			'finishedStatus',
+			$author$project$Proto$Api$finishedStatus_IdDecoder,
+			$author$project$Proto$Api$finishedStatus_IdDefault,
 			A4(
 				$tiziano88$elm_protobuf$Protobuf$required,
-				'piece',
-				$author$project$Proto$Api$piece_IdDecoder,
-				$author$project$Proto$Api$piece_IdDefault,
-				A3(
-					$tiziano88$elm_protobuf$Protobuf$optional,
-					'dst',
-					$author$project$Proto$Api$posDecoder,
+				'promoted',
+				$elm$json$Json$Decode$bool,
+				false,
+				A4(
+					$tiziano88$elm_protobuf$Protobuf$required,
+					'piece',
+					$author$project$Proto$Api$piece_IdDecoder,
+					$author$project$Proto$Api$piece_IdDefault,
 					A3(
 						$tiziano88$elm_protobuf$Protobuf$optional,
-						'src',
+						'dst',
 						$author$project$Proto$Api$posDecoder,
-						A4(
-							$tiziano88$elm_protobuf$Protobuf$required,
-							'seq',
-							$tiziano88$elm_protobuf$Protobuf$intDecoder,
-							0,
-							$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Step))))));
+						A3(
+							$tiziano88$elm_protobuf$Protobuf$optional,
+							'src',
+							$author$project$Proto$Api$posDecoder,
+							A4(
+								$tiziano88$elm_protobuf$Protobuf$required,
+								'seq',
+								$tiziano88$elm_protobuf$Protobuf$intDecoder,
+								0,
+								$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$GetSamePositionsResponse_Step)))))));
 	});
 var $author$project$Proto$Api$getSamePositionsResponse_KifuDecoder = $elm$json$Json$Decode$lazy(
 	function (_v0) {
@@ -8390,7 +8395,6 @@ var $author$project$Main$signInAndReturn = F4(
 						])));
 		}
 	});
-var $elm$core$List$sortBy = _List_sortBy;
 var $author$project$Proto$Api$RequestGetSamePositions = function (a) {
 	return {$: 'RequestGetSamePositions', a: a};
 };
@@ -8699,16 +8703,6 @@ var $author$project$Main$apiResponse = F3(
 											model.uploadModel.repeat ? $author$project$Route$Upload : $author$project$Route$Index)));
 							case 'ResponseGetKifu':
 								var r = _v4.a;
-								var kifu = _Utils_update(
-									r,
-									{
-										steps: A2(
-											$elm$core$List$sortBy,
-											function (s) {
-												return s.seq;
-											},
-											r.steps)
-									});
 								var curSeq = function () {
 									var _v5 = model.route;
 									if (_v5.$ === 'Kifu') {
@@ -8722,9 +8716,9 @@ var $author$project$Main$apiResponse = F3(
 									curStep: A2(
 										$elm$core$Maybe$withDefault,
 										$author$project$Page$Kifu$initStep,
-										A2($author$project$Main$elem, kifu.steps, curSeq)),
-									kifu: kifu,
-									len: $elm$core$List$length(kifu.steps),
+										A2($author$project$Main$elem, r.steps, curSeq)),
+									kifu: r,
+									len: $elm$core$List$length(r.steps),
 									samePos: _List_Nil
 								};
 								var model_ = _Utils_update(

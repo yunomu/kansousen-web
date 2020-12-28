@@ -267,7 +267,26 @@ func (d *DynamoDB) BatchGet(ctx context.Context, keys []*Key) ([]*Item, error) {
 	return ret, nil
 }
 
-func (d *DynamoDB) Scan(ctx context.Context, pk string, f func(*Item)) error {
+type scanOption struct {
+	expression string
+	values     map[string]*dynamodb.AttributeValue
+}
+
+type ScanOption func(*scanOption)
+
+func SetScanExpression(expression string, values map[string]*dynamodb.AttributeValue) ScanOption {
+	return func(op *scanOption) {
+		op.expression = expression
+		op.values = values
+	}
+}
+
+func (d *DynamoDB) Scan(ctx context.Context, pk string, f func(*Item), ops ...ScanOption) error {
+	o := &scanOption{}
+	for _, f := range ops {
+		f(o)
+	}
+
 	input := &dynamodb.ScanInput{
 		TableName:        aws.String(d.table),
 		FilterExpression: aws.String(fmt.Sprintf("%s = :pk", pkField)),

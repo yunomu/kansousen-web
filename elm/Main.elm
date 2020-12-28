@@ -341,15 +341,12 @@ apiResponse model req res =
                                         _ ->
                                             0
 
-                                kifu =
-                                    { r | steps = List.sortBy (\s -> s.seq) r.steps }
-
                                 kifuModel =
-                                    { kifu = kifu
+                                    { kifu = r
                                     , curStep =
                                         Maybe.withDefault Kifu.initStep <|
-                                            elem kifu.steps curSeq
-                                    , len = List.length kifu.steps
+                                            elem r.steps curSeq
+                                    , len = List.length r.steps
                                     , samePos = []
                                     }
 

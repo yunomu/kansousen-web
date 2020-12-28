@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 
 	"golang.org/x/sync/errgroup"
 
@@ -207,6 +208,12 @@ func (db *DynamoDB) GetKifu(
 	return kifu, nil
 }
 
+type StepSlice []*documentpb.Step
+
+func (s StepSlice) Len() int               { return len(s) }
+func (s StepSlice) Less(i int, j int) bool { return s[i].GetSeq() < s[j].GetSeq() }
+func (s StepSlice) Swap(i int, j int)      { s[i], s[j] = s[j], s[i] }
+
 func (db *DynamoDB) GetKifuAndSteps(
 	ctx context.Context,
 	userId string,
@@ -239,6 +246,7 @@ func (db *DynamoDB) GetKifuAndSteps(
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
+	sort.Sort(StepSlice(steps))
 
 	return kifu, steps, nil
 }
