@@ -267,36 +267,36 @@ func (d *DynamoDB) BatchGet(ctx context.Context, keys []*Key) ([]*Item, error) {
 	return ret, nil
 }
 
-type scanOption struct {
+type queryOption struct {
 	expression string
 	values     map[string]*dynamodb.AttributeValue
 }
 
-type ScanOption func(*scanOption)
+type QueryOption func(*queryOption)
 
-func SetScanExpression(expression string, values map[string]*dynamodb.AttributeValue) ScanOption {
-	return func(op *scanOption) {
+func SetQueryExpression(expression string, values map[string]*dynamodb.AttributeValue) QueryOption {
+	return func(op *queryOption) {
 		op.expression = expression
 		op.values = values
 	}
 }
 
-func (d *DynamoDB) Scan(ctx context.Context, pk string, f func(*Item), ops ...ScanOption) error {
-	o := &scanOption{}
+func (d *DynamoDB) Query(ctx context.Context, pk string, f func(*Item), ops ...QueryOption) error {
+	o := &queryOption{}
 	for _, f := range ops {
 		f(o)
 	}
 
-	input := &dynamodb.ScanInput{
-		TableName:        aws.String(d.table),
-		FilterExpression: aws.String(fmt.Sprintf("%s = :pk", pkField)),
+	input := &dynamodb.QueryInput{
+		TableName:              aws.String(d.table),
+		KeyConditionExpression: aws.String(fmt.Sprintf("%s = :pk", pkField)),
 		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 			":pk": &dynamodb.AttributeValue{S: aws.String(pk)},
 		},
 	}
 
 	var rerr error
-	if err := d.client.ScanPagesWithContext(ctx, input, func(out *dynamodb.ScanOutput, lastPage bool) bool {
+	if err := d.client.QueryPagesWithContext(ctx, input, func(out *dynamodb.QueryOutput, lastPage bool) bool {
 		for _, item := range out.Items {
 			select {
 			case <-ctx.Done():

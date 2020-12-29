@@ -255,7 +255,7 @@ func (db *DynamoDB) ListKifu(ctx context.Context, userId string, f func(kifu *do
 	ctx, cancel := context.WithCancel(ctx)
 	pk, _ := buildKifuKey(userId, "")
 	var rerr error
-	if err := db.table.Scan(ctx, pk, func(item *dynamodb.Item) {
+	if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
 		select {
 		case <-ctx.Done():
 			if err := ctx.Err(); err == context.Canceled {
@@ -299,7 +299,7 @@ func (db *DynamoDB) DuplicateKifu(ctx context.Context, sfen string) ([]*document
 	var rerr error
 	var ret []*documentpb.KifuSignature
 	pk, _ := buildKifuSignatureKey(sfen, "", "")
-	if err := db.table.Scan(ctx, pk, func(item *dynamodb.Item) {
+	if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
 		doc := &documentpb.Document{}
 		if err := proto.Unmarshal(item.Bytes, doc); err != nil {
 			rerr = err
@@ -331,7 +331,7 @@ func (db *DynamoDB) GetSteps(ctx context.Context, userId, kifuId string) ([]*doc
 	var rerr error
 	var ret []*documentpb.Step
 	pk, _ := buildStepKey(userId, kifuId, 0)
-	if err := db.table.Scan(ctx, pk, func(item *dynamodb.Item) {
+	if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
 		doc := &documentpb.Document{}
 		if err := proto.Unmarshal(item.Bytes, doc); err != nil {
 			rerr = err
@@ -391,7 +391,7 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 				pk, _ := buildPositionKey(userId, pos, "", 0)
 				ctx, cancel := context.WithCancel(ctx)
 				var rerr error
-				if err := db.table.Scan(ctx, pk, func(item *dynamodb.Item) {
+				if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
 					doc := &documentpb.Document{}
 					if err := proto.Unmarshal(item.Bytes, doc); err != nil {
 						rerr = err
