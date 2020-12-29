@@ -287,12 +287,22 @@ func (d *DynamoDB) Query(ctx context.Context, pk string, f func(*Item), ops ...Q
 		f(o)
 	}
 
+	expression := fmt.Sprintf("%s = :pk", pkField)
+	if o.expression != "" {
+		expression += " AND " + o.expression
+	}
+
+	values := map[string]*dynamodb.AttributeValue{
+		":pk": &dynamodb.AttributeValue{S: aws.String(pk)},
+	}
+	for k, v := range o.values {
+		values[k] = v
+	}
+
 	input := &dynamodb.QueryInput{
-		TableName:              aws.String(d.table),
-		KeyConditionExpression: aws.String(fmt.Sprintf("%s = :pk", pkField)),
-		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-			":pk": &dynamodb.AttributeValue{S: aws.String(pk)},
-		},
+		TableName:                 aws.String(d.table),
+		KeyConditionExpression:    aws.String(expression),
+		ExpressionAttributeValues: values,
 	}
 
 	var rerr error
