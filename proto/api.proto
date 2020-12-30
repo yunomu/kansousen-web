@@ -268,13 +268,3 @@ message KifuResponse {
     GetSamePositionsResponse response_get_same_positions = 5;
   }
 }
-
-// Hello 
-
-message HelloRequest {
-}
-
-message HelloResponse {
-  string message = 1;
-  string name = 2;
-}

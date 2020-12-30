@@ -10,13 +10,11 @@ import Task
 type Request
     = AuthRequest PB.AuthRequest
     | KifuRequest PB.KifuRequest
-    | HelloRequest
 
 
 type Response
     = AuthResponse (Result Error PB.AuthResponse)
     | KifuResponse (Result Error PB.KifuResponse)
-    | HelloResponse (Result Error PB.HelloResponse)
 
 
 type Error
@@ -133,26 +131,6 @@ request msg token req =
                 , tracker = Nothing
                 }
 
-        HelloRequest ->
-            Http.request
-                { method = "POST"
-                , headers =
-                    case token of
-                        Just t ->
-                            Http.header "Authorization" t :: headers
-
-                        Nothing ->
-                            headers
-                , url = endpoint ++ "/hello"
-                , body = Http.stringBody "application/json" "{}"
-                , expect =
-                    Http.expectStringResponse
-                        (msg req << HelloResponse)
-                        (resultJson PB.helloResponseDecoder)
-                , timeout = Nothing
-                , tracker = Nothing
-                }
-
 
 resolverJson : Decoder a -> Http.Resolver Error a
 resolverJson decoder =
@@ -207,22 +185,5 @@ requestAsync msg token req =
                         , url = endpoint ++ "/kifu"
                         , body = Http.jsonBody <| PB.kifuRequestEncoder kifuReq
                         , resolver = resolverJson PB.kifuResponseDecoder
-                        , timeout = Nothing
-                        }
-
-            HelloRequest ->
-                Task.attempt HelloResponse <|
-                    Http.task
-                        { method = "POST"
-                        , headers =
-                            case token of
-                                Just t ->
-                                    Http.header "Authorization" t :: headers
-
-                                Nothing ->
-                                    headers
-                        , url = endpoint ++ "/hello"
-                        , body = Http.stringBody "application/json" "{}"
-                        , resolver = resolverJson PB.helloResponseDecoder
                         , timeout = Nothing
                         }

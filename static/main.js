@@ -6694,7 +6694,6 @@ var $author$project$Api$AuthRequest = function (a) {
 var $author$project$Proto$Api$AuthRequest = function (authRequestSelect) {
 	return {authRequestSelect: authRequestSelect};
 };
-var $author$project$Api$HelloRequest = {$: 'HelloRequest'};
 var $author$project$Api$KifuRequest = function (a) {
 	return {$: 'KifuRequest', a: a};
 };
@@ -6823,9 +6822,6 @@ var $author$project$Route$path = function (route) {
 };
 var $author$project$Api$AuthResponse = function (a) {
 	return {$: 'AuthResponse', a: a};
-};
-var $author$project$Api$HelloResponse = function (a) {
-	return {$: 'HelloResponse', a: a};
 };
 var $author$project$Api$KifuResponse = function (a) {
 	return {$: 'KifuResponse', a: a};
@@ -7200,24 +7196,6 @@ var $elm$http$Http$Header = F2(
 	});
 var $elm$http$Http$header = $elm$http$Http$Header;
 var $author$project$Api$headers = _List_Nil;
-var $author$project$Proto$Api$HelloResponse = F2(
-	function (message, name) {
-		return {message: message, name: name};
-	});
-var $author$project$Proto$Api$helloResponseDecoder = $elm$json$Json$Decode$lazy(
-	function (_v0) {
-		return A4(
-			$tiziano88$elm_protobuf$Protobuf$required,
-			'name',
-			$elm$json$Json$Decode$string,
-			'',
-			A4(
-				$tiziano88$elm_protobuf$Protobuf$required,
-				'message',
-				$elm$json$Json$Decode$string,
-				'',
-				$tiziano88$elm_protobuf$Protobuf$decode($author$project$Proto$Api$HelloResponse)));
-	});
 var $elm$http$Http$jsonBody = function (value) {
 	return A2(
 		_Http_pair,
@@ -8129,85 +8107,56 @@ var $author$project$Api$resultJson = F2(
 					$author$project$Api$ErrorResponse(res));
 		}
 	});
-var $elm$http$Http$stringBody = _Http_pair;
 var $author$project$Api$request = F3(
 	function (msg, token, req) {
-		switch (req.$) {
-			case 'AuthRequest':
-				var authreq = req.a;
-				return $elm$http$Http$request(
-					{
-						body: $elm$http$Http$jsonBody(
-							$author$project$Proto$Api$authRequestEncoder(authreq)),
-						expect: A2(
-							$elm$http$Http$expectStringResponse,
-							A2(
-								$elm$core$Basics$composeL,
-								msg(req),
-								$author$project$Api$AuthResponse),
-							$author$project$Api$resultJson($author$project$Proto$Api$authResponseDecoder)),
-						headers: $author$project$Api$headers,
-						method: 'POST',
-						timeout: $elm$core$Maybe$Nothing,
-						tracker: $elm$core$Maybe$Nothing,
-						url: $author$project$Api$endpoint + '/auth'
-					});
-			case 'KifuRequest':
-				var kifuReq = req.a;
-				return $elm$http$Http$request(
-					{
-						body: $elm$http$Http$jsonBody(
-							$author$project$Proto$Api$kifuRequestEncoder(kifuReq)),
-						expect: A2(
-							$elm$http$Http$expectStringResponse,
-							A2(
-								$elm$core$Basics$composeL,
-								msg(req),
-								$author$project$Api$KifuResponse),
-							$author$project$Api$resultJson($author$project$Proto$Api$kifuResponseDecoder)),
-						headers: function () {
-							if (token.$ === 'Just') {
-								var t = token.a;
-								return A2(
-									$elm$core$List$cons,
-									A2($elm$http$Http$header, 'Authorization', t),
-									$author$project$Api$headers);
-							} else {
-								return $author$project$Api$headers;
-							}
-						}(),
-						method: 'POST',
-						timeout: $elm$core$Maybe$Nothing,
-						tracker: $elm$core$Maybe$Nothing,
-						url: $author$project$Api$endpoint + '/kifu'
-					});
-			default:
-				return $elm$http$Http$request(
-					{
-						body: A2($elm$http$Http$stringBody, 'application/json', '{}'),
-						expect: A2(
-							$elm$http$Http$expectStringResponse,
-							A2(
-								$elm$core$Basics$composeL,
-								msg(req),
-								$author$project$Api$HelloResponse),
-							$author$project$Api$resultJson($author$project$Proto$Api$helloResponseDecoder)),
-						headers: function () {
-							if (token.$ === 'Just') {
-								var t = token.a;
-								return A2(
-									$elm$core$List$cons,
-									A2($elm$http$Http$header, 'Authorization', t),
-									$author$project$Api$headers);
-							} else {
-								return $author$project$Api$headers;
-							}
-						}(),
-						method: 'POST',
-						timeout: $elm$core$Maybe$Nothing,
-						tracker: $elm$core$Maybe$Nothing,
-						url: $author$project$Api$endpoint + '/hello'
-					});
+		if (req.$ === 'AuthRequest') {
+			var authreq = req.a;
+			return $elm$http$Http$request(
+				{
+					body: $elm$http$Http$jsonBody(
+						$author$project$Proto$Api$authRequestEncoder(authreq)),
+					expect: A2(
+						$elm$http$Http$expectStringResponse,
+						A2(
+							$elm$core$Basics$composeL,
+							msg(req),
+							$author$project$Api$AuthResponse),
+						$author$project$Api$resultJson($author$project$Proto$Api$authResponseDecoder)),
+					headers: $author$project$Api$headers,
+					method: 'POST',
+					timeout: $elm$core$Maybe$Nothing,
+					tracker: $elm$core$Maybe$Nothing,
+					url: $author$project$Api$endpoint + '/auth'
+				});
+		} else {
+			var kifuReq = req.a;
+			return $elm$http$Http$request(
+				{
+					body: $elm$http$Http$jsonBody(
+						$author$project$Proto$Api$kifuRequestEncoder(kifuReq)),
+					expect: A2(
+						$elm$http$Http$expectStringResponse,
+						A2(
+							$elm$core$Basics$composeL,
+							msg(req),
+							$author$project$Api$KifuResponse),
+						$author$project$Api$resultJson($author$project$Proto$Api$kifuResponseDecoder)),
+					headers: function () {
+						if (token.$ === 'Just') {
+							var t = token.a;
+							return A2(
+								$elm$core$List$cons,
+								A2($elm$http$Http$header, 'Authorization', t),
+								$author$project$Api$headers);
+						} else {
+							return $author$project$Api$headers;
+						}
+					}(),
+					method: 'POST',
+					timeout: $elm$core$Maybe$Nothing,
+					tracker: $elm$core$Maybe$Nothing,
+					url: $author$project$Api$endpoint + '/kifu'
+				});
 		}
 	});
 var $elm$core$Debug$toString = _Debug_toString;
@@ -8479,70 +8428,46 @@ var $author$project$Api$requestAsync = F3(
 			$elm$core$Platform$Cmd$map,
 			msg(req),
 			function () {
-				switch (req.$) {
-					case 'AuthRequest':
-						var authreq = req.a;
-						return A2(
-							$elm$core$Task$attempt,
-							$author$project$Api$AuthResponse,
-							$elm$http$Http$task(
-								{
-									body: $elm$http$Http$jsonBody(
-										$author$project$Proto$Api$authRequestEncoder(authreq)),
-									headers: $author$project$Api$headers,
-									method: 'POST',
-									resolver: $author$project$Api$resolverJson($author$project$Proto$Api$authResponseDecoder),
-									timeout: $elm$core$Maybe$Nothing,
-									url: $author$project$Api$endpoint + '/auth'
-								}));
-					case 'KifuRequest':
-						var kifuReq = req.a;
-						return A2(
-							$elm$core$Task$attempt,
-							$author$project$Api$KifuResponse,
-							$elm$http$Http$task(
-								{
-									body: $elm$http$Http$jsonBody(
-										$author$project$Proto$Api$kifuRequestEncoder(kifuReq)),
-									headers: function () {
-										if (token.$ === 'Just') {
-											var t = token.a;
-											return A2(
-												$elm$core$List$cons,
-												A2($elm$http$Http$header, 'Authorization', t),
-												$author$project$Api$headers);
-										} else {
-											return $author$project$Api$headers;
-										}
-									}(),
-									method: 'POST',
-									resolver: $author$project$Api$resolverJson($author$project$Proto$Api$kifuResponseDecoder),
-									timeout: $elm$core$Maybe$Nothing,
-									url: $author$project$Api$endpoint + '/kifu'
-								}));
-					default:
-						return A2(
-							$elm$core$Task$attempt,
-							$author$project$Api$HelloResponse,
-							$elm$http$Http$task(
-								{
-									body: A2($elm$http$Http$stringBody, 'application/json', '{}'),
-									headers: function () {
-										if (token.$ === 'Just') {
-											var t = token.a;
-											return A2(
-												$elm$core$List$cons,
-												A2($elm$http$Http$header, 'Authorization', t),
-												$author$project$Api$headers);
-										} else {
-											return $author$project$Api$headers;
-										}
-									}(),
-									method: 'POST',
-									resolver: $author$project$Api$resolverJson($author$project$Proto$Api$helloResponseDecoder),
-									timeout: $elm$core$Maybe$Nothing,
-									url: $author$project$Api$endpoint + '/hello'
-								}));
+				if (req.$ === 'AuthRequest') {
+					var authreq = req.a;
+					return A2(
+						$elm$core$Task$attempt,
+						$author$project$Api$AuthResponse,
+						$elm$http$Http$task(
+							{
+								body: $elm$http$Http$jsonBody(
+									$author$project$Proto$Api$authRequestEncoder(authreq)),
+								headers: $author$project$Api$headers,
+								method: 'POST',
+								resolver: $author$project$Api$resolverJson($author$project$Proto$Api$authResponseDecoder),
+								timeout: $elm$core$Maybe$Nothing,
+								url: $author$project$Api$endpoint + '/auth'
+							}));
+				} else {
+					var kifuReq = req.a;
+					return A2(
+						$elm$core$Task$attempt,
+						$author$project$Api$KifuResponse,
+						$elm$http$Http$task(
+							{
+								body: $elm$http$Http$jsonBody(
+									$author$project$Proto$Api$kifuRequestEncoder(kifuReq)),
+								headers: function () {
+									if (token.$ === 'Just') {
+										var t = token.a;
+										return A2(
+											$elm$core$List$cons,
+											A2($elm$http$Http$header, 'Authorization', t),
+											$author$project$Api$headers);
+									} else {
+										return $author$project$Api$headers;
+									}
+								}(),
+								method: 'POST',
+								resolver: $author$project$Api$resolverJson($author$project$Proto$Api$kifuResponseDecoder),
+								timeout: $elm$core$Maybe$Nothing,
+								url: $author$project$Api$endpoint + '/kifu'
+							}));
 				}
 			}());
 	});
@@ -8585,198 +8510,186 @@ var $author$project$Main$updateKifuPage = F2(
 	});
 var $author$project$Main$apiResponse = F3(
 	function (model, req, res) {
-		switch (res.$) {
-			case 'AuthResponse':
-				var result = res.a;
-				if (result.$ === 'Ok') {
-					var v = result.a;
-					var _v2 = v.authResponseSelect;
-					switch (_v2.$) {
-						case 'ResponseSignUp':
-							var r = _v2.a;
-							var m = model.confirmSignUpModel;
+		if (res.$ === 'AuthResponse') {
+			var result = res.a;
+			if (result.$ === 'Ok') {
+				var v = result.a;
+				var _v2 = v.authResponseSelect;
+				switch (_v2.$) {
+					case 'ResponseSignUp':
+						var r = _v2.a;
+						var m = model.confirmSignUpModel;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									confirmSignUpModel: _Utils_update(
+										m,
+										{
+											signUpResponse: $elm$core$Maybe$Just(r)
+										})
+								}),
+							A2(
+								$elm$browser$Browser$Navigation$pushUrl,
+								model.key,
+								$author$project$Route$path($author$project$Route$ConfirmSignUp)));
+					case 'ResponseConfirmSignUp':
+						var m = model.confirmSignUpModel;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{confirmSignUpModel: $author$project$Page$ConfirmSignUp$init}),
+							A2(
+								$elm$browser$Browser$Navigation$pushUrl,
+								model.key,
+								$author$project$Route$path($author$project$Route$Index)));
+					case 'ResponseForgotPassword':
+						var r = _v2.a;
+						var m = model.confirmForgotPasswordModel;
+						return _Utils_Tuple2(
+							_Utils_update(
+								model,
+								{
+									confirmForgotPasswordModel: _Utils_update(
+										m,
+										{
+											forgotPasswordResponse: $elm$core$Maybe$Just(r)
+										})
+								}),
+							A2(
+								$elm$browser$Browser$Navigation$pushUrl,
+								model.key,
+								$author$project$Route$path($author$project$Route$ConfirmForgotPassword)));
+					case 'ResponseConfirmForgotPassword':
+						return _Utils_Tuple2(
+							model,
+							A2(
+								$elm$browser$Browser$Navigation$pushUrl,
+								model.key,
+								$author$project$Route$path($author$project$Route$Index)));
+					case 'ResponseSignIn':
+						var r = _v2.a;
+						return A4(
+							$author$project$Main$signInAndReturn,
+							model,
+							$elm$core$Maybe$Just(r),
+							r.token,
+							$elm$core$Maybe$Just(r.refreshToken));
+					case 'ResponseTokenRefresh':
+						var r = _v2.a;
+						return A4(
+							$author$project$Main$signInAndReturn,
+							model,
+							A2(
+								$elm$core$Maybe$map,
+								function (t) {
+									return _Utils_update(
+										t,
+										{token: r.token});
+								},
+								model.authToken),
+							r.token,
+							$elm$core$Maybe$Nothing);
+					default:
+						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
+				}
+			} else {
+				if (result.a.$ === 'ErrorUnauthorized') {
+					var _v3 = result.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								authToken: $elm$core$Maybe$Nothing,
+								errorMessage: $elm$core$Maybe$Just('logout')
+							}),
+						$elm$core$Platform$Cmd$none);
+				} else {
+					var err = result.a;
+					return _Utils_Tuple2(
+						_Utils_update(
+							model,
+							{
+								errorMessage: $elm$core$Maybe$Just(
+									$author$project$Api$errorToString(err))
+							}),
+						$elm$core$Platform$Cmd$none);
+				}
+			}
+		} else {
+			var result = res.a;
+			return A4(
+				$author$project$Main$authorizedResponse,
+				model,
+				req,
+				result,
+				function (kifuRes) {
+					var _v4 = kifuRes.kifuResponseSelect;
+					switch (_v4.$) {
+						case 'ResponseRecentKifu':
+							var r = _v4.a;
+							return _Utils_Tuple2(
+								_Utils_update(
+									model,
+									{recentKifu: r.kifus}),
+								$elm$core$Platform$Cmd$none);
+						case 'ResponsePostKifu':
+							var r = _v4.a;
+							return _Utils_Tuple2(
+								model,
+								A2(
+									$elm$browser$Browser$Navigation$pushUrl,
+									model.key,
+									$author$project$Route$path(
+										model.uploadModel.repeat ? $author$project$Route$Upload : $author$project$Route$Index)));
+						case 'ResponseGetKifu':
+							var r = _v4.a;
+							var curSeq = function () {
+								var _v5 = model.route;
+								if (_v5.$ === 'Kifu') {
+									var seq = _v5.b;
+									return seq;
+								} else {
+									return 0;
+								}
+							}();
+							var kifuModel = {
+								curStep: A2(
+									$elm$core$Maybe$withDefault,
+									$author$project$Page$Kifu$initStep,
+									A2($author$project$Main$elem, r.steps, curSeq)),
+								kifu: r,
+								len: $elm$core$List$length(r.steps),
+								samePos: _List_Nil
+							};
+							var model_ = _Utils_update(
+								model,
+								{kifuModel: kifuModel});
+							var authToken = A2(
+								$elm$core$Maybe$map,
+								function (at) {
+									return at.token;
+								},
+								model.authToken);
+							return _Utils_Tuple2(
+								model_,
+								A2($author$project$Main$updateKifuPage, authToken, kifuModel));
+						case 'ResponseGetSamePositions':
+							var r = _v4.a;
+							var kifuModel = model.kifuModel;
 							return _Utils_Tuple2(
 								_Utils_update(
 									model,
 									{
-										confirmSignUpModel: _Utils_update(
-											m,
-											{
-												signUpResponse: $elm$core$Maybe$Just(r)
-											})
+										kifuModel: _Utils_update(
+											kifuModel,
+											{samePos: r.kifus})
 									}),
-								A2(
-									$elm$browser$Browser$Navigation$pushUrl,
-									model.key,
-									$author$project$Route$path($author$project$Route$ConfirmSignUp)));
-						case 'ResponseConfirmSignUp':
-							var m = model.confirmSignUpModel;
-							return _Utils_Tuple2(
-								_Utils_update(
-									model,
-									{confirmSignUpModel: $author$project$Page$ConfirmSignUp$init}),
-								A2(
-									$elm$browser$Browser$Navigation$pushUrl,
-									model.key,
-									$author$project$Route$path($author$project$Route$Index)));
-						case 'ResponseForgotPassword':
-							var r = _v2.a;
-							var m = model.confirmForgotPasswordModel;
-							return _Utils_Tuple2(
-								_Utils_update(
-									model,
-									{
-										confirmForgotPasswordModel: _Utils_update(
-											m,
-											{
-												forgotPasswordResponse: $elm$core$Maybe$Just(r)
-											})
-									}),
-								A2(
-									$elm$browser$Browser$Navigation$pushUrl,
-									model.key,
-									$author$project$Route$path($author$project$Route$ConfirmForgotPassword)));
-						case 'ResponseConfirmForgotPassword':
-							return _Utils_Tuple2(
-								model,
-								A2(
-									$elm$browser$Browser$Navigation$pushUrl,
-									model.key,
-									$author$project$Route$path($author$project$Route$Index)));
-						case 'ResponseSignIn':
-							var r = _v2.a;
-							return A4(
-								$author$project$Main$signInAndReturn,
-								model,
-								$elm$core$Maybe$Just(r),
-								r.token,
-								$elm$core$Maybe$Just(r.refreshToken));
-						case 'ResponseTokenRefresh':
-							var r = _v2.a;
-							return A4(
-								$author$project$Main$signInAndReturn,
-								model,
-								A2(
-									$elm$core$Maybe$map,
-									function (t) {
-										return _Utils_update(
-											t,
-											{token: r.token});
-									},
-									model.authToken),
-								r.token,
-								$elm$core$Maybe$Nothing);
+								$elm$core$Platform$Cmd$none);
 						default:
 							return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 					}
-				} else {
-					if (result.a.$ === 'ErrorUnauthorized') {
-						var _v3 = result.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									authToken: $elm$core$Maybe$Nothing,
-									errorMessage: $elm$core$Maybe$Just('logout')
-								}),
-							$elm$core$Platform$Cmd$none);
-					} else {
-						var err = result.a;
-						return _Utils_Tuple2(
-							_Utils_update(
-								model,
-								{
-									errorMessage: $elm$core$Maybe$Just(
-										$author$project$Api$errorToString(err))
-								}),
-							$elm$core$Platform$Cmd$none);
-					}
-				}
-			case 'KifuResponse':
-				var result = res.a;
-				return A4(
-					$author$project$Main$authorizedResponse,
-					model,
-					req,
-					result,
-					function (kifuRes) {
-						var _v4 = kifuRes.kifuResponseSelect;
-						switch (_v4.$) {
-							case 'ResponseRecentKifu':
-								var r = _v4.a;
-								return _Utils_Tuple2(
-									_Utils_update(
-										model,
-										{recentKifu: r.kifus}),
-									$elm$core$Platform$Cmd$none);
-							case 'ResponsePostKifu':
-								var r = _v4.a;
-								return _Utils_Tuple2(
-									model,
-									A2(
-										$elm$browser$Browser$Navigation$pushUrl,
-										model.key,
-										$author$project$Route$path(
-											model.uploadModel.repeat ? $author$project$Route$Upload : $author$project$Route$Index)));
-							case 'ResponseGetKifu':
-								var r = _v4.a;
-								var curSeq = function () {
-									var _v5 = model.route;
-									if (_v5.$ === 'Kifu') {
-										var seq = _v5.b;
-										return seq;
-									} else {
-										return 0;
-									}
-								}();
-								var kifuModel = {
-									curStep: A2(
-										$elm$core$Maybe$withDefault,
-										$author$project$Page$Kifu$initStep,
-										A2($author$project$Main$elem, r.steps, curSeq)),
-									kifu: r,
-									len: $elm$core$List$length(r.steps),
-									samePos: _List_Nil
-								};
-								var model_ = _Utils_update(
-									model,
-									{kifuModel: kifuModel});
-								var authToken = A2(
-									$elm$core$Maybe$map,
-									function (at) {
-										return at.token;
-									},
-									model.authToken);
-								return _Utils_Tuple2(
-									model_,
-									A2($author$project$Main$updateKifuPage, authToken, kifuModel));
-							case 'ResponseGetSamePositions':
-								var r = _v4.a;
-								var kifuModel = model.kifuModel;
-								return _Utils_Tuple2(
-									_Utils_update(
-										model,
-										{
-											kifuModel: _Utils_update(
-												kifuModel,
-												{samePos: r.kifus})
-										}),
-									$elm$core$Platform$Cmd$none);
-							default:
-								return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-						}
-					});
-			default:
-				var result = res.a;
-				return A4(
-					$author$project$Main$authorizedResponse,
-					model,
-					req,
-					result,
-					function (r) {
-						var _v6 = A2($elm$core$Debug$log, 'HelloResponse', r);
-						return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
-					});
+				});
 		}
 	});
 var $elm$browser$Browser$Navigation$load = _Browser_load;
@@ -9201,10 +9114,6 @@ var $author$project$Main$update = F2(
 						model.key,
 						$author$project$Route$path(
 							A2($author$project$Route$Kifu, kifuId, seq))));
-			case 'HelloRequest':
-				return _Utils_Tuple2(
-					model,
-					A3($author$project$Api$request, $author$project$Main$ApiResponse, authToken, $author$project$Api$HelloRequest));
 			case 'OnResize':
 				var w = msg.a;
 				var h = msg.b;

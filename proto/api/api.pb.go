@@ -2171,99 +2171,6 @@ func (*KifuResponse_ResponseGetKifu) isKifuResponse_KifuResponseSelect() {}
 
 func (*KifuResponse_ResponseGetSamePositions) isKifuResponse_KifuResponseSelect() {}
 
-type HelloRequest struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-}
-
-func (x *HelloRequest) Reset() {
-	*x = HelloRequest{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[31]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *HelloRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HelloRequest) ProtoMessage() {}
-
-func (x *HelloRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[31]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HelloRequest.ProtoReflect.Descriptor instead.
-func (*HelloRequest) Descriptor() ([]byte, []int) {
-	return file_proto_api_proto_rawDescGZIP(), []int{31}
-}
-
-type HelloResponse struct {
-	state         protoimpl.MessageState
-	sizeCache     protoimpl.SizeCache
-	unknownFields protoimpl.UnknownFields
-
-	Message string `protobuf:"bytes,1,opt,name=message,proto3" json:"message,omitempty"`
-	Name    string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-}
-
-func (x *HelloResponse) Reset() {
-	*x = HelloResponse{}
-	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[32]
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		ms.StoreMessageInfo(mi)
-	}
-}
-
-func (x *HelloResponse) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*HelloResponse) ProtoMessage() {}
-
-func (x *HelloResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[32]
-	if protoimpl.UnsafeEnabled && x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use HelloResponse.ProtoReflect.Descriptor instead.
-func (*HelloResponse) Descriptor() ([]byte, []int) {
-	return file_proto_api_proto_rawDescGZIP(), []int{32}
-}
-
-func (x *HelloResponse) GetMessage() string {
-	if x != nil {
-		return x.Message
-	}
-	return ""
-}
-
-func (x *HelloResponse) GetName() string {
-	if x != nil {
-		return x.Name
-	}
-	return ""
-}
-
 type RecentKifuResponse_Kifu struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -2282,7 +2189,7 @@ type RecentKifuResponse_Kifu struct {
 func (x *RecentKifuResponse_Kifu) Reset() {
 	*x = RecentKifuResponse_Kifu{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[33]
+		mi := &file_proto_api_proto_msgTypes[31]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2295,7 +2202,7 @@ func (x *RecentKifuResponse_Kifu) String() string {
 func (*RecentKifuResponse_Kifu) ProtoMessage() {}
 
 func (x *RecentKifuResponse_Kifu) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[33]
+	mi := &file_proto_api_proto_msgTypes[31]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2379,7 +2286,7 @@ type PostKifuResponse_Kifu struct {
 func (x *PostKifuResponse_Kifu) Reset() {
 	*x = PostKifuResponse_Kifu{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[34]
+		mi := &file_proto_api_proto_msgTypes[32]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2392,7 +2299,7 @@ func (x *PostKifuResponse_Kifu) String() string {
 func (*PostKifuResponse_Kifu) ProtoMessage() {}
 
 func (x *PostKifuResponse_Kifu) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[34]
+	mi := &file_proto_api_proto_msgTypes[32]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2434,7 +2341,7 @@ type GetKifuResponse_Player struct {
 func (x *GetKifuResponse_Player) Reset() {
 	*x = GetKifuResponse_Player{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[35]
+		mi := &file_proto_api_proto_msgTypes[33]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2447,7 +2354,7 @@ func (x *GetKifuResponse_Player) String() string {
 func (*GetKifuResponse_Player) ProtoMessage() {}
 
 func (x *GetKifuResponse_Player) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[35]
+	mi := &file_proto_api_proto_msgTypes[33]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2498,7 +2405,7 @@ type GetKifuResponse_Step struct {
 func (x *GetKifuResponse_Step) Reset() {
 	*x = GetKifuResponse_Step{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[36]
+		mi := &file_proto_api_proto_msgTypes[34]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2511,7 +2418,7 @@ func (x *GetKifuResponse_Step) String() string {
 func (*GetKifuResponse_Step) ProtoMessage() {}
 
 func (x *GetKifuResponse_Step) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[36]
+	mi := &file_proto_api_proto_msgTypes[34]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2620,7 +2527,7 @@ type GetSamePositionsResponse_Step struct {
 func (x *GetSamePositionsResponse_Step) Reset() {
 	*x = GetSamePositionsResponse_Step{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[37]
+		mi := &file_proto_api_proto_msgTypes[35]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2633,7 +2540,7 @@ func (x *GetSamePositionsResponse_Step) String() string {
 func (*GetSamePositionsResponse_Step) ProtoMessage() {}
 
 func (x *GetSamePositionsResponse_Step) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[37]
+	mi := &file_proto_api_proto_msgTypes[35]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2705,7 +2612,7 @@ type GetSamePositionsResponse_Kifu struct {
 func (x *GetSamePositionsResponse_Kifu) Reset() {
 	*x = GetSamePositionsResponse_Kifu{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_proto_api_proto_msgTypes[38]
+		mi := &file_proto_api_proto_msgTypes[36]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -2718,7 +2625,7 @@ func (x *GetSamePositionsResponse_Kifu) String() string {
 func (*GetSamePositionsResponse_Kifu) ProtoMessage() {}
 
 func (x *GetSamePositionsResponse_Kifu) ProtoReflect() protoreflect.Message {
-	mi := &file_proto_api_proto_msgTypes[38]
+	mi := &file_proto_api_proto_msgTypes[36]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -3121,13 +3028,8 @@ var file_proto_api_proto_rawDesc = []byte{
 	0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x48, 0x00, 0x52, 0x18, 0x72, 0x65, 0x73, 0x70, 0x6f,
 	0x6e, 0x73, 0x65, 0x47, 0x65, 0x74, 0x53, 0x61, 0x6d, 0x65, 0x50, 0x6f, 0x73, 0x69, 0x74, 0x69,
 	0x6f, 0x6e, 0x73, 0x42, 0x16, 0x0a, 0x14, 0x6b, 0x69, 0x66, 0x75, 0x5f, 0x72, 0x65, 0x73, 0x70,
-	0x6f, 0x6e, 0x73, 0x65, 0x5f, 0x73, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x22, 0x0e, 0x0a, 0x0c, 0x48,
-	0x65, 0x6c, 0x6c, 0x6f, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x22, 0x3d, 0x0a, 0x0d, 0x48,
-	0x65, 0x6c, 0x6c, 0x6f, 0x52, 0x65, 0x73, 0x70, 0x6f, 0x6e, 0x73, 0x65, 0x12, 0x18, 0x0a, 0x07,
-	0x6d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x52, 0x07, 0x6d,
-	0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x12, 0x12, 0x0a, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x18, 0x02,
-	0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x6e, 0x61, 0x6d, 0x65, 0x42, 0x0b, 0x5a, 0x09, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6f, 0x6e, 0x73, 0x65, 0x5f, 0x73, 0x65, 0x6c, 0x65, 0x63, 0x74, 0x42, 0x0b, 0x5a, 0x09, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -3143,7 +3045,7 @@ func file_proto_api_proto_rawDescGZIP() []byte {
 }
 
 var file_proto_api_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_proto_api_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_proto_api_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_proto_api_proto_goTypes = []interface{}{
 	(Piece_Id)(0),                         // 0: api.Piece.Id
 	(FinishedStatus_Id)(0),                // 1: api.FinishedStatus.Id
@@ -3178,14 +3080,12 @@ var file_proto_api_proto_goTypes = []interface{}{
 	(*GetSamePositionsResponse)(nil),      // 30: api.GetSamePositionsResponse
 	(*KifuRequest)(nil),                   // 31: api.KifuRequest
 	(*KifuResponse)(nil),                  // 32: api.KifuResponse
-	(*HelloRequest)(nil),                  // 33: api.HelloRequest
-	(*HelloResponse)(nil),                 // 34: api.HelloResponse
-	(*RecentKifuResponse_Kifu)(nil),       // 35: api.RecentKifuResponse.Kifu
-	(*PostKifuResponse_Kifu)(nil),         // 36: api.PostKifuResponse.Kifu
-	(*GetKifuResponse_Player)(nil),        // 37: api.GetKifuResponse.Player
-	(*GetKifuResponse_Step)(nil),          // 38: api.GetKifuResponse.Step
-	(*GetSamePositionsResponse_Step)(nil), // 39: api.GetSamePositionsResponse.Step
-	(*GetSamePositionsResponse_Kifu)(nil), // 40: api.GetSamePositionsResponse.Kifu
+	(*RecentKifuResponse_Kifu)(nil),       // 33: api.RecentKifuResponse.Kifu
+	(*PostKifuResponse_Kifu)(nil),         // 34: api.PostKifuResponse.Kifu
+	(*GetKifuResponse_Player)(nil),        // 35: api.GetKifuResponse.Player
+	(*GetKifuResponse_Step)(nil),          // 36: api.GetKifuResponse.Step
+	(*GetSamePositionsResponse_Step)(nil), // 37: api.GetSamePositionsResponse.Step
+	(*GetSamePositionsResponse_Kifu)(nil), // 38: api.GetSamePositionsResponse.Kifu
 }
 var file_proto_api_proto_depIdxs = []int32{
 	2,  // 0: api.AuthRequest.request_sign_up:type_name -> api.SignUpRequest
@@ -3201,13 +3101,13 @@ var file_proto_api_proto_depIdxs = []int32{
 	13, // 10: api.AuthResponse.response_confirm_forgot_password:type_name -> api.ConfirmForgotPasswordResponse
 	14, // 11: api.AuthResponse.response_sign_in:type_name -> api.SignInResponse
 	15, // 12: api.AuthResponse.response_token_refresh:type_name -> api.TokenRefreshResponse
-	35, // 13: api.RecentKifuResponse.kifus:type_name -> api.RecentKifuResponse.Kifu
-	36, // 14: api.PostKifuResponse.duplicated:type_name -> api.PostKifuResponse.Kifu
-	37, // 15: api.GetKifuResponse.first_players:type_name -> api.GetKifuResponse.Player
-	37, // 16: api.GetKifuResponse.second_players:type_name -> api.GetKifuResponse.Player
+	33, // 13: api.RecentKifuResponse.kifus:type_name -> api.RecentKifuResponse.Kifu
+	34, // 14: api.PostKifuResponse.duplicated:type_name -> api.PostKifuResponse.Kifu
+	35, // 15: api.GetKifuResponse.first_players:type_name -> api.GetKifuResponse.Player
+	35, // 16: api.GetKifuResponse.second_players:type_name -> api.GetKifuResponse.Player
 	27, // 17: api.GetKifuResponse.other_fields:type_name -> api.Value
-	38, // 18: api.GetKifuResponse.steps:type_name -> api.GetKifuResponse.Step
-	40, // 19: api.GetSamePositionsResponse.kifus:type_name -> api.GetSamePositionsResponse.Kifu
+	36, // 18: api.GetKifuResponse.steps:type_name -> api.GetKifuResponse.Step
+	38, // 19: api.GetSamePositionsResponse.kifus:type_name -> api.GetSamePositionsResponse.Kifu
 	17, // 20: api.KifuRequest.request_recent_kifu:type_name -> api.RecentKifuRequest
 	19, // 21: api.KifuRequest.request_post_kifu:type_name -> api.PostKifuRequest
 	21, // 22: api.KifuRequest.request_delete_kifu:type_name -> api.DeleteKifuRequest
@@ -3227,7 +3127,7 @@ var file_proto_api_proto_depIdxs = []int32{
 	24, // 36: api.GetSamePositionsResponse.Step.dst:type_name -> api.Pos
 	0,  // 37: api.GetSamePositionsResponse.Step.piece:type_name -> api.Piece.Id
 	1,  // 38: api.GetSamePositionsResponse.Step.finished_status:type_name -> api.FinishedStatus.Id
-	39, // 39: api.GetSamePositionsResponse.Kifu.steps:type_name -> api.GetSamePositionsResponse.Step
+	37, // 39: api.GetSamePositionsResponse.Kifu.steps:type_name -> api.GetSamePositionsResponse.Step
 	40, // [40:40] is the sub-list for method output_type
 	40, // [40:40] is the sub-list for method input_type
 	40, // [40:40] is the sub-list for extension type_name
@@ -3614,30 +3514,6 @@ func file_proto_api_proto_init() {
 			}
 		}
 		file_proto_api_proto_msgTypes[31].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HelloRequest); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_api_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
-			switch v := v.(*HelloResponse); i {
-			case 0:
-				return &v.state
-			case 1:
-				return &v.sizeCache
-			case 2:
-				return &v.unknownFields
-			default:
-				return nil
-			}
-		}
-		file_proto_api_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*RecentKifuResponse_Kifu); i {
 			case 0:
 				return &v.state
@@ -3649,7 +3525,7 @@ func file_proto_api_proto_init() {
 				return nil
 			}
 		}
-		file_proto_api_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_api_proto_msgTypes[32].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*PostKifuResponse_Kifu); i {
 			case 0:
 				return &v.state
@@ -3661,7 +3537,7 @@ func file_proto_api_proto_init() {
 				return nil
 			}
 		}
-		file_proto_api_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_api_proto_msgTypes[33].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetKifuResponse_Player); i {
 			case 0:
 				return &v.state
@@ -3673,7 +3549,7 @@ func file_proto_api_proto_init() {
 				return nil
 			}
 		}
-		file_proto_api_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_api_proto_msgTypes[34].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetKifuResponse_Step); i {
 			case 0:
 				return &v.state
@@ -3685,7 +3561,7 @@ func file_proto_api_proto_init() {
 				return nil
 			}
 		}
-		file_proto_api_proto_msgTypes[37].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_api_proto_msgTypes[35].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetSamePositionsResponse_Step); i {
 			case 0:
 				return &v.state
@@ -3697,7 +3573,7 @@ func file_proto_api_proto_init() {
 				return nil
 			}
 		}
-		file_proto_api_proto_msgTypes[38].Exporter = func(v interface{}, i int) interface{} {
+		file_proto_api_proto_msgTypes[36].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*GetSamePositionsResponse_Kifu); i {
 			case 0:
 				return &v.state
@@ -3747,7 +3623,7 @@ func file_proto_api_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_proto_api_proto_rawDesc,
 			NumEnums:      2,
-			NumMessages:   39,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

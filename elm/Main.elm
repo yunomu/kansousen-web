@@ -59,7 +59,6 @@ type Msg
     | ApiResponse Api.Request Api.Response
     | UploadMsg Upload.Msg
     | KifuMsg Kifu.Msg
-    | HelloRequest
     | Logout
     | NOP
 
@@ -373,15 +372,6 @@ apiResponse model req res =
                         _ ->
                             ( model, Cmd.none )
 
-        Api.HelloResponse result ->
-            authorizedResponse model req result <|
-                \r ->
-                    let
-                        _ =
-                            Debug.log "HelloResponse" r
-                    in
-                    ( model, Cmd.none )
-
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
@@ -569,11 +559,6 @@ update msg model =
                     ( model
                     , Nav.pushUrl model.key (Route.path <| Route.Kifu kifuId seq)
                     )
-
-        HelloRequest ->
-            ( model
-            , Api.request ApiResponse authToken Api.HelloRequest
-            )
 
         OnResize w h ->
             ( { model | windowSize = ( w, h ) }, Cmd.none )
