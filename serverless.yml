@@ -61,16 +61,6 @@ package:
     - ./bin/**
 
 functions:
-  hello:
-    handler: bin/hello
-    events:
-      - http:
-          path: hello
-          method: post
-          cors: true
-          authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId: x8o9p6
   auth:
     handler: bin/auth
     events:

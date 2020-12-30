@@ -1,6 +1,6 @@
 .PHONY: build clean deploy proto proto-clean elm
 
-SERVICES=hello auth kifu
+SERVICES=auth kifu
 PROTOBUF=document api
 ELM_DIR=elm
 
