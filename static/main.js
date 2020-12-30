@@ -7245,6 +7245,26 @@ var $author$project$Proto$Api$getKifuRequestEncoder = function (v) {
 				])));
 };
 var $elm$json$Json$Encode$int = _Json_wrap;
+var $elm$json$Json$Encode$list = F2(
+	function (func, entries) {
+		return _Json_wrap(
+			A3(
+				$elm$core$List$foldl,
+				_Json_addEntry(func),
+				_Json_emptyArray(_Utils_Tuple0),
+				entries));
+	});
+var $tiziano88$elm_protobuf$Protobuf$repeatedFieldEncoder = F3(
+	function (name, encoder, v) {
+		if (!v.b) {
+			return $elm$core$Maybe$Nothing;
+		} else {
+			return $elm$core$Maybe$Just(
+				_Utils_Tuple2(
+					name,
+					A2($elm$json$Json$Encode$list, encoder, v)));
+		}
+	});
 var $author$project$Proto$Api$getSamePositionsRequestEncoder = function (v) {
 	return $elm$json$Json$Encode$object(
 		A2(
@@ -7253,7 +7273,8 @@ var $author$project$Proto$Api$getSamePositionsRequestEncoder = function (v) {
 			_List_fromArray(
 				[
 					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'position', $elm$json$Json$Encode$string, '', v.position),
-					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'steps', $elm$json$Json$Encode$int, 0, v.steps)
+					A4($tiziano88$elm_protobuf$Protobuf$requiredFieldEncoder, 'steps', $elm$json$Json$Encode$int, 0, v.steps),
+					A3($tiziano88$elm_protobuf$Protobuf$repeatedFieldEncoder, 'excludeKifuIds', $elm$json$Json$Encode$string, v.excludeKifuIds)
 				])));
 };
 var $author$project$Proto$Api$postKifuRequestEncoder = function (v) {
@@ -8329,15 +8350,6 @@ var $elm$core$Maybe$map = F2(
 		}
 	});
 var $author$project$Main$storeToken = _Platform_outgoingPort('storeToken', $elm$json$Json$Encode$string);
-var $elm$json$Json$Encode$list = F2(
-	function (func, entries) {
-		return _Json_wrap(
-			A3(
-				$elm$core$List$foldl,
-				_Json_addEntry(func),
-				_Json_emptyArray(_Utils_Tuple0),
-				entries));
-	});
 var $author$project$Main$storeTokens = _Platform_outgoingPort(
 	'storeTokens',
 	function ($) {
@@ -8563,7 +8575,12 @@ var $author$project$Main$updateKifuPage = F2(
 					$author$project$Api$KifuRequest(
 						$author$project$Proto$Api$KifuRequest(
 							$author$project$Proto$Api$RequestGetSamePositions(
-								{position: position, steps: 5}))))
+								{
+									excludeKifuIds: _List_fromArray(
+										[kifuModel.kifu.kifuId]),
+									position: position,
+									steps: 5
+								}))))
 				]));
 	});
 var $author$project$Main$apiResponse = F3(

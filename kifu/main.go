@@ -279,7 +279,12 @@ func min(a, b int) int {
 }
 
 func (s *server) getSamePositions(ctx context.Context, userId string, req *apipb.GetSamePositionsRequest) (*apipb.KifuResponse, error) {
-	pss, err := s.table.GetSamePositions(ctx, []string{userId}, req.Position, req.Steps)
+	pss, err := s.table.GetSamePositions(ctx,
+		[]string{userId},
+		req.Position,
+		db.GetSamePositionsSetNumStep(req.GetSteps()),
+		db.GetSamePositionsAddExcludeKifuIds(req.GetExcludeKifuIds()),
+	)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "GetSamePositions: %v", err)
 	}

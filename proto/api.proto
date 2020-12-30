@@ -224,6 +224,7 @@ message GetKifuResponse {
 message GetSamePositionsRequest {
   string position = 1;
   int32 steps = 2;
+  repeated string exclude_kifu_ids = 3;
 }
 
 message GetSamePositionsResponse {

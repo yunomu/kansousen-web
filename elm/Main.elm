@@ -234,6 +234,7 @@ updateKifuPage authToken kifuModel =
                     PB.RequestGetSamePositions
                         { position = position
                         , steps = 5
+                        , excludeKifuIds = [ kifuModel.kifu.kifuId ]
                         }
         ]
 

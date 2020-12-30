@@ -378,10 +378,19 @@ func (db *DynamoDB) GetSteps(ctx context.Context, userId, kifuId string, options
 	return ret, nil
 }
 
+func include(ss []string, o string) bool {
+	for _, s := range ss {
+		if s == o {
+			return true
+		}
+	}
+	return false
+}
+
 func (db *DynamoDB) getPositions(
 	ctx context.Context,
 	userId, pos string,
-	numStep int32,
+	opts *getSamePositionsOptions,
 ) ([]*PositionAndSteps, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
@@ -408,6 +417,10 @@ func (db *DynamoDB) getPositions(
 			}
 			position.Version = item.Version
 
+			if include(opts.excludeKifuIds, position.GetKifuId()) {
+				return
+			}
+
 			select {
 			case <-ctx.Done():
 				if err := ctx.Err(); err == context.Canceled {
@@ -433,10 +446,10 @@ func (db *DynamoDB) getPositions(
 	g.Go(func() error {
 		for pos := range posCh {
 			var steps []*documentpb.Step
-			if numStep > 0 {
+			if opts.numStep > 0 {
 				start := pos.Seq + 1
-				end := start + numStep - 1
-				ss, err := db.GetSteps(ctx, pos.UserId, pos.KifuId, SetGetStepsRange(start, end))
+				end := start + opts.numStep - 1
+				ss, err := db.GetSteps(ctx, pos.UserId, pos.KifuId, GetStepsSetRange(start, end))
 				if err != nil {
 					return err
 				}
@@ -470,9 +483,18 @@ func (db *DynamoDB) getPositions(
 	return ret, nil
 }
 
-func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string, steps int32) ([]*PositionAndSteps, error) {
+func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*PositionAndSteps, error) {
+	if pos == "" {
+		return nil, ErrPositionIsEmpty
+	}
+
 	if len(userIds) == 0 {
 		return nil, nil
+	}
+
+	o := &getSamePositionsOptions{}
+	for _, f := range options {
+		f(o)
 	}
 
 	g, ctx := errgroup.WithContext(ctx)
@@ -500,7 +522,7 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 	for i := 0; i < db.parallelism; i++ {
 		g.Go(func() error {
 			for userId := range userIdCh {
-				ps, err := db.getPositions(ctx, userId, pos, steps)
+				ps, err := db.getPositions(ctx, userId, pos, o)
 				if err != nil {
 					return err
 				}

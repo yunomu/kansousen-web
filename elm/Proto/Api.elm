@@ -1022,6 +1022,7 @@ getKifuResponse_StepEncoder v =
 type alias GetSamePositionsRequest =
     { position : String -- 1
     , steps : Int -- 2
+    , excludeKifuIds : List String -- 3
     }
 
 
@@ -1030,6 +1031,7 @@ getSamePositionsRequestDecoder =
     JD.lazy <| \_ -> decode GetSamePositionsRequest
         |> required "position" JD.string ""
         |> required "steps" intDecoder 0
+        |> repeated "excludeKifuIds" JD.string
 
 
 getSamePositionsRequestEncoder : GetSamePositionsRequest -> JE.Value
@@ -1037,6 +1039,7 @@ getSamePositionsRequestEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "position" JE.string "" v.position)
         , (requiredFieldEncoder "steps" JE.int 0 v.steps)
+        , (repeatedFieldEncoder "excludeKifuIds" JE.string v.excludeKifuIds)
         ]
 
 

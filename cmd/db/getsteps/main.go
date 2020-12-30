@@ -51,7 +51,7 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 
 	var opts []db.GetStepsOption
 	if *c.start > 0 {
-		opts = append(opts, db.SetGetStepsRange(int32(*c.start), int32(*c.start+*c.limit)))
+		opts = append(opts, db.GetStepsSetRange(int32(*c.start), int32(*c.start+*c.limit)))
 	}
 
 	db := args[0].(func() db.DB)()
