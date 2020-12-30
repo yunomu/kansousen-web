@@ -270,14 +270,39 @@ func (d *DynamoDB) BatchGet(ctx context.Context, keys []*Key) ([]*Item, error) {
 type queryOption struct {
 	expression string
 	values     map[string]*dynamodb.AttributeValue
+	limit      int64
 }
 
 type QueryOption func(*queryOption)
 
-func SetQueryExpression(expression string, values map[string]*dynamodb.AttributeValue) QueryOption {
+func SetQueryRange(start, end string) QueryOption {
 	return func(op *queryOption) {
-		op.expression = expression
-		op.values = values
+		op.expression = fmt.Sprintf("%s BETWEEN :start AND :end", skField)
+		op.values = map[string]*dynamodb.AttributeValue{
+			":start": &dynamodb.AttributeValue{
+				S: aws.String(start),
+			},
+			":end": &dynamodb.AttributeValue{
+				S: aws.String(end),
+			},
+		}
+	}
+}
+
+func SetQueryRangeStart(start string) QueryOption {
+	return func(op *queryOption) {
+		op.expression = fmt.Sprintf("%s >= :sk", skField)
+		op.values = map[string]*dynamodb.AttributeValue{
+			":sk": &dynamodb.AttributeValue{
+				S: aws.String(start),
+			},
+		}
+	}
+}
+
+func SetQueryLimit(limit int64) QueryOption {
+	return func(op *queryOption) {
+		op.limit = limit
 	}
 }
 
@@ -304,6 +329,10 @@ func (d *DynamoDB) Query(ctx context.Context, pk string, f func(*Item), ops ...Q
 		KeyConditionExpression:    aws.String(expression),
 		ExpressionAttributeValues: values,
 	}
+
+	//if o.limit > 0 {
+	//	input.Limit = aws.Int64(o.limit)
+	//}
 
 	var rerr error
 	if err := d.client.QueryPagesWithContext(ctx, input, func(out *dynamodb.QueryOutput, lastPage bool) bool {
@@ -374,7 +403,7 @@ func (d *DynamoDB) RecentlyUpdated(ctx context.Context, pk string, limit int) ([
 	return ret, nil
 }
 
-func (d *DynamoDB) Delete(ctx context.Context, idempotentKey string, keys []*Key) error {
+func (d *DynamoDB) Delete(ctx context.Context, keys []*Key) error {
 	if len(keys) == 0 {
 		return nil
 	}

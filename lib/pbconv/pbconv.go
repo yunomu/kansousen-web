@@ -51,44 +51,6 @@ func posYFromInt(y int32) sfen.PosY {
 	return sfen.PosYs[y]
 }
 
-func stepToMove(p *sfen.Surface, step *ptypes.Step) *document.Move {
-	var captured document.Piece_Id
-	if step.FinishedStatus == ptypes.FinishedStatus_NOT_FINISHED {
-		if piece := p.GetPiece(posXFromInt(step.Dst.X), posYFromInt(step.Dst.Y)); piece != nil {
-			switch piece.Type {
-			case sfen.Piece_NULL:
-				captured = document.Piece_NULL
-			case sfen.Piece_HISHA:
-				captured = document.Piece_HISHA
-			case sfen.Piece_KAKU:
-				captured = document.Piece_KAKU
-			case sfen.Piece_KIN:
-				captured = document.Piece_KIN
-			case sfen.Piece_GIN:
-				captured = document.Piece_GIN
-			case sfen.Piece_KEI:
-				captured = document.Piece_KEI
-			case sfen.Piece_KYOU:
-				captured = document.Piece_KYOU
-			case sfen.Piece_FU:
-				captured = document.Piece_FU
-			default:
-				panic("Unknown Piece type")
-			}
-		}
-	}
-
-	return &document.Move{
-		Src:            KifPosToPos(step.GetSrc()),
-		Dst:            KifPosToPos(step.GetDst()),
-		Piece:          KifPieceToPiece(step.GetPiece()),
-		Promote:        step.GetModifier() == ptypes.Modifier_PROMOTE,
-		Drop:           step.GetModifier() == ptypes.Modifier_PUTTED,
-		Captured:       captured,
-		FinishedStatus: KifFinishedStatusToStatus(step.GetFinishedStatus()),
-	}
-}
-
 func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) {
 	p := sfen.NewSurfaceStartpos()
 	var steps []*document.Step
@@ -99,11 +61,9 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 	}
 	steps = append(steps, &document.Step{
 		UserId: userId,
-		KifuId: kifuId,
-		Seq:    0,
+		KifuId: kifuId, Seq: 0,
 
 		Position:     buf.String(),
-		Move:         nil,
 		TimestampSec: 0,
 		ThinkingSec:  0,
 		Notes:        nil,
@@ -120,10 +80,42 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 			Notes:        step.GetNotes(),
 		}
 
-		move := kif.StepToMove(step)
-		s.Move = stepToMove(p, step)
-		s.Move.Sfen = move
+		var captured document.Piece_Id
+		if step.FinishedStatus == ptypes.FinishedStatus_NOT_FINISHED {
+			if piece := p.GetPiece(posXFromInt(step.Dst.X), posYFromInt(step.Dst.Y)); piece != nil {
+				switch piece.Type {
+				case sfen.Piece_NULL:
+					captured = document.Piece_NULL
+				case sfen.Piece_HISHA:
+					captured = document.Piece_HISHA
+				case sfen.Piece_KAKU:
+					captured = document.Piece_KAKU
+				case sfen.Piece_KIN:
+					captured = document.Piece_KIN
+				case sfen.Piece_GIN:
+					captured = document.Piece_GIN
+				case sfen.Piece_KEI:
+					captured = document.Piece_KEI
+				case sfen.Piece_KYOU:
+					captured = document.Piece_KYOU
+				case sfen.Piece_FU:
+					captured = document.Piece_FU
+				default:
+					panic("Unknown Piece type")
+				}
+			}
+		}
 
+		s.Src = KifPosToPos(step.GetSrc())
+		s.Dst = KifPosToPos(step.GetDst())
+		s.Piece = KifPieceToPiece(step.GetPiece())
+		s.Promote = step.GetModifier() == ptypes.Modifier_PROMOTE
+		s.Drop = step.GetModifier() == ptypes.Modifier_PUTTED
+		s.Captured = captured
+		s.FinishedStatus = KifFinishedStatusToStatus(step.GetFinishedStatus())
+
+		move := kif.StepToMove(step)
+		s.Sfen = move
 		if move != "" {
 			if err := p.Move(move); err != nil {
 				return nil, err
@@ -148,34 +140,16 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 }
 
 func StepsToPositions(steps []*document.Step) []*document.Position {
-	var moves []*document.Move
+	var positions []*document.Position
 	for _, step := range steps {
 		if step.Seq == 0 {
-			// and pos = startpos
 			continue
-		}
-		if step.Move == nil {
-			break
-		}
-		moves = append(moves, step.Move)
-	}
-
-	var positions []*document.Position
-	for i, step := range steps {
-		if step.Seq == 0 {
-			continue
-		}
-		var ms []*document.Move
-		if i < len(moves) {
-			ms = moves[i:]
 		}
 		positions = append(positions, &document.Position{
 			UserId:   step.UserId,
 			Position: step.Position,
 			KifuId:   step.KifuId,
 			Seq:      step.Seq,
-
-			Moves: ms,
 		})
 	}
 

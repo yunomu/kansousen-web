@@ -85,17 +85,6 @@ message Pos {
   int32 y = 2;
 }
 
-message Move {
-  Pos src = 1;
-  Pos dst = 2;
-  Piece.Id piece = 3;
-  bool promote = 4;
-  bool drop = 5;
-  Piece.Id captured = 6;
-  FinishedStatus.Id finished_status = 7;
-  string sfen = 8;
-}
-
 message Kifu {
   string user_id = 1;
   string kifu_id = 2;
@@ -121,10 +110,17 @@ message Step {
   int64 version = 4;
 
   string position = 5;
-  Move move = 6;
-  int32 timestamp_sec = 7;
-  int32 thinking_sec = 8;
-  repeated string notes = 10;
+  Pos src = 6;
+  Pos dst = 7;
+  Piece.Id piece = 8;
+  bool promote = 9;
+  bool drop = 10;
+  Piece.Id captured = 11;
+  FinishedStatus.Id finished_status = 12;
+  string sfen = 13;
+  int32 timestamp_sec = 14;
+  int32 thinking_sec = 15;
+  repeated string notes = 16;
 }
 
 message Position {
@@ -133,8 +129,6 @@ message Position {
   string kifu_id = 3;
   int32 seq = 4;
   int64 version = 5;
-
-  repeated Move moves = 6;
 }
 
 message KifuSignature {

@@ -16,9 +16,12 @@ import (
 	"github.com/yunomu/kansousen/lib/dynamodb"
 
 	"github.com/yunomu/kansousen/cmd/db/deletekifu"
+	"github.com/yunomu/kansousen/cmd/db/getkifu"
+	"github.com/yunomu/kansousen/cmd/db/getsteps"
 	"github.com/yunomu/kansousen/cmd/db/listkifu"
 	"github.com/yunomu/kansousen/cmd/db/putkifu"
 	"github.com/yunomu/kansousen/cmd/db/recentkifu"
+	"github.com/yunomu/kansousen/cmd/db/samepos"
 )
 
 type Command struct {
@@ -54,10 +57,15 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	commander.Register(commander.CommandsCommand(), "help")
 	commander.Register(commander.HelpCommand(), "help")
 
-	commander.Register(putkifu.NewCommand(), "")
-	commander.Register(listkifu.NewCommand(), "")
-	commander.Register(deletekifu.NewCommand(), "")
-	commander.Register(recentkifu.NewCommand(), "")
+	commander.Register(putkifu.NewCommand(), "kifu")
+	commander.Register(getkifu.NewCommand(), "kifu")
+	commander.Register(listkifu.NewCommand(), "kifu")
+	commander.Register(deletekifu.NewCommand(), "kifu")
+	commander.Register(recentkifu.NewCommand(), "kifu")
+
+	commander.Register(getsteps.NewCommand(), "step")
+
+	commander.Register(samepos.NewCommand(), "pos")
 
 	c.commander = commander
 }

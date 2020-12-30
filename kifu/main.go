@@ -193,24 +193,23 @@ func (s *server) getKifu(ctx context.Context, userId string, req *apipb.GetKifuR
 		resStep = &apipb.GetKifuResponse_Step{
 			Seq:          step.GetSeq(),
 			Position:     step.GetPosition(),
-			Promoted:     step.GetMove().GetPromote(),
-			Captured:     apipb.Piece_Id(step.GetMove().GetCaptured()),
+			Promoted:     step.GetPromote(),
+			Captured:     apipb.Piece_Id(step.GetCaptured()),
 			TimestampSec: step.GetTimestampSec(),
 			ThinkingSec:  step.GetThinkingSec(),
 			Notes:        step.Notes,
 
-			FinishedStatus: apipb.FinishedStatus_Id(step.GetMove().GetFinishedStatus()),
+			FinishedStatus: apipb.FinishedStatus_Id(step.GetFinishedStatus()),
 		}
 
-		m := step.GetMove()
-		if dst := m.GetDst(); dst != nil {
+		if dst := step.GetDst(); dst != nil {
 			resStep.Dst = &apipb.Pos{
 				X: dst.GetX(),
 				Y: dst.GetY(),
 			}
 		}
-		resStep.Piece = apipb.Piece_Id(m.GetPiece())
-		if src := m.GetSrc(); src != nil {
+		resStep.Piece = apipb.Piece_Id(step.GetPiece())
+		if src := step.GetSrc(); src != nil {
 			resStep.Src = &apipb.Pos{
 				X: src.GetX(),
 				Y: src.GetY(),
@@ -280,47 +279,42 @@ func min(a, b int) int {
 }
 
 func (s *server) getSamePositions(ctx context.Context, userId string, req *apipb.GetSamePositionsRequest) (*apipb.KifuResponse, error) {
-	ps, err := s.table.GetSamePositions(ctx, []string{userId}, req.Position)
+	pss, err := s.table.GetSamePositions(ctx, []string{userId}, req.Position, req.Steps)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "GetSamePositions: %v", err)
 	}
 
-	maxSteps := int(req.Steps)
-	if maxSteps == 0 {
-		maxSteps = 5
-	}
-
 	var kifus []*apipb.GetSamePositionsResponse_Kifu
-	for _, p := range ps {
+	for _, ps := range pss {
 		var steps []*apipb.GetSamePositionsResponse_Step
-		for i, m := range p.Moves[:min(maxSteps, len(p.Moves))] {
+		for _, step := range ps.Steps {
 			var src, dst *apipb.Pos
-			if m.Dst != nil {
+			if step.GetDst() != nil {
 				dst = &apipb.Pos{
-					X: m.Dst.X,
-					Y: m.Dst.Y,
+					X: step.Dst.X,
+					Y: step.Dst.Y,
 				}
 			}
-			if m.Src != nil {
+			if step.GetSrc() != nil {
 				src = &apipb.Pos{
-					X: m.Src.X,
-					Y: m.Src.Y,
+					X: step.Src.X,
+					Y: step.Src.Y,
 				}
 			}
 			steps = append(steps, &apipb.GetSamePositionsResponse_Step{
-				Seq:            p.Seq + int32(i) + 1,
+				Seq:            step.GetSeq(),
 				Dst:            dst,
 				Src:            src,
-				Piece:          apipb.Piece_Id(m.GetPiece()),
-				Promoted:       m.Promote,
-				FinishedStatus: apipb.FinishedStatus_Id(m.GetFinishedStatus()),
+				Piece:          apipb.Piece_Id(step.GetPiece()),
+				Promoted:       step.Promote,
+				FinishedStatus: apipb.FinishedStatus_Id(step.GetFinishedStatus()),
 			})
 		}
 
 		kifus = append(kifus, &apipb.GetSamePositionsResponse_Kifu{
-			UserId: p.UserId,
-			KifuId: p.KifuId,
-			Seq:    p.Seq,
+			UserId: ps.Position.GetUserId(),
+			KifuId: ps.Position.GetKifuId(),
+			Seq:    ps.Position.GetSeq(),
 			Steps:  steps,
 		})
 	}

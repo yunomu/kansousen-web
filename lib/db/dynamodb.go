@@ -10,8 +10,6 @@ import (
 
 	"github.com/golang/protobuf/proto"
 
-	"github.com/google/uuid"
-
 	documentpb "github.com/yunomu/kansousen/proto/document"
 
 	"github.com/yunomu/kansousen/lib/dynamodb"
@@ -50,11 +48,11 @@ func buildKifuKey(userId, kifuId string) (string, string) {
 }
 
 func buildStepKey(userId, kifuId string, seq int32) (string, string) {
-	return fmt.Sprintf("STEP:%s:%s", userId, kifuId), fmt.Sprintf("%d", seq)
+	return fmt.Sprintf("STEP:%s:%s", userId, kifuId), fmt.Sprintf("%04d", seq)
 }
 
 func buildPositionKey(userId, sfenPos, kifuId string, seq int32) (string, string) {
-	return fmt.Sprintf("POSITION:%s:%s", userId, sfenPos), fmt.Sprintf("%s:%d", kifuId, seq)
+	return fmt.Sprintf("POSITION:%s:%s", userId, sfenPos), fmt.Sprintf("%s:%04d", kifuId, seq)
 }
 
 func buildKifuSignatureKey(sfen, userId, kifuId string) (string, string) {
@@ -246,7 +244,6 @@ func (db *DynamoDB) GetKifuAndSteps(
 	if err := g.Wait(); err != nil {
 		return nil, nil, err
 	}
-	sort.Sort(StepSlice(steps))
 
 	return kifu, steps, nil
 }
@@ -326,11 +323,32 @@ func (db *DynamoDB) DuplicateKifu(ctx context.Context, sfen string) ([]*document
 	return ret, nil
 }
 
-func (db *DynamoDB) GetSteps(ctx context.Context, userId, kifuId string) ([]*documentpb.Step, error) {
+func min(a, b int) int {
+	if a < b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func (db *DynamoDB) GetSteps(ctx context.Context, userId, kifuId string, options ...GetStepsOption) ([]*documentpb.Step, error) {
+	o := &getStepsOptions{}
+	for _, f := range options {
+		f(o)
+	}
+
+	var opts []dynamodb.QueryOption
+	switch {
+	case o.start > 0 && o.end > 0:
+		_, start := buildStepKey(userId, kifuId, o.start)
+		_, end := buildStepKey(userId, kifuId, o.end)
+		opts = append(opts, dynamodb.SetQueryRange(start, end))
+	}
+
+	pk, _ := buildStepKey(userId, kifuId, 0)
 	ctx, cancel := context.WithCancel(ctx)
 	var rerr error
 	var ret []*documentpb.Step
-	pk, _ := buildStepKey(userId, kifuId, 0)
 	if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
 		doc := &documentpb.Document{}
 		if err := proto.Unmarshal(item.Bytes, doc); err != nil {
@@ -348,17 +366,111 @@ func (db *DynamoDB) GetSteps(ctx context.Context, userId, kifuId string) ([]*doc
 		step.Version = item.Version
 
 		ret = append(ret, step)
-	}); err != nil {
+	}, opts...); err != nil {
 		if rerr != nil {
 			return nil, rerr
 		}
 		return nil, err
 	}
 
+	sort.Sort(StepSlice(ret))
+
 	return ret, nil
 }
 
-func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string) ([]*documentpb.Position, error) {
+func (db *DynamoDB) getPositions(
+	ctx context.Context,
+	userId, pos string,
+	numStep int32,
+) ([]*PositionAndSteps, error) {
+	g, ctx := errgroup.WithContext(ctx)
+
+	posCh := make(chan *documentpb.Position)
+	g.Go(func() error {
+		defer close(posCh)
+
+		pk, _ := buildPositionKey(userId, pos, "", 0)
+		ctx, cancel := context.WithCancel(ctx)
+		var rerr error
+		if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
+			doc := &documentpb.Document{}
+			if err := proto.Unmarshal(item.Bytes, doc); err != nil {
+				rerr = err
+				cancel()
+				return
+			}
+
+			position := doc.GetPosition()
+			if position == nil {
+				rerr = ErrInvalidValue
+				cancel()
+				return
+			}
+			position.Version = item.Version
+
+			select {
+			case <-ctx.Done():
+				if err := ctx.Err(); err == context.Canceled {
+					rerr = errors.New("canceled: send position")
+				} else {
+					rerr = err
+				}
+				cancel()
+				return
+			case posCh <- position:
+			}
+		}); err != nil {
+			if rerr != nil {
+				return rerr
+			}
+			return err
+		}
+
+		return nil
+	})
+
+	psCh := make(chan *PositionAndSteps)
+	g.Go(func() error {
+		for pos := range posCh {
+			var steps []*documentpb.Step
+			if numStep > 0 {
+				start := pos.Seq + 1
+				end := start + numStep - 1
+				ss, err := db.GetSteps(ctx, pos.UserId, pos.KifuId, SetGetStepsRange(start, end))
+				if err != nil {
+					return err
+				}
+				steps = ss
+			}
+
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case psCh <- &PositionAndSteps{Position: pos, Steps: steps}:
+			}
+		}
+
+		return nil
+	})
+
+	go func() {
+		g.Wait()
+		close(psCh)
+	}()
+
+	var ret []*PositionAndSteps
+	for ps := range psCh {
+		ret = append(ret, ps)
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+
+	return ret, nil
+}
+
+func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string, steps int32) ([]*PositionAndSteps, error) {
 	if len(userIds) == 0 {
 		return nil, nil
 	}
@@ -384,45 +496,19 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 		return nil
 	})
 
-	positionCh := make(chan *documentpb.Position, db.parallelism)
+	psCh := make(chan []*PositionAndSteps)
 	for i := 0; i < db.parallelism; i++ {
 		g.Go(func() error {
 			for userId := range userIdCh {
-				pk, _ := buildPositionKey(userId, pos, "", 0)
-				ctx, cancel := context.WithCancel(ctx)
-				var rerr error
-				if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
-					doc := &documentpb.Document{}
-					if err := proto.Unmarshal(item.Bytes, doc); err != nil {
-						rerr = err
-						cancel()
-						return
-					}
-
-					position := doc.GetPosition()
-					if position == nil {
-						rerr = ErrInvalidValue
-						cancel()
-						return
-					}
-					position.Version = item.Version
-
-					select {
-					case positionCh <- position:
-					case <-ctx.Done():
-						if err := ctx.Err(); err == context.Canceled {
-							rerr = errors.New("canceled: send position")
-						} else {
-							rerr = err
-						}
-						cancel()
-						return
-					}
-				}); err != nil {
-					if rerr != nil {
-						return rerr
-					}
+				ps, err := db.getPositions(ctx, userId, pos, steps)
+				if err != nil {
 					return err
+				}
+
+				select {
+				case <-ctx.Done():
+					return ctx.Err()
+				case psCh <- ps:
 				}
 			}
 
@@ -432,12 +518,12 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 
 	go func() {
 		g.Wait()
-		close(positionCh)
+		close(psCh)
 	}()
 
-	var ret []*documentpb.Position
-	for position := range positionCh {
-		ret = append(ret, position)
+	var ret []*PositionAndSteps
+	for ps := range psCh {
+		ret = append(ret, ps...)
 	}
 
 	if err := g.Wait(); err != nil {
@@ -568,11 +654,6 @@ func (db *DynamoDB) DeleteKifu(ctx context.Context, userId, kifuId string) error
 		return err
 	}
 
-	idempotentKey, err := uuid.NewRandom()
-	if err != nil {
-		return errors.New("Generate idempotentkey error")
-	}
-
 	g, ctx := errgroup.WithContext(ctx)
 
 	keysCh := make(chan []*dynamodb.Key, db.parallelism)
@@ -602,7 +683,7 @@ func (db *DynamoDB) DeleteKifu(ctx context.Context, userId, kifuId string) error
 	for i := 0; i < db.parallelism; i++ {
 		g.Go(func() error {
 			for ks := range keysCh {
-				if err := db.table.Delete(ctx, idempotentKey.String(), ks); err != nil {
+				if err := db.table.Delete(ctx, ks); err != nil {
 					return err
 				}
 			}
