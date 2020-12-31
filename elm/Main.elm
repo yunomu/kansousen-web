@@ -564,7 +564,7 @@ update msg model =
             ( { model | windowSize = ( w, h ) }, Cmd.none )
 
         Logout ->
-            ( model, removeTokens () )
+            ( { model | authToken = Nothing }, removeTokens () )
 
         _ ->
             let

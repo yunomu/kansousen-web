@@ -9126,7 +9126,9 @@ var $author$project$Main$update = F2(
 					$elm$core$Platform$Cmd$none);
 			case 'Logout':
 				return _Utils_Tuple2(
-					model,
+					_Utils_update(
+						model,
+						{authToken: $elm$core$Maybe$Nothing}),
 					$author$project$Main$removeTokens(_Utils_Tuple0));
 			default:
 				var _v10 = A2(
