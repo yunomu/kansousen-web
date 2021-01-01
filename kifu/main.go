@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"os"
 	"strings"
 	"time"
@@ -33,16 +32,9 @@ import (
 	documentpb "github.com/yunomu/kansousen/proto/document"
 )
 
-var (
-	dev       = flag.Bool("dev", false, "Development mode")
-	tableName = flag.String("table", "kansousen", "DynamoDB table name")
-)
-
 func init() {
-	flag.Parse()
-
 	var logger *zap.Logger
-	if *dev {
+	if os.Getenv("DEV") == "true" {
 		l, err := zap.NewDevelopment()
 		if err != nil {
 			panic(err)
@@ -360,6 +352,11 @@ func (s *server) Serve(ctx context.Context, m proto.Message) (proto.Message, err
 func main() {
 	ctx := context.Background()
 
+	tableName := os.Getenv("TABLE_NAME")
+	if tableName == "" {
+		zap.L().Fatal("env TABLE_NAME is not found")
+	}
+
 	region := "ap-northeast-1"
 
 	kv, err := awsx.GetSecrets(ctx, region, os.Getenv("SECRET_NAME"))
@@ -376,9 +373,9 @@ func main() {
 
 	dynamodb := awsdynamodb.New(session, aws.NewConfig().WithRegion(region))
 
-	table := libdynamodb.NewDynamoDBTable(dynamodb, *tableName)
+	table := libdynamodb.NewDynamoDBTable(dynamodb, tableName)
 	if err := table.Init(ctx); err != nil {
-		zap.L().Fatal("DynamoDBTable.Init", zap.Error(err), zap.Stringp("tableName", tableName))
+		zap.L().Fatal("DynamoDBTable.Init", zap.Error(err), zap.String("tableName", tableName))
 	}
 
 	s := &server{

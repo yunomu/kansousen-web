@@ -23,6 +23,8 @@ frameworkVersion: '2'
 provider:
   name: aws
   runtime: go1.x
+  apiGateway:
+    shouldStartNameWithService: true
 
 # you can overwrite defaults here
   stage: dev
@@ -53,6 +55,7 @@ provider:
   environment:
     SECRET_NAME: dev/kifulog
     COGNITO_CLIENT_ID: 3sp4kn17md6qe043jqd3k1gf5u
+    TABLE_NAME: ${file(./cfg/dynamodb-kansousen.yaml):TableName}
 
 package:
   exclude:
@@ -61,13 +64,6 @@ package:
     - ./bin/**
 
 functions:
-  auth:
-    handler: bin/auth
-    events:
-      - http:
-          path: auth
-          method: post
-          cors: true
   kifu:
     handler: bin/kifu
     events:
@@ -76,8 +72,17 @@ functions:
           method: post
           cors: true
           authorizer:
-            type: COGNITO_USER_POOLS
-            authorizerId: x8o9p6
+            arn: arn:aws:cognito-idp:ap-northeast-1:970194315034:userpool/ap-northeast-1_2D5uI4X3j
+            #authorizerId: x8o9p6
+            #type: COGNITO_USER_POOLS
+            #authorizerId: fpgiho
+  auth:
+    handler: bin/auth
+    events:
+      - http:
+          path: auth
+          method: post
+          cors: true
 #    The following are a few example events you can configure
 #    NOTE: Please make sure to change your handler code to work with those events
 #    Check the event documentation for details
