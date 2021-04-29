@@ -1,10 +1,11 @@
 port module Main exposing (main)
 
+--import Debug
+
 import Api
 import Browser
 import Browser.Events
 import Browser.Navigation as Nav
-import Debug
 import Element exposing (Attribute, Element)
 import Element.Events as Events
 import Element.Input as Input
@@ -211,7 +212,8 @@ authorizedResponse model req result f =
                     )
 
         Err err ->
-            Debug.log (Debug.toString err) ( model, Cmd.none )
+            --Debug.log (Debug.toString err) ( model, Cmd.none )
+            ( model, Cmd.none )
 
 
 elem : List a -> Int -> Maybe a
@@ -567,10 +569,10 @@ update msg model =
             ( { model | authToken = Nothing }, removeTokens () )
 
         _ ->
-            let
-                _ =
-                    Debug.log (Debug.toString msg) msg
-            in
+            --let
+            --    _ =
+            --        Debug.log (Debug.toString msg) msg
+            --in
             ( model, Cmd.none )
 
 

@@ -92,6 +92,7 @@ message Kifu {
 
   DateTime start = 4;
   DateTime end = 5;
+  string timezone = 14;
   Handicap.Id handicap = 6;
   string game_name = 7;
   repeated Player players = 8;

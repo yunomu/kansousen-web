@@ -399,12 +399,15 @@ func ReadHeader(hs []*ptypes.Header, out *document.Kifu) error {
 }
 
 func DateTimeToTS(dt *document.DateTime, loc *time.Location) int64 {
+	return DateTimeToTime(dt, loc).Unix()
+}
+
+func DateTimeToTime(dt *document.DateTime, loc *time.Location) time.Time {
 	d := dt.GetDate()
 	tsec := int(dt.GetTimeSec())
 	sec := tsec % 60
 	tmin := tsec / 60
 	min := tmin % 60
 	hour := tmin / 60
-	t := time.Date(int(d.GetYear()), time.Month(d.GetMonth()), int(d.GetDay()), hour, min, sec, 0, loc)
-	return t.Unix()
+	return time.Date(int(d.GetYear()), time.Month(d.GetMonth()), int(d.GetDay()), hour, min, sec, 0, loc)
 }

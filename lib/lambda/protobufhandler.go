@@ -4,14 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"reflect"
-	"strings"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/golang/protobuf/jsonpb"
-	"github.com/golang/protobuf/proto"
 
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 
@@ -25,52 +20,22 @@ type Request events.APIGatewayProxyRequest
 type Response events.APIGatewayProxyResponse
 
 type Server interface {
-	Serve(context.Context, proto.Message) (proto.Message, error)
+	Serve(context.Context, []byte) ([]byte, error)
 }
 
-type ProtobufHandler struct {
-	marshaler   *jsonpb.Marshaler
-	unmarshaler *jsonpb.Unmarshaler
-
-	reqType reflect.Type
-	server  Server
+type Handler struct {
+	server Server
 }
 
-func NewProtobufHandler(requestTemplate proto.Message, s Server) *ProtobufHandler {
-	return &ProtobufHandler{
-		marshaler: &jsonpb.Marshaler{
-			EmitDefaults: true,
-		},
-		unmarshaler: &jsonpb.Unmarshaler{
-			AllowUnknownFields: true,
-		},
-		reqType: reflect.TypeOf(requestTemplate).Elem(),
-		server:  s,
+func NewHandler(s Server) *Handler {
+	return &Handler{
+		server: s,
 	}
 }
 
-func (h *ProtobufHandler) handler(ctx context.Context, r Request) (Response, error) {
+func (h *Handler) handler(ctx context.Context, r Request) (Response, error) {
 	header := map[string]string{
 		"Access-Control-Allow-Origin": "*",
-	}
-
-	i := reflect.New(h.reqType).Interface()
-
-	req, ok := i.(proto.Message)
-	if !ok {
-		return Response{
-			StatusCode: http.StatusServiceUnavailable,
-			Headers:    header,
-			Body:       "failed precondition",
-		}, errors.New("request is not instance of proto.Message")
-	}
-
-	if err := h.unmarshaler.Unmarshal(strings.NewReader(r.Body), req); err != nil {
-		return Response{
-			StatusCode: http.StatusBadRequest,
-			Headers:    header,
-			Body:       err.Error(),
-		}, err
 	}
 
 	if auth, ok := r.Headers["Authorization"]; ok {
@@ -85,7 +50,7 @@ func (h *ProtobufHandler) handler(ctx context.Context, r Request) (Response, err
 
 		username, ok := payload["cognito:username"]
 		if !ok {
-			err := errors.New("username is not found")
+			err := errors.New("unauthorized")
 			return Response{
 				StatusCode: http.StatusInternalServerError,
 				Headers:    header,
@@ -96,7 +61,7 @@ func (h *ProtobufHandler) handler(ctx context.Context, r Request) (Response, err
 		ctx = context.WithValue(ctx, "userId", username)
 	}
 
-	res, err := h.server.Serve(ctx, req)
+	res, err := h.server.Serve(ctx, []byte(r.Body))
 	switch code := status.Code(err); code {
 	case codes.OK:
 		// do nothing
@@ -113,19 +78,11 @@ func (h *ProtobufHandler) handler(ctx context.Context, r Request) (Response, err
 		}, err
 	}
 
-	body, err := h.marshaler.MarshalToString(res)
-	if err != nil {
-		return Response{
-			StatusCode: http.StatusInternalServerError,
-			Headers:    header,
-		}, err
-	}
-
 	header["Content-Type"] = "application/json"
 	return Response{
 		StatusCode: http.StatusOK,
 		Headers:    header,
-		Body:       body,
+		Body:       string(res),
 	}, nil
 }
 
@@ -139,6 +96,6 @@ func GetUserId(ctx context.Context) string {
 	return ""
 }
 
-func (h *ProtobufHandler) Start(ctx context.Context) {
+func (h *Handler) Start(ctx context.Context) {
 	lambda.StartWithContext(ctx, h.handler)
 }

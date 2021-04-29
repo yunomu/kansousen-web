@@ -6,8 +6,7 @@ import (
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -21,8 +20,6 @@ type server struct {
 	clientId string
 	c        *cognitoidentityprovider.CognitoIdentityProvider
 }
-
-var _ lambda.Server = (*server)(nil)
 
 func (s *server) signUp(ctx context.Context, r *apipb.SignUpRequest) (*apipb.AuthResponse, error) {
 	out, err := s.c.SignUpWithContext(ctx, &cognitoidentityprovider.SignUpInput{
@@ -199,21 +196,31 @@ func (s *server) tokenRefresh(ctx context.Context, r *apipb.TokenRefreshRequest)
 	}, nil
 }
 
-func (s *server) Serve(ctx context.Context, m proto.Message) (proto.Message, error) {
-	request := m.(*apipb.AuthRequest)
+func (s *server) Serve(ctx context.Context, payload []byte) ([]byte, error) {
+	request := &apipb.AuthRequest{}
+	if err := protojson.Unmarshal(payload, request); err != nil {
+		return nil, err
+	}
 
+	var err error
+	var res *apipb.AuthResponse
 	switch t := request.AuthRequestSelect.(type) {
 	case *apipb.AuthRequest_RequestSignUp:
-		return s.signUp(ctx, t.RequestSignUp)
+		res, err = s.signUp(ctx, t.RequestSignUp)
 	case *apipb.AuthRequest_RequestConfirmSignUp:
-		return s.confirmSignUp(ctx, t.RequestConfirmSignUp)
+		res, err = s.confirmSignUp(ctx, t.RequestConfirmSignUp)
 	case *apipb.AuthRequest_RequestSignIn:
-		return s.signIn(ctx, t.RequestSignIn)
+		res, err = s.signIn(ctx, t.RequestSignIn)
 	case *apipb.AuthRequest_RequestTokenRefresh:
-		return s.tokenRefresh(ctx, t.RequestTokenRefresh)
+		res, err = s.tokenRefresh(ctx, t.RequestTokenRefresh)
 	default:
 		return nil, status.Errorf(codes.Unimplemented, "Unimplemented")
 	}
+	if err != nil {
+		return nil, err
+	}
+
+	return protojson.Marshal(res)
 }
 
 func main() {
@@ -228,7 +235,7 @@ func main() {
 		c:        cognitoidentityprovider.New(session, aws.NewConfig().WithRegion(region)),
 	}
 
-	h := lambda.NewProtobufHandler((*apipb.AuthRequest)(nil), s)
+	h := lambda.NewHandler(s)
 
 	h.Start(ctx)
 }

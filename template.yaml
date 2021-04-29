@@ -1,0 +1,244 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  kansousen
+  
+  SAM Template for kansousen
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 5
+
+Parameters:
+  Stage:
+    Type: String
+    Default: Prod
+  ApiDomainName:
+    Type: String
+    Default: kansousenapi.wagahai.info
+  SiteDomainName:
+    Type: String
+    Default: kansousen.wagahai.info
+  Certificate:
+    Type: String
+    Default: "arn:aws:acm:us-east-1:970194315034:certificate/22878dcd-b96c-4529-bc08-eddaa1d90324"
+  CloudfrontManagedCachePolicy:
+    Type: String
+    Default: "658327ea-f89d-4fab-a63d-7e88639e58f6"
+
+Resources:
+  KansousenTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: PK
+          AttributeType: S
+        - AttributeName: SK
+          AttributeType: S
+        - AttributeName: InversedVersion
+          AttributeType: N
+      KeySchema:
+        - AttributeName: PK
+          KeyType: HASH
+        - AttributeName: SK
+          KeyType: RANGE
+      LocalSecondaryIndexes:
+        - IndexName: InversedVersionIndex
+          KeySchema:
+            - AttributeName: PK
+              KeyType: HASH
+            - AttributeName: InversedVersion
+              KeyType: RANGE
+          Projection:
+            ProjectionType: KEYS_ONLY
+  KansousenTablePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:PutItem
+              - dynamodb:GetItem
+              - dynamodb:DeleteItem
+            Resource: !GetAtt KansousenTable.Arn
+  KifuFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: lambda/kifu
+      Handler: kifu
+      Runtime: go1.x
+      Policies: !Ref KansousenTablePolicy
+      Environment:
+        Variables:
+          TABLE_NAME: !Ref KansousenTable
+  CognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UsernameAttributes:
+        - email
+      UsernameConfiguration:
+        CaseSensitive: False
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireLowercase: False
+          RequireNumbers: False
+          RequireSymbols: False
+          RequireUppercase: False
+          TemporaryPasswordValidityDays: 7
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: False
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Priority: 1
+            Name: verified_email
+      AutoVerifiedAttributes:
+        - email
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+  CognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+      TokenValidityUnits:
+        IdToken: "hours"
+        AccessToken: "hours"
+        RefreshToken: "days"
+      IdTokenValidity: 1
+      AccessTokenValidity: 1
+      RefreshTokenValidity: 30
+  KifuApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Cors: "'*'"
+      Auth:
+        DefaultAuthorizer: CognitoAuthorizer
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt CognitoUserPool.Arn
+  KifuApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: api/kifu
+      Handler: kifu
+      Runtime: go1.x
+      Policies:
+        - Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - lambda:InvokeFunction
+              Resource: !GetAtt KifuFunction.Arn
+      Environment:
+        Variables:
+          KIFU_FUNC_ARN: !GetAtt KifuFunction.Arn
+      Events:
+        Properties:
+          Type: Api
+          Properties:
+            Path: /v1/kifu
+            Method: POST
+            RestApiId: !Ref KifuApi
+  ApiDomain:
+    Type: AWS::ApiGatewayV2::DomainName
+    Properties:
+      DomainName: !Ref ApiDomainName
+      DomainNameConfigurations:
+        - EndpointType: REGIONAL
+          CertificateArn: !Ref Certificate
+          SecurityPolicy: TLS_1_2
+  ApiDomainMapping:
+    Type: AWS::ApiGatewayV2::ApiMapping
+    DependsOn:
+      - KifuApiStage
+    Properties:
+      ApiId: !Ref KifuApi
+      DomainName: !Ref ApiDomainName
+      Stage: !Ref Stage
+  AuthFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: api/auth/
+      Handler: auth
+      Runtime: go1.x
+      Environment:
+        Variables:
+          COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
+      Events:
+        Properties:
+          Type: Api
+          Properties:
+            Path: /v1/auth
+            Method: POST
+            RestApiId: !Ref KifuApi
+            Auth:
+              Authorizer: NONE
+  StaticBucket:
+    Type: AWS::S3::Bucket
+  StaticCDN:
+    Type: AWS::CloudFront::Distribution
+    Properties:
+      DistributionConfig:
+        Enabled: true
+        DefaultRootObject: index.html
+        CNAMEs:
+          - !Ref SiteDomainName
+        ViewerCertificate:
+          AcmCertificateArn: !Ref Certificate
+          MinimumProtocolVersion: TLSv1.2_2019
+          SslSupportMethod: sni-only
+        Origins:
+          - DomainName: !GetAtt StaticBucket.DomainName
+            Id: !Sub "S3-${StaticBucket}"
+            S3OriginConfig: {}
+        DefaultCacheBehavior:
+          CachePolicyId: !Ref CloudfrontManagedCachePolicy
+          TargetOriginId: !Sub "S3-${StaticBucket}"
+          ViewerProtocolPolicy: https-only
+          AllowedMethods:
+            - GET
+            - HEAD
+        HttpVersion: http2
+
+Outputs:
+  KifuTable:
+    Description: "Table ARN for Kifu"
+    Value: !GetAtt KansousenTable.Arn
+  KifuFunction:
+    Description: "KifuFunction Arn"
+    Value: !GetAtt KifuFunction.Arn
+  UserPoolClientID:
+    Description: "User Pool Client ID"
+    Value: !Ref CognitoUserPoolClient
+  ApiID:
+    Description: "API ID"
+    Value: !Ref KifuApi
+  RawEndpoint:
+    Description: "Raw Endpoint"
+    Value: !Sub "https://${KifuApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
+  Endpoint:
+    Description: "API Endpoint"
+    Value: !Sub "https://${ApiDomain}/"
+  RegionalDomainName:
+    Description: "Set CNAME record"
+    Value: !GetAtt ApiDomain.RegionalDomainName
+  StaticBucket:
+    Description: "S3 Bucket for static resources"
+    Value: !Ref StaticBucket
+  StaticBucketWebsite:
+    Description: "S3 Website for static resources"
+    Value: !GetAtt StaticBucket.WebsiteURL
+  StaticBucketDomainName:
+    Description: "S3 Bucket Domain Name for static resources"
+    Value: !GetAtt StaticBucket.RegionalDomainName
+  CDNDomainName:
+    Description: "CDN Domain Name"
+    Value: !GetAtt StaticCDN.DomainName
