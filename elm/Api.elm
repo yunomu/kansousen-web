@@ -64,7 +64,7 @@ errorToString err =
 
 endpoint : String
 endpoint =
-    "https://kifuapi.wagahai.info/v1"
+    "https://kansousenapi.wagahai.info/v1"
 
 
 headers : List Http.Header
