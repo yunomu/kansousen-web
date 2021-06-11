@@ -183,13 +183,28 @@ Resources:
               Authorizer: NONE
   StaticBucket:
     Type: AWS::S3::Bucket
+  StaticBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref StaticBucket
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${StaticBucket}/*"
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Sub "access-identity-${StaticBucket}"
   StaticCDN:
     Type: AWS::CloudFront::Distribution
     Properties:
       DistributionConfig:
         Enabled: true
         DefaultRootObject: index.html
-        CNAMEs:
+        Aliases:
           - !Ref SiteDomainName
         ViewerCertificate:
           AcmCertificateArn: !Ref Certificate
@@ -198,7 +213,8 @@ Resources:
         Origins:
           - DomainName: !GetAtt StaticBucket.DomainName
             Id: !Sub "S3-${StaticBucket}"
-            S3OriginConfig: {}
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}"
         DefaultCacheBehavior:
           CachePolicyId: !Ref CloudfrontManagedCachePolicy
           TargetOriginId: !Sub "S3-${StaticBucket}"
