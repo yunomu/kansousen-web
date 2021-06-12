@@ -118,7 +118,10 @@ Resources:
     Type: AWS::Serverless::Api
     Properties:
       StageName: !Ref Stage
-      Cors: "'*'"
+      Cors:
+        AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        AllowMethods: "'POST, OPTIONS'"
+        AllowOrigin: "'*'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
@@ -140,8 +143,9 @@ Resources:
       Environment:
         Variables:
           KIFU_FUNC_ARN: !GetAtt KifuFunction.Arn
+          REGION: !Ref AWS::Region
       Events:
-        Properties:
+        KifuApiEvent:
           Type: Api
           Properties:
             Path: /v1/kifu
@@ -172,8 +176,9 @@ Resources:
       Environment:
         Variables:
           COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
+          REGION: !Ref AWS::Region
       Events:
-        Properties:
+        AuthApiEvent:
           Type: Api
           Properties:
             Path: /v1/auth
@@ -225,6 +230,9 @@ Resources:
         HttpVersion: http2
 
 Outputs:
+  Region:
+    Description: "AWS Region"
+    Value: !Ref AWS::Region
   KifuTable:
     Description: "Table ARN for Kifu"
     Value: !GetAtt KansousenTable.Arn

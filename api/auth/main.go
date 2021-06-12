@@ -226,7 +226,7 @@ func (s *server) Serve(ctx context.Context, payload []byte) ([]byte, error) {
 func main() {
 	ctx := context.Background()
 
-	region := "ap-northeast-1"
+	region := os.Getenv("REGION")
 
 	session := session.New(aws.NewConfig())
 

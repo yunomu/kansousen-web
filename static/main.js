@@ -6730,7 +6730,6 @@ var $author$project$Main$PrevRequest = function (a) {
 var $author$project$Proto$Api$RequestTokenRefresh = function (a) {
 	return {$: 'RequestTokenRefresh', a: a};
 };
-var $elm$core$Debug$log = _Debug_log;
 var $elm$core$Platform$Cmd$batch = _Platform_batch;
 var $elm$core$Platform$Cmd$none = $elm$core$Platform$Cmd$batch(_List_Nil);
 var $elm$url$Url$Builder$toQueryPair = function (_v0) {
@@ -7150,7 +7149,7 @@ var $elm$core$Basics$composeL = F3(
 		return g(
 			f(x));
 	});
-var $author$project$Api$endpoint = 'https://kifuapi.wagahai.info/v1';
+var $author$project$Api$endpoint = 'https://kansousenapi.wagahai.info/v1';
 var $elm$http$Http$BadStatus_ = F2(
 	function (a, b) {
 		return {$: 'BadStatus_', a: a, b: b};
@@ -8159,7 +8158,6 @@ var $author$project$Api$request = F3(
 				});
 		}
 	});
-var $elm$core$Debug$toString = _Debug_toString;
 var $author$project$Main$authorizedResponse = F4(
 	function (model, req, result, f) {
 		if (result.$ === 'Ok') {
@@ -8199,10 +8197,7 @@ var $author$project$Main$authorizedResponse = F4(
 				}
 			} else {
 				var err = result.a;
-				return A2(
-					$elm$core$Debug$log,
-					$elm$core$Debug$toString(err),
-					_Utils_Tuple2(model, $elm$core$Platform$Cmd$none));
+				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 			}
 		}
 	});
@@ -9131,10 +9126,6 @@ var $author$project$Main$update = F2(
 						{authToken: $elm$core$Maybe$Nothing}),
 					$author$project$Main$removeTokens(_Utils_Tuple0));
 			default:
-				var _v10 = A2(
-					$elm$core$Debug$log,
-					$elm$core$Debug$toString(msg),
-					msg);
 				return _Utils_Tuple2(model, $elm$core$Platform$Cmd$none);
 		}
 	});

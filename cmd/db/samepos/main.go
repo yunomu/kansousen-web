@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/subcommands"
 
-	"github.com/yunomu/kansousen/lib/db"
+	dblib "github.com/yunomu/kansousen/lib/db"
 )
 
 type Command struct {
@@ -47,9 +47,11 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 
 	out := os.Stdout
 
-	db := args[0].(func() db.DB)()
+	db := args[0].(func() dblib.DB)()
 
-	ps, err := db.GetSamePositions(ctx, []string{*c.userId}, *c.pos, int32(*c.steps))
+	ps, err := db.GetSamePositions(ctx, []string{*c.userId}, *c.pos,
+		dblib.GetSamePositionsSetNumStep(int32(*c.steps)),
+	)
 	if err != nil {
 		log.Fatalf("GetSamePositions: %v", err)
 	}

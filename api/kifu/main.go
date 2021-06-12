@@ -225,7 +225,7 @@ func main() {
 		zap.L().Fatal("env KIFU_FUNC_ARN is not found")
 	}
 
-	region := "ap-northeast-1"
+	region := os.Getenv("REGION")
 
 	session := session.New()
 	lambdaClient := lambda.New(session, aws.NewConfig().WithRegion(region))
