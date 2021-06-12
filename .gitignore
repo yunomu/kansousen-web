@@ -26,3 +26,6 @@ vendor
 /samconfig.toml
 
 /public
+
+/static/main.js
+/static/main.opt.js
