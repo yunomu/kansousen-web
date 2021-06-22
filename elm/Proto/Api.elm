@@ -16,8 +16,7 @@ uselessDeclarationToPreventErrorDueToEmptyOutputFile = 42
 
 type alias SignUpRequest =
     { username : String -- 1
-    , email : String -- 2
-    , password : String -- 3
+    , password : String -- 2
     }
 
 
@@ -25,7 +24,6 @@ signUpRequestDecoder : JD.Decoder SignUpRequest
 signUpRequestDecoder =
     JD.lazy <| \_ -> decode SignUpRequest
         |> required "username" JD.string ""
-        |> required "email" JD.string ""
         |> required "password" JD.string ""
 
 
@@ -33,7 +31,6 @@ signUpRequestEncoder : SignUpRequest -> JE.Value
 signUpRequestEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "username" JE.string "" v.username)
-        , (requiredFieldEncoder "email" JE.string "" v.email)
         , (requiredFieldEncoder "password" JE.string "" v.password)
         ]
 

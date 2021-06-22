@@ -9,7 +9,6 @@ import Style
 
 type Msg
     = ChangeUsername String
-    | ChangeEmail String
     | ChangePassword String
     | ChangeShowPassword
     | Submit
@@ -25,7 +24,6 @@ init : Model
 init =
     { params =
         { username = ""
-        , email = ""
         , password = ""
         }
     , showPassword = False
@@ -42,9 +40,6 @@ update msg model =
         ChangeUsername str ->
             { model | params = { ps | username = str } }
 
-        ChangeEmail str ->
-            { model | params = { ps | email = str } }
-
         ChangePassword str ->
             { model | params = { ps | password = str } }
 
@@ -59,17 +54,11 @@ view : (Msg -> msg) -> Model -> Element msg
 view msg model =
     Element.column Style.mainColumn
         [ Element.html (Html.h1 [] [ Html.text "Sign up" ])
-        , Input.username []
+        , Input.email []
             { onChange = msg << ChangeUsername
             , text = model.params.username
             , placeholder = Nothing
             , label = Input.labelLeft [] <| Element.text "Username"
-            }
-        , Input.email []
-            { onChange = msg << ChangeEmail
-            , text = model.params.email
-            , placeholder = Nothing
-            , label = Input.labelLeft [] <| Element.text "Email"
             }
         , Input.newPassword []
             { onChange = msg << ChangePassword

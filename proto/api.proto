@@ -8,8 +8,7 @@ option go_package = "proto/api";
 
 message SignUpRequest {
   string username = 1;
-  string email = 2;
-  string password = 3;
+  string password = 2;
 }
 
 message ConfirmSignUpRequest {

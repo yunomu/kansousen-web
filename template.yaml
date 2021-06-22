@@ -120,7 +120,7 @@ Resources:
       StageName: !Ref Stage
       Cors:
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        AllowMethods: "'POST, OPTIONS'"
+        AllowMethods: "'POST'"
         AllowOrigin: "'*'"
       Auth:
         DefaultAuthorizer: CognitoAuthorizer
@@ -183,6 +183,14 @@ Resources:
           Properties:
             Path: /v1/auth
             Method: POST
+            RestApiId: !Ref KifuApi
+            Auth:
+              Authorizer: NONE
+        AuthApiOptionsEvent:
+          Type: Api
+          Properties:
+            Path: /v1/auth
+            Method: OPTIONS
             RestApiId: !Ref KifuApi
             Auth:
               Authorizer: NONE

@@ -23,15 +23,10 @@ type server struct {
 
 func (s *server) signUp(ctx context.Context, r *apipb.SignUpRequest) (*apipb.AuthResponse, error) {
 	out, err := s.c.SignUpWithContext(ctx, &cognitoidentityprovider.SignUpInput{
-		ClientId: aws.String(s.clientId),
-		Username: aws.String(r.Username),
-		Password: aws.String(r.Password),
-		UserAttributes: []*cognitoidentityprovider.AttributeType{
-			{
-				Name:  aws.String("email"),
-				Value: aws.String(r.Email),
-			},
-		},
+		ClientId:       aws.String(s.clientId),
+		Username:       aws.String(r.Username),
+		Password:       aws.String(r.Password),
+		UserAttributes: []*cognitoidentityprovider.AttributeType{},
 	})
 	if err != nil {
 		if e, ok := err.(*cognitoidentityprovider.InvalidParameterException); ok {
