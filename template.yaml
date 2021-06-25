@@ -123,6 +123,7 @@ Resources:
         AllowMethods: "'POST'"
         AllowOrigin: "'*'"
       Auth:
+        AddDefaultAuthorizerToCorsPreflight: false
         DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
           CognitoAuthorizer:
@@ -183,14 +184,6 @@ Resources:
           Properties:
             Path: /v1/auth
             Method: POST
-            RestApiId: !Ref KifuApi
-            Auth:
-              Authorizer: NONE
-        AuthApiOptionsEvent:
-          Type: Api
-          Properties:
-            Path: /v1/auth
-            Method: OPTIONS
             RestApiId: !Ref KifuApi
             Auth:
               Authorizer: NONE
