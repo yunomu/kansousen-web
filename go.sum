@@ -4,6 +4,7 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/antihax/optional v1.0.0/go.mod h1:uupD/76wgC+ih3iEmQUL+0Ugr19nfwCT1kdvxnR2qWY=
 github.com/aws/aws-lambda-go v1.20.0 h1:ZSweJx/Hy9BoIDXKBEh16vbHH0t0dehnF8MKpMiOWc0=
 github.com/aws/aws-lambda-go v1.20.0/go.mod h1:jJmlefzPfGnckuHdXX7/80O3BvUUi12XOkbv4w9SGLU=
+github.com/aws/aws-lambda-go v1.25.0 h1:hv0Av6ooQhnqMS2jqeaph0izIwwaV2N6gsT5ad17Ihw=
 github.com/aws/aws-sdk-go v1.35.18 h1:Gka1bopihF2e9XFhuVZPrgafmOFpCsRtAPMYLp/0AfA=
 github.com/aws/aws-sdk-go v1.35.18/go.mod h1:tlPOdRjfxPBpNIwqDj61rmsnA85v9jc0Ps9+muhnW+k=
 github.com/aws/aws-sdk-go v1.35.20 h1:Hs7x9Czh+MMPnZLQqHhsuZKeNFA3Vuf7pdy2r5QlVb0=

@@ -20,6 +20,9 @@ Parameters:
   SiteDomainName:
     Type: String
     Default: kansousen.wagahai.info
+  AuthDomainName:
+    Type: String
+    Default: kansousenauth.wagahai.info
   Certificate:
     Type: String
     Default: "arn:aws:acm:us-east-1:970194315034:certificate/22878dcd-b96c-4529-bc08-eddaa1d90324"
@@ -104,7 +107,23 @@ Resources:
     Type: AWS::Cognito::UserPoolClient
     Properties:
       UserPoolId: !Ref CognitoUserPool
+      SupportedIdentityProviders:
+        - COGNITO
       GenerateSecret: false
+      CallbackURLs:
+        - !Sub "https://${SiteDomainName}/callback"
+        - http://localhost:8080/callback
+      LogoutURLs:
+        - !Sub "https://${SiteDomainName}/"
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - phone
+        - email
+        - openid
+        - profile
+        - aws.cognito.signin.user.admin
       ExplicitAuthFlows:
         - ALLOW_USER_PASSWORD_AUTH
         - ALLOW_REFRESH_TOKEN_AUTH
@@ -115,6 +134,13 @@ Resources:
       IdTokenValidity: 1
       AccessTokenValidity: 1
       RefreshTokenValidity: 30
+  CognitoUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref CognitoUserPool
+      Domain: !Ref AuthDomainName
+      CustomDomainConfig:
+        CertificateArn: !Ref Certificate
   KifuApi:
     Type: AWS::Serverless::Api
     Properties:
@@ -169,25 +195,6 @@ Resources:
       ApiId: !Ref KifuApi
       DomainName: !Ref ApiDomainName
       Stage: !Ref Stage
-  AuthFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: api/auth/
-      Handler: auth
-      Runtime: go1.x
-      Environment:
-        Variables:
-          COGNITO_CLIENT_ID: !Ref CognitoUserPoolClient
-          REGION: !Ref AWS::Region
-      Events:
-        AuthApiEvent:
-          Type: Api
-          Properties:
-            Path: /v1/auth
-            Method: POST
-            RestApiId: !Ref KifuApi
-            Auth:
-              Authorizer: NONE
   StaticBucket:
     Type: AWS::S3::Bucket
   StaticBucketPolicy:
@@ -232,9 +239,6 @@ Resources:
         HttpVersion: http2
 
 Outputs:
-  Region:
-    Description: "AWS Region"
-    Value: !Ref AWS::Region
   KifuTable:
     Description: "Table ARN for Kifu"
     Value: !GetAtt KansousenTable.Arn
@@ -259,12 +263,3 @@ Outputs:
   StaticBucket:
     Description: "S3 Bucket for static resources"
     Value: !Ref StaticBucket
-  StaticBucketWebsite:
-    Description: "S3 Website for static resources"
-    Value: !GetAtt StaticBucket.WebsiteURL
-  StaticBucketDomainName:
-    Description: "S3 Bucket Domain Name for static resources"
-    Value: !GetAtt StaticBucket.RegionalDomainName
-  CDNDomainName:
-    Description: "CDN Domain Name"
-    Value: !GetAtt StaticCDN.DomainName
