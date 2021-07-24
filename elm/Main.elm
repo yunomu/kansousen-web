@@ -12,14 +12,8 @@ import Element.Input as Input
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Http
-import Page.ConfirmForgotPassword as ConfirmForgotPassword
-import Page.ConfirmSignUp as ConfirmSignUp
-import Page.ForgotPassword as ForgotPassword
 import Page.Kifu as Kifu
 import Page.MyPage as MyPage
-import Page.ResendConfirm as ResendConfirm
-import Page.SignIn as SignIn
-import Page.SignUp as SignUp
 import Page.Upload as Upload
 import Proto.Api as PB
 import Route exposing (Route)
@@ -44,6 +38,8 @@ type alias Flags =
     , refreshToken : Maybe String
     , windowWidth : Int
     , windowHeight : Int
+    , authClientId : String
+    , authRedirectURI : String
     }
 
 
@@ -51,12 +47,6 @@ type Msg
     = UrlRequest Browser.UrlRequest
     | UrlChanged Url
     | OnResize Int Int
-    | SignUpMsg SignUp.Msg
-    | ConfirmSignUpMsg ConfirmSignUp.Msg
-    | ResendConfirmMsg ResendConfirm.Msg
-    | SignInMsg SignIn.Msg
-    | ForgotPasswordMsg ForgotPassword.Msg
-    | ConfirmForgotPasswordMsg ConfirmForgotPassword.Msg
     | ApiResponse Api.Request Api.Response
     | UploadMsg Upload.Msg
     | KifuMsg Kifu.Msg
@@ -73,18 +63,13 @@ type alias Model =
     { key : Nav.Key
     , route : Route
     , windowSize : ( Int, Int )
-    , signUpModel : SignUp.Model
-    , confirmSignUpModel : ConfirmSignUp.Model
-    , resendConfirmModel : ResendConfirm.Model
-    , signInModel : SignIn.Model
-    , forgotPasswordModel : ForgotPassword.Model
-    , confirmForgotPasswordModel : ConfirmForgotPassword.Model
     , authToken : Maybe PB.SignInResponse
     , errorMessage : Maybe String
     , prevState : PreviousState
     , recentKifu : List PB.RecentKifuResponse_Kifu
     , kifuModel : Kifu.Model
     , uploadModel : Upload.Model
+    , loginFormURL : String
     }
 
 
@@ -110,22 +95,25 @@ init flags url key =
 
                 _ ->
                     Nothing
+
+        loginFormURL =
+            String.concat
+                [ "https://kansousenauth.wagahai.info/login?response_type=code&client_id="
+                , flags.authClientId
+                , "&redirect_uri="
+                , flags.authRedirectURI
+                ]
     in
     ( { key = key
       , route = Route.fromUrl url
       , windowSize = ( flags.windowWidth, flags.windowHeight )
-      , signUpModel = SignUp.init
-      , confirmSignUpModel = ConfirmSignUp.init
-      , resendConfirmModel = ResendConfirm.init
-      , signInModel = SignIn.init
-      , forgotPasswordModel = ForgotPassword.init
-      , confirmForgotPasswordModel = ConfirmForgotPassword.init
       , authToken = authToken
       , errorMessage = Nothing
       , prevState = PrevNone
       , recentKifu = []
       , kifuModel = Kifu.init
       , uploadModel = Upload.init False
+      , loginFormURL = loginFormURL
       }
     , Nav.pushUrl key (Url.toString url)
     )
@@ -200,15 +188,14 @@ authorizedResponse model req result f =
             case model.authToken of
                 Just t ->
                     ( { model | prevState = PrevRequest req }
-                    , Api.request ApiResponse Nothing <|
-                        Api.AuthRequest <|
-                            PB.AuthRequest <|
-                                PB.RequestTokenRefresh { refreshToken = t.refreshToken }
+                      -- TODO
+                    , Cmd.none
                     )
 
                 Nothing ->
                     ( { model | prevState = PrevRequest req }
-                    , Nav.pushUrl model.key (Route.path Route.SignIn)
+                      -- TODO redirect to signin
+                    , Cmd.none
                     )
 
         Err err ->
@@ -243,76 +230,6 @@ updateKifuPage authToken kifuModel =
 apiResponse : Model -> Api.Request -> Api.Response -> ( Model, Cmd Msg )
 apiResponse model req res =
     case res of
-        Api.AuthResponse result ->
-            case result of
-                Ok v ->
-                    case v.authResponseSelect of
-                        PB.ResponseSignUp r ->
-                            let
-                                m =
-                                    model.confirmSignUpModel
-                            in
-                            ( { model
-                                | confirmSignUpModel = { m | signUpResponse = Just r }
-                              }
-                            , Nav.pushUrl model.key (Route.path Route.ConfirmSignUp)
-                            )
-
-                        PB.ResponseConfirmSignUp _ ->
-                            let
-                                m =
-                                    model.confirmSignUpModel
-                            in
-                            ( { model | confirmSignUpModel = ConfirmSignUp.init }
-                            , Nav.pushUrl model.key (Route.path Route.Index)
-                            )
-
-                        PB.ResponseForgotPassword r ->
-                            let
-                                m =
-                                    model.confirmForgotPasswordModel
-                            in
-                            ( { model
-                                | confirmForgotPasswordModel = { m | forgotPasswordResponse = Just r }
-                              }
-                            , Nav.pushUrl model.key (Route.path Route.ConfirmForgotPassword)
-                            )
-
-                        PB.ResponseConfirmForgotPassword _ ->
-                            ( model
-                            , Nav.pushUrl model.key (Route.path Route.Index)
-                            )
-
-                        PB.ResponseSignIn r ->
-                            signInAndReturn model (Just r) r.token (Just r.refreshToken)
-
-                        PB.ResponseTokenRefresh r ->
-                            signInAndReturn model
-                                (Maybe.map
-                                    (\t -> { t | token = r.token })
-                                    model.authToken
-                                )
-                                r.token
-                                Nothing
-
-                        PB.AuthResponseSelectUnspecified ->
-                            ( model, Cmd.none )
-
-                Err Api.ErrorUnauthorized ->
-                    ( { model
-                        | errorMessage = Just "logout"
-                        , authToken = Nothing
-                      }
-                    , Cmd.none
-                    )
-
-                Err err ->
-                    ( { model
-                        | errorMessage = Just <| Api.errorToString err
-                      }
-                    , Cmd.none
-                    )
-
         Api.KifuResponse result ->
             authorizedResponse model req result <|
                 \kifuRes ->
@@ -399,26 +316,6 @@ update msg model =
                     }
             in
             case model_.route of
-                Route.SignUp ->
-                    ( { model_ | signUpModel = SignUp.init }
-                    , Cmd.none
-                    )
-
-                Route.SignIn ->
-                    ( { model_ | signInModel = SignIn.init }
-                    , Cmd.none
-                    )
-
-                Route.ConfirmSignUp ->
-                    ( { model_ | confirmSignUpModel = ConfirmSignUp.init }
-                    , Cmd.none
-                    )
-
-                Route.ForgotPassword ->
-                    ( { model_ | forgotPasswordModel = ForgotPassword.init }
-                    , Cmd.none
-                    )
-
                 Route.MyPage ->
                     ( model_
                     , Api.request ApiResponse authToken <|
@@ -461,81 +358,6 @@ update msg model =
 
                 _ ->
                     ( model_, Cmd.none )
-
-        SignUpMsg m ->
-            case m of
-                SignUp.Submit ->
-                    ( model
-                    , Api.request ApiResponse Nothing <|
-                        Api.AuthRequest <|
-                            PB.AuthRequest <|
-                                PB.RequestSignUp model.signUpModel.params
-                    )
-
-                _ ->
-                    ( { model | signUpModel = SignUp.update m model.signUpModel }
-                    , Cmd.none
-                    )
-
-        ConfirmSignUpMsg m ->
-            case m of
-                ConfirmSignUp.Submit ->
-                    ( model
-                    , Api.request ApiResponse Nothing <|
-                        Api.AuthRequest <|
-                            PB.AuthRequest <|
-                                PB.RequestConfirmSignUp model.confirmSignUpModel.params
-                    )
-
-                _ ->
-                    ( { model | confirmSignUpModel = ConfirmSignUp.update m model.confirmSignUpModel }
-                    , Cmd.none
-                    )
-
-        SignInMsg m ->
-            case m of
-                SignIn.Submit ->
-                    ( model
-                    , Api.request ApiResponse Nothing <|
-                        Api.AuthRequest <|
-                            PB.AuthRequest <|
-                                PB.RequestSignIn model.signInModel.params
-                    )
-
-                _ ->
-                    ( { model | signInModel = SignIn.update m model.signInModel }
-                    , Cmd.none
-                    )
-
-        ForgotPasswordMsg m ->
-            case m of
-                ForgotPassword.Submit ->
-                    ( model
-                    , Api.request ApiResponse Nothing <|
-                        Api.AuthRequest <|
-                            PB.AuthRequest <|
-                                PB.RequestForgotPassword model.forgotPasswordModel
-                    )
-
-                _ ->
-                    ( { model | forgotPasswordModel = ForgotPassword.update m model.forgotPasswordModel }
-                    , Cmd.none
-                    )
-
-        ConfirmForgotPasswordMsg m ->
-            case m of
-                ConfirmForgotPassword.Submit ->
-                    ( model
-                    , Api.request ApiResponse Nothing <|
-                        Api.AuthRequest <|
-                            PB.AuthRequest <|
-                                PB.RequestConfirmForgotPassword model.confirmForgotPasswordModel.params
-                    )
-
-                _ ->
-                    ( { model | confirmForgotPasswordModel = ConfirmForgotPassword.update m model.confirmForgotPasswordModel }
-                    , Cmd.none
-                    )
 
         ApiResponse req res ->
             apiResponse model req res
@@ -587,24 +409,6 @@ routeToTitle route =
         Route.Index ->
             "Index"
 
-        Route.SignUp ->
-            "SignUp"
-
-        Route.ConfirmSignUp ->
-            "Confirm SignUp"
-
-        Route.ResendConfirm ->
-            "Resend confirm code"
-
-        Route.SignIn ->
-            "SignIn"
-
-        Route.ForgotPassword ->
-            "Forgot password"
-
-        Route.ConfirmForgotPassword ->
-            "Confirm forgot password"
-
         Route.MyPage ->
             "MyPage"
 
@@ -627,24 +431,6 @@ routeToTitle route =
 content : Model -> Element Msg
 content model =
     case model.route of
-        Route.SignUp ->
-            SignUp.view SignUpMsg model.signUpModel
-
-        Route.ConfirmSignUp ->
-            ConfirmSignUp.view ConfirmSignUpMsg model.confirmSignUpModel
-
-        Route.ResendConfirm ->
-            ResendConfirm.view ResendConfirmMsg model.resendConfirmModel
-
-        Route.SignIn ->
-            SignIn.view SignInMsg model.signInModel
-
-        Route.ForgotPassword ->
-            ForgotPassword.view ForgotPasswordMsg model.forgotPasswordModel
-
-        Route.ConfirmForgotPassword ->
-            ConfirmForgotPassword.view ConfirmForgotPasswordMsg model.confirmForgotPasswordModel
-
         Route.MyPage ->
             MyPage.view model.recentKifu
 
@@ -684,9 +470,7 @@ userInfo : Model -> Element Msg
 userInfo model =
     if model.authToken == Nothing then
         Element.row headerAttrs
-            [ Element.link [] { url = Route.path Route.SignUp, label = Element.text "Sign up" }
-            , Style.border
-            , Element.link [] { url = Route.path Route.SignIn, label = Element.text "Sign in" }
+            [ Element.link [] { url = model.loginFormURL, label = Element.text "Signup/Signin" }
             ]
 
     else

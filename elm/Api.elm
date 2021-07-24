@@ -8,13 +8,11 @@ import Task
 
 
 type Request
-    = AuthRequest PB.AuthRequest
-    | KifuRequest PB.KifuRequest
+    = KifuRequest PB.KifuRequest
 
 
 type Response
-    = AuthResponse (Result Error PB.AuthResponse)
-    | KifuResponse (Result Error PB.KifuResponse)
+    = KifuResponse (Result Error PB.KifuResponse)
 
 
 type Error
@@ -97,20 +95,6 @@ resultJson decoder res =
 request : (Request -> Response -> msg) -> Maybe String -> Request -> Cmd msg
 request msg token req =
     case req of
-        AuthRequest authreq ->
-            Http.request
-                { method = "POST"
-                , headers = headers
-                , url = endpoint ++ "/auth"
-                , body = Http.jsonBody <| PB.authRequestEncoder authreq
-                , expect =
-                    Http.expectStringResponse
-                        (msg req << AuthResponse)
-                        (resultJson PB.authResponseDecoder)
-                , timeout = Nothing
-                , tracker = Nothing
-                }
-
         KifuRequest kifuReq ->
             Http.request
                 { method = "POST"
@@ -160,17 +144,6 @@ requestAsync : (Request -> Response -> msg) -> Maybe String -> Request -> Cmd ms
 requestAsync msg token req =
     Cmd.map (msg req) <|
         case req of
-            AuthRequest authreq ->
-                Task.attempt AuthResponse <|
-                    Http.task
-                        { method = "POST"
-                        , headers = headers
-                        , url = endpoint ++ "/auth"
-                        , body = Http.jsonBody <| PB.authRequestEncoder authreq
-                        , resolver = resolverJson PB.authResponseDecoder
-                        , timeout = Nothing
-                        }
-
             KifuRequest kifuReq ->
                 Task.attempt KifuResponse <|
                     Http.task

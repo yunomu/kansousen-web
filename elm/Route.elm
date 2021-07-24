@@ -7,12 +7,6 @@ import Url.Parser as P exposing ((</>), Parser, s)
 
 type Route
     = Index
-    | SignUp
-    | ConfirmSignUp
-    | ResendConfirm
-    | ForgotPassword
-    | ConfirmForgotPassword
-    | SignIn
     | MyPage
     | Upload
     | Kifu String Int
@@ -24,12 +18,6 @@ parser =
     P.oneOf
         [ P.map Index P.top
         , P.map Index <| s "index.html"
-        , P.map SignUp <| s "signup"
-        , P.map ConfirmSignUp <| s "confirm_signup"
-        , P.map ResendConfirm <| s "resend_confirm"
-        , P.map SignIn <| s "signin"
-        , P.map ForgotPassword <| s "forgot_password"
-        , P.map ConfirmForgotPassword <| s "confirm_forgot_password"
         , P.map MyPage <| s "my"
         , P.map Upload <| s "upload"
         , P.map Kifu <| s "kifu" </> P.string </> P.int
@@ -43,24 +31,6 @@ path route =
     case route of
         Index ->
             UrlBuilder.absolute [] []
-
-        SignUp ->
-            UrlBuilder.absolute [ "signup" ] []
-
-        ConfirmSignUp ->
-            UrlBuilder.absolute [ "confirm_signup" ] []
-
-        ResendConfirm ->
-            UrlBuilder.absolute [ "resend_confirm" ] []
-
-        SignIn ->
-            UrlBuilder.absolute [ "signin" ] []
-
-        ForgotPassword ->
-            UrlBuilder.absolute [ "forgot_password" ] []
-
-        ConfirmForgotPassword ->
-            UrlBuilder.absolute [ "confirm_forgot_password" ] []
 
         MyPage ->
             UrlBuilder.absolute [ "my" ] []

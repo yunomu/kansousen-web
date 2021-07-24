@@ -32,7 +32,10 @@ dl.kifuinfo dd {
             "token": localStorage.getItem('token'),
             "refreshToken": localStorage.getItem('refresh_token'),
             "windowWidth": window.innerWidth,
-            "windowHeight": window.innerHeight
+            "windowHeight": window.innerHeight,
+            "authClientId": "6l7ojgvggrjd7hnu2ju9569aau",
+            //"authRedirectURI": "https://kansousen.wagahai.info/callback"
+            "authRedirectURI": "https://localhost:8080/callback"
         }
     });
     app.ports.storeToken.subscribe((req)=>{
