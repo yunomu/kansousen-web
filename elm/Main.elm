@@ -12,6 +12,7 @@ import Element.Input as Input
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Http
+import Json.Decode as Decoder exposing (Decoder)
 import Page.Kifu as Kifu
 import Page.MyPage as MyPage
 import Page.Upload as Upload
@@ -40,6 +41,16 @@ type alias Flags =
     , windowHeight : Int
     , authClientId : String
     , authRedirectURI : String
+    , tokenEndpoint : String
+    }
+
+
+type alias AuthToken =
+    { idToken : String
+    , accessToken : String
+    , refreshToken : String
+    , expiresIn : Int
+    , tokenType : String
     }
 
 
@@ -51,6 +62,7 @@ type Msg
     | UploadMsg Upload.Msg
     | KifuMsg Kifu.Msg
     | Logout
+    | AuthTokenMsg (Result Http.Error AuthToken)
     | NOP
 
 
@@ -63,13 +75,16 @@ type alias Model =
     { key : Nav.Key
     , route : Route
     , windowSize : ( Int, Int )
-    , authToken : Maybe PB.SignInResponse
+    , authToken : Maybe { refreshToken : String, token : String }
     , errorMessage : Maybe String
     , prevState : PreviousState
     , recentKifu : List PB.RecentKifuResponse_Kifu
     , kifuModel : Kifu.Model
     , uploadModel : Upload.Model
+    , authClientId : String
+    , authRedirectURI : String
     , loginFormURL : String
+    , tokenEndpoint : String
     }
 
 
@@ -113,7 +128,10 @@ init flags url key =
       , recentKifu = []
       , kifuModel = Kifu.init
       , uploadModel = Upload.init False
+      , authClientId = flags.authClientId
+      , authRedirectURI = flags.authRedirectURI
       , loginFormURL = loginFormURL
+      , tokenEndpoint = flags.tokenEndpoint
       }
     , Nav.pushUrl key (Url.toString url)
     )
@@ -138,39 +156,54 @@ httpErrorToString err =
             "BadBody: " ++ str
 
 
-signInAndReturn : Model -> Maybe PB.SignInResponse -> String -> Maybe String -> ( Model, Cmd Msg )
-signInAndReturn model authToken token refreshToken =
+authTokenDecoder : Decoder AuthToken
+authTokenDecoder =
+    Decoder.map5 AuthToken
+        (Decoder.field "id_token" Decoder.string)
+        (Decoder.field "access_token" Decoder.string)
+        (Decoder.field "refresh_token" Decoder.string)
+        (Decoder.field "expires_in" Decoder.int)
+        (Decoder.field "token_type" Decoder.string)
+
+
+tokenRequest : Model -> List ( String, String ) -> Cmd Msg
+tokenRequest model params =
     let
-        model_ =
-            { model
-                | authToken = authToken
-                , prevState = PrevNone
-            }
+        kv ( k, v ) =
+            String.concat [ k, "=", v ]
 
-        cmdStoreTokens =
-            case refreshToken of
-                Just refreshToken_ ->
-                    storeTokens ( token, refreshToken_ )
-
-                Nothing ->
-                    storeToken token
+        formParams =
+            String.join "&" << List.map kv
     in
-    case model.prevState of
-        PrevRequest req ->
-            ( model_
-            , Cmd.batch
-                [ cmdStoreTokens
-                , Api.request ApiResponse (Just token) req
-                ]
-            )
+    Http.request
+        { method = "POST"
+        , headers = []
+        , url = model.tokenEndpoint
+        , body =
+            Http.stringBody "application/x-www-form-urlencoded" <| formParams params
+        , expect = Http.expectJson AuthTokenMsg authTokenDecoder
+        , timeout = Nothing
+        , tracker = Nothing
+        }
 
-        PrevNone ->
-            ( model_
-            , Cmd.batch
-                [ cmdStoreTokens
-                , Nav.pushUrl model.key (Route.path Route.MyPage)
-                ]
-            )
+
+tokenRefreshRequest : Model -> String -> Cmd Msg
+tokenRefreshRequest model refreshToken =
+    tokenRequest model
+        [ ( "grant_type", "refresh_token" )
+        , ( "client_id", model.authClientId )
+        , ( "refresh_token", refreshToken )
+        ]
+
+
+authorizationRequest : Model -> String -> Cmd Msg
+authorizationRequest model code =
+    tokenRequest model
+        [ ( "grant_type", "authorization_code" )
+        , ( "client_id", model.authClientId )
+        , ( "redirect_uri", model.authRedirectURI )
+        , ( "code", code )
+        ]
 
 
 authorizedResponse :
@@ -188,14 +221,12 @@ authorizedResponse model req result f =
             case model.authToken of
                 Just t ->
                     ( { model | prevState = PrevRequest req }
-                      -- TODO
-                    , Cmd.none
+                    , tokenRefreshRequest model t.refreshToken
                     )
 
                 Nothing ->
                     ( { model | prevState = PrevRequest req }
-                      -- TODO redirect to signin
-                    , Cmd.none
+                    , Nav.load model.loginFormURL
                     )
 
         Err err ->
@@ -356,6 +387,16 @@ update msg model =
                     , Cmd.none
                     )
 
+                Route.AuthCallback maybeCode ->
+                    case maybeCode of
+                        Just code ->
+                            ( model_
+                            , authorizationRequest model code
+                            )
+
+                        Nothing ->
+                            ( model_, Cmd.none )
+
                 _ ->
                     ( model_, Cmd.none )
 
@@ -390,7 +431,48 @@ update msg model =
         Logout ->
             ( { model | authToken = Nothing }, removeTokens () )
 
-        _ ->
+        AuthTokenMsg result ->
+            case result of
+                Ok token ->
+                    ( { model
+                        | authToken =
+                            Just
+                                { refreshToken = token.refreshToken
+                                , token = token.idToken
+                                }
+                      }
+                    , Cmd.batch
+                        [ storeTokens ( token.idToken, token.refreshToken )
+                        , Nav.pushUrl model.key (Route.path Route.Index)
+                        ]
+                    )
+
+                Err err ->
+                    let
+                        errMsg =
+                            case err of
+                                Http.BadUrl str ->
+                                    "Bad URL: " ++ str
+
+                                Http.Timeout ->
+                                    "Timeout"
+
+                                Http.NetworkError ->
+                                    "Network Error"
+
+                                Http.BadStatus code ->
+                                    "Bad status: " ++ String.fromInt code
+
+                                Http.BadBody str ->
+                                    "Bad body: " ++ str
+                    in
+                    ( { model
+                        | errorMessage = Just errMsg
+                      }
+                    , Nav.pushUrl model.key (Route.path Route.Index)
+                    )
+
+        NOP ->
             --let
             --    _ =
             --        Debug.log (Debug.toString msg) msg
@@ -424,6 +506,9 @@ routeToTitle route =
                 , ")"
                 ]
 
+        Route.AuthCallback _ ->
+            "Redirect"
+
         Route.NotFound ->
             "NotFound"
 
@@ -448,6 +533,9 @@ content model =
                         [ Html.a [ Attr.href "./" ] [ Html.text "Index" ]
                         ]
                 ]
+
+        Route.AuthCallback _ ->
+            Element.none
 
         Route.Index ->
             let
