@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"os"
 	"strings"
 
@@ -16,6 +17,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
+
+	"github.com/aws/aws-lambda-go/events"
+	runtime "github.com/aws/aws-lambda-go/lambda"
 
 	lambdalib "github.com/yunomu/kansousen/lib/lambda"
 	apipb "github.com/yunomu/kansousen/proto/api"
@@ -217,6 +221,76 @@ func (s *server) Serve(ctx context.Context, payload []byte) ([]byte, error) {
 	return s.marshaler.Marshal(res)
 }
 
+type request events.APIGatewayProxyRequest
+type response events.APIGatewayProxyResponse
+
+func getUserId(ctx *events.APIGatewayProxyRequestContext) string {
+	claimsVal, ok := ctx.Authorizer["claims"]
+	if !ok {
+		return ""
+	}
+
+	claims, ok := claimsVal.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	userIdVal, ok := claims["sub"]
+	if !ok {
+		return ""
+	}
+
+	userId, ok := userIdVal.(string)
+	if !ok {
+		return ""
+	}
+
+	return userId
+}
+
+func (s *server) handler(ctx context.Context, req *request) (*response, error) {
+	header := map[string]string{
+		"Access-Control-Allow-Origin": "*",
+	}
+
+	userId := getUserId(&req.RequestContext)
+	if userId == "" {
+		return nil, errors.New("cognito:username is not found in RequestContext")
+	}
+
+	switch req.HTTPMethod {
+	case "POST":
+		switch req.Path {
+		case "/v1/kifu":
+			return &response{
+				StatusCode: 501,
+				Headers:    header,
+			}, nil
+		case "/v1/ok":
+			header["Content-Type"] = "application/json"
+			bs, err := json.Marshal(req)
+			if err != nil {
+				return nil, err
+			}
+			return &response{
+				StatusCode: 200,
+				Headers:    header,
+				Body:       string(bs),
+			}, nil
+		default:
+			return &response{
+				StatusCode: 404,
+				Headers:    header,
+			}, nil
+		}
+	default:
+		return &response{
+			StatusCode: 405,
+			Headers:    header,
+		}, nil
+	}
+}
+
 func main() {
 	ctx := context.Background()
 
@@ -239,7 +313,5 @@ func main() {
 		},
 	}
 
-	h := lambdalib.NewHandler(s)
-
-	h.Start(ctx)
+	runtime.StartWithContext(ctx, s.handler)
 }

@@ -179,6 +179,12 @@ Resources:
             Path: /v1/kifu
             Method: POST
             RestApiId: !Ref KifuApi
+        TestApiEvent:
+          Type: Api
+          Properties:
+            Path: /v1/ok
+            Method: POST
+            RestApiId: !Ref KifuApi
   ApiDomain:
     Type: AWS::ApiGatewayV2::DomainName
     Properties:
@@ -237,6 +243,13 @@ Resources:
             - GET
             - HEAD
         HttpVersion: http2
+        CustomErrorResponses:
+          - ErrorCode: 403
+            ResponseCode: 200
+            ResponsePagePath: /index.html
+          - ErrorCode: 404
+            ResponseCode: 200
+            ResponsePagePath: /index.html
 
 Outputs:
   KifuTable:
