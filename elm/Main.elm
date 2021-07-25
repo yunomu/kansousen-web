@@ -22,9 +22,6 @@ import Style
 import Url exposing (Url)
 
 
-port storeToken : String -> Cmd msg
-
-
 port storeTokens : ( String, String ) -> Cmd msg
 
 

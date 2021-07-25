@@ -34,12 +34,10 @@ dl.kifuinfo dd {
             "windowWidth": window.innerWidth,
             "windowHeight": window.innerHeight,
             "authClientId": "6l7ojgvggrjd7hnu2ju9569aau",
-            "authRedirectURI": "https://kansousen.wagahai.info/callback",
+            "authRedirectURI": "http://localhost:8080/callback",
+            //"authRedirectURI": "https://kansousen.wagahai.info/callback",
             "tokenEndpoint":"https://kansousenauth.wagahai.info/oauth2/token"
         }
-    });
-    app.ports.storeToken.subscribe((req)=>{
-        localStorage.setItem('token',req);
     });
     app.ports.storeTokens.subscribe((req)=>{
         localStorage.setItem('token',req[0]);
