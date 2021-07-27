@@ -261,12 +261,6 @@ Outputs:
   UserPoolClientID:
     Description: "User Pool Client ID"
     Value: !Ref CognitoUserPoolClient
-  ApiID:
-    Description: "API ID"
-    Value: !Ref KifuApi
-  RawEndpoint:
-    Description: "Raw Endpoint"
-    Value: !Sub "https://${KifuApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"
   Endpoint:
     Description: "API Endpoint"
     Value: !Sub "https://${ApiDomain}/"
@@ -276,3 +270,9 @@ Outputs:
   StaticBucket:
     Description: "S3 Bucket for static resources"
     Value: !Ref StaticBucket
+  Host:
+    Description: "Host URL"
+    Value: !Sub "https://${SiteDomainName}/"
+  IDP:
+    Description: "IDP URL"
+    Value: !Sub "https://${AuthDomainName}/"

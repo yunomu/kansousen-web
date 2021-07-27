@@ -21,7 +21,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	runtime "github.com/aws/aws-lambda-go/lambda"
 
-	lambdalib "github.com/yunomu/kansousen/lib/lambda"
 	apipb "github.com/yunomu/kansousen/proto/api"
 
 	"github.com/yunomu/kansousen/proto/lambdakifu"
@@ -52,8 +51,6 @@ type server struct {
 	marshaler   *protojson.MarshalOptions
 	unmarshaler *protojson.UnmarshalOptions
 }
-
-var _ lambdalib.Server = (*server)(nil)
 
 func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, error) {
 	in := &lambdakifu.Input{}
@@ -169,14 +166,45 @@ func convResponse(out *lambdakifu.Output) (*apipb.KifuResponse, error) {
 	return res, nil
 }
 
-func (s *server) Serve(ctx context.Context, payload []byte) ([]byte, error) {
-	userId := lambdalib.GetUserId(ctx)
+type request events.APIGatewayProxyRequest
+type response events.APIGatewayProxyResponse
+
+func getUserId(ctx *events.APIGatewayProxyRequestContext) string {
+	claimsVal, ok := ctx.Authorizer["claims"]
+	if !ok {
+		return ""
+	}
+
+	claims, ok := claimsVal.(map[string]interface{})
+	if !ok {
+		return ""
+	}
+
+	userIdVal, ok := claims["sub"]
+	if !ok {
+		return ""
+	}
+
+	userId, ok := userIdVal.(string)
+	if !ok {
+		return ""
+	}
+
+	return userId
+}
+
+func (s *server) kifu(ctx context.Context, r *request) (*response, error) {
+	headers := map[string]string{
+		"Access-Control-Allow-Origin": "*",
+	}
+
+	userId := getUserId(&r.RequestContext)
 	if userId == "" {
-		return nil, status.Errorf(codes.Unauthenticated, "Invalid authentication data")
+		return nil, errors.New("sub is not found in claims")
 	}
 
 	req := &apipb.KifuRequest{}
-	if err := s.unmarshaler.Unmarshal(payload, req); err != nil {
+	if err := s.unmarshaler.Unmarshal([]byte(r.Body), req); err != nil {
 		return nil, err
 	}
 
@@ -205,7 +233,8 @@ func (s *server) Serve(ctx context.Context, payload []byte) ([]byte, error) {
 		if err := d.Decode(v); err != nil {
 			return nil, err
 		}
-		return nil, status.Errorf(codes.Internal, "%s: %s", v["errorType"], v["errorMessage"])
+		// TODO: v["errorType"]判別
+		return nil, err
 	}
 
 	out := &lambdakifu.Output{}
@@ -218,34 +247,17 @@ func (s *server) Serve(ctx context.Context, payload []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	return s.marshaler.Marshal(res)
-}
-
-type request events.APIGatewayProxyRequest
-type response events.APIGatewayProxyResponse
-
-func getUserId(ctx *events.APIGatewayProxyRequestContext) string {
-	claimsVal, ok := ctx.Authorizer["claims"]
-	if !ok {
-		return ""
+	outBs, err := s.marshaler.Marshal(res)
+	if err != nil {
+		return nil, err
 	}
 
-	claims, ok := claimsVal.(map[string]interface{})
-	if !ok {
-		return ""
-	}
-
-	userIdVal, ok := claims["sub"]
-	if !ok {
-		return ""
-	}
-
-	userId, ok := userIdVal.(string)
-	if !ok {
-		return ""
-	}
-
-	return userId
+	headers["Content-Type"] = "application/json"
+	return &response{
+		StatusCode: 200,
+		Headers:    headers,
+		Body:       string(outBs),
+	}, nil
 }
 
 func (s *server) handler(ctx context.Context, req *request) (*response, error) {
@@ -253,19 +265,11 @@ func (s *server) handler(ctx context.Context, req *request) (*response, error) {
 		"Access-Control-Allow-Origin": "*",
 	}
 
-	userId := getUserId(&req.RequestContext)
-	if userId == "" {
-		return nil, errors.New("cognito:username is not found in RequestContext")
-	}
-
 	switch req.HTTPMethod {
 	case "POST":
 		switch req.Path {
 		case "/v1/kifu":
-			return &response{
-				StatusCode: 501,
-				Headers:    header,
-			}, nil
+			return s.kifu(ctx, req)
 		case "/v1/ok":
 			header["Content-Type"] = "application/json"
 			bs, err := json.Marshal(req)

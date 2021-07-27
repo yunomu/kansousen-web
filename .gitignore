@@ -29,3 +29,4 @@ vendor
 
 /static/main.js
 /static/main.opt.js
+/static/config.json

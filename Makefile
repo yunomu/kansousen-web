@@ -38,4 +38,4 @@ elm-release:
 	cp -r static $(PUBLISH_DIR)
 	elm make $(ELM_DIR)/Main.elm --output=static/main.opt.js --optimize
 	uglifyjs --compress --mangle -- static/main.opt.js > public/main.js
-	rm -f static/main.opt.js
+	rm -f static/main.opt.js $(PUBLISH_DIR)/config.json

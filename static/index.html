@@ -26,29 +26,32 @@ dl.kifuinfo dd {
   <script>
   const img = new Image();
   img.onload = function(e) {
-    const app = Elm.Main.init({
-        node: document.getElementById("app"),
-        flags: {
-            "token": localStorage.getItem('token'),
-            "refreshToken": localStorage.getItem('refresh_token'),
-            "windowWidth": window.innerWidth,
-            "windowHeight": window.innerHeight,
-            "authClientId": "6l7ojgvggrjd7hnu2ju9569aau",
-            "authRedirectURI": "http://localhost:8080/callback",
-            //"authRedirectURI": "https://kansousen.wagahai.info/callback",
-            "tokenEndpoint":"https://kansousenauth.wagahai.info/oauth2/token"
-        }
-    });
-    app.ports.storeTokens.subscribe((req)=>{
-        localStorage.setItem('token',req[0]);
-        localStorage.setItem('refresh_token',req[1]);
-    });
-    app.ports.removeTokens.subscribe((req)=>{
-        localStorage.removeItem('token');
-        localStorage.removeItem('refresh_token');
-    });
-    app.ports.updateBoard.subscribe((req)=>{
-        const ctx = shogiboard.draw(req[0], img, req[1]);
+    fetch("./config.json").then(res => {
+      return res.json();
+    }).then(cfg => {
+      const app = Elm.Main.init({
+          node: document.getElementById("app"),
+          flags: {
+              "token": localStorage.getItem('token'),
+              "refreshToken": localStorage.getItem('refresh_token'),
+              "windowWidth": window.innerWidth,
+              "windowHeight": window.innerHeight,
+              "authClientId": cfg.UserPoolClientID,
+              "authRedirectURI": cfg.Host + "callback",
+              "tokenEndpoint": cfg.IDP + "oauth2/token"
+          }
+      });
+      app.ports.storeTokens.subscribe((req)=>{
+          localStorage.setItem('token',req[0]);
+          localStorage.setItem('refresh_token',req[1]);
+      });
+      app.ports.removeTokens.subscribe((req)=>{
+          localStorage.removeItem('token');
+          localStorage.removeItem('refresh_token');
+      });
+      app.ports.updateBoard.subscribe((req)=>{
+          const ctx = shogiboard.draw(req[0], img, req[1]);
+      });
     });
   }
   img.src = '/koma43.png';
