@@ -270,17 +270,6 @@ func (s *server) handler(ctx context.Context, req *request) (*response, error) {
 		switch req.Path {
 		case "/v1/kifu":
 			return s.kifu(ctx, req)
-		case "/v1/ok":
-			header["Content-Type"] = "application/json"
-			bs, err := json.Marshal(req)
-			if err != nil {
-				return nil, err
-			}
-			return &response{
-				StatusCode: 200,
-				Headers:    header,
-				Body:       string(bs),
-			}, nil
 		default:
 			return &response{
 				StatusCode: 404,

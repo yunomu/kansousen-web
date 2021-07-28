@@ -180,12 +180,21 @@ Resources:
             Path: /v1/kifu
             Method: POST
             RestApiId: !Ref KifuApi
-        TestApiEvent:
+  HealthApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: api/ok
+      Handler: ok
+      Runtime: go1.x
+      Events:
+        HealthApiEvent:
           Type: Api
           Properties:
             Path: /v1/ok
-            Method: POST
+            Method: GET
             RestApiId: !Ref KifuApi
+            Auth:
+              Authorizer: NONE
   ApiDomain:
     Type: AWS::ApiGatewayV2::DomainName
     Properties:
