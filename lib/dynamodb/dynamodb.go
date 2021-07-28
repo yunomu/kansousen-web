@@ -220,6 +220,10 @@ type Key struct {
 }
 
 func (d *DynamoDB) BatchGet(ctx context.Context, keys []*Key) ([]*Item, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+
 	var requestItems []map[string]*dynamodb.AttributeValue
 	for _, key := range keys {
 		requestItems = append(requestItems, requestItem(key))

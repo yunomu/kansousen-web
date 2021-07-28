@@ -1,14 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"os"
 	"strings"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -52,7 +49,7 @@ type server struct {
 	unmarshaler *protojson.UnmarshalOptions
 }
 
-func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, error) {
+func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, *response) {
 	in := &lambdakifu.Input{}
 
 	switch t := req.KifuRequestSelect.(type) {
@@ -69,12 +66,12 @@ func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, erro
 
 		encoding, ok := lambdakifu.PostKifuInput_Encoding_value[r.Encoding]
 		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "unknown encoding")
+			return nil, clientError(400, "unknown encoding")
 		}
 
 		format, ok := lambdakifu.PostKifuInput_Format_value[r.Format]
 		if !ok {
-			return nil, status.Error(codes.InvalidArgument, "unknown format")
+			return nil, clientError(400, "unknown format")
 		}
 
 		in.Select = &lambdakifu.Input_PostKifuInput{
@@ -112,13 +109,13 @@ func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, erro
 			},
 		}
 	default:
-		return nil, status.Error(codes.InvalidArgument, "unknown request")
+		return nil, clientError(400, "unknown request")
 	}
 
 	return in, nil
 }
 
-func convResponse(out *lambdakifu.Output) (*apipb.KifuResponse, error) {
+func convResponse(out *lambdakifu.Output) *apipb.KifuResponse {
 	res := &apipb.KifuResponse{}
 
 	switch t := out.Select.(type) {
@@ -160,10 +157,11 @@ func convResponse(out *lambdakifu.Output) (*apipb.KifuResponse, error) {
 		}
 	case *lambdakifu.Output_GetSamePositionsOutput:
 	default:
-		return nil, status.Errorf(codes.Unimplemented, "unknown operation")
+		zap.L().Error("convResponse: unknown type", zap.Any("type", t))
+		return nil
 	}
 
-	return res, nil
+	return res
 }
 
 type request events.APIGatewayProxyRequest
@@ -193,29 +191,51 @@ func getUserId(ctx *events.APIGatewayProxyRequestContext) string {
 	return userId
 }
 
-func (s *server) kifu(ctx context.Context, r *request) (*response, error) {
+func buildResponse(statusCode int, contentType string, body string) *response {
 	headers := map[string]string{
 		"Access-Control-Allow-Origin": "*",
 	}
 
+	if contentType != "" {
+		headers["Content-Type"] = contentType
+	}
+
+	return &response{
+		StatusCode: statusCode,
+		Headers:    headers,
+		Body:       body,
+	}
+}
+
+func clientError(statusCode int, msg string) *response {
+	return buildResponse(statusCode, "", msg)
+}
+
+func serverError() *response {
+	return buildResponse(500, "", "\"Internal Server Error\"")
+}
+
+func (s *server) kifu(ctx context.Context, r *request) *response {
 	userId := getUserId(&r.RequestContext)
 	if userId == "" {
-		return nil, errors.New("sub is not found in claims")
+		zap.L().Error("sub is not found in claims", zap.Any("RequestContext", &r.RequestContext))
+		return serverError()
 	}
 
 	req := &apipb.KifuRequest{}
 	if err := s.unmarshaler.Unmarshal([]byte(r.Body), req); err != nil {
-		return nil, err
+		return clientError(400, err.Error())
 	}
 
-	in, err := convRequest(userId, req)
-	if err != nil {
-		return nil, err
+	in, errRes := convRequest(userId, req)
+	if errRes != nil {
+		return errRes
 	}
 
 	bs, err := s.marshaler.Marshal(in)
 	if err != nil {
-		return nil, err
+		zap.L().Error("json.Marshal(in)", zap.Error(err))
+		return serverError()
 	}
 
 	o, err := s.lambdaClient.InvokeWithContext(ctx, &lambda.InvokeInput{
@@ -224,63 +244,58 @@ func (s *server) kifu(ctx context.Context, r *request) (*response, error) {
 		Payload:        bs,
 	})
 	if err != nil {
-		return nil, err
+		zap.L().Error("lambda.Invoke", zap.Error(err))
+		return serverError()
 	}
 
 	if o.FunctionError != nil {
-		d := json.NewDecoder(strings.NewReader(aws.StringValue(o.FunctionError)))
-		v := map[string]string{}
-		if err := d.Decode(v); err != nil {
-			return nil, err
+		d := json.NewDecoder(bytes.NewReader(o.Payload))
+		errObj := map[string]interface{}{}
+		if err := d.Decode(&errObj); err != nil {
+			zap.L().Error("json.Decode", zap.Error(err), zap.ByteString("Payload", o.Payload))
+			return serverError()
 		}
+
 		// TODO: v["errorType"]判別
-		return nil, err
+		var fields []zap.Field
+		for k, v := range errObj {
+			fields = append(fields, zap.Any("payload_"+k, v))
+		}
+		zap.L().Error("FunctionError", fields...)
+		return serverError()
 	}
 
 	out := &lambdakifu.Output{}
 	if err := s.unmarshaler.Unmarshal(o.Payload, out); err != nil {
-		return nil, err
+		zap.L().Error("json.Unmarshal(out)", zap.Error(err))
+		return serverError()
 	}
 
-	res, err := convResponse(out)
-	if err != nil {
-		return nil, err
+	res := convResponse(out)
+	if res == nil {
+		return serverError()
 	}
 
 	outBs, err := s.marshaler.Marshal(res)
 	if err != nil {
-		return nil, err
+		zap.L().Error("json.Marshal(response)", zap.Error(err))
+		return serverError()
 	}
 
-	headers["Content-Type"] = "application/json"
-	return &response{
-		StatusCode: 200,
-		Headers:    headers,
-		Body:       string(outBs),
-	}, nil
+	return buildResponse(200, "application/json", string(outBs))
 }
 
 func (s *server) handler(ctx context.Context, req *request) (*response, error) {
-	header := map[string]string{
-		"Access-Control-Allow-Origin": "*",
-	}
-
 	switch req.HTTPMethod {
 	case "POST":
 		switch req.Path {
 		case "/v1/kifu":
-			return s.kifu(ctx, req)
+			return s.kifu(ctx, req), nil
 		default:
-			return &response{
-				StatusCode: 404,
-				Headers:    header,
-			}, nil
+			return clientError(404, ""), nil
 		}
 	default:
-		return &response{
-			StatusCode: 405,
-			Headers:    header,
-		}, nil
+		return clientError(405, ""), nil
 	}
 }
 

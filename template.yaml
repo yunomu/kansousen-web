@@ -71,7 +71,11 @@ Resources:
               - dynamodb:PutItem
               - dynamodb:BatchWriteItem
               - dynamodb:DeleteItem
-            Resource: !GetAtt KansousenTable.Arn
+            Resource:
+              - !GetAtt KansousenTable.Arn
+              - !Sub
+                - "${TableARN}/index/*"
+                - { TableARN: !GetAtt KansousenTable.Arn }
   KifuFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -160,6 +164,24 @@ Resources:
         Authorizers:
           CognitoAuthorizer:
             UserPoolArn: !GetAtt CognitoUserPool.Arn
+  ApiGatewayResponse4XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref KifuApi
+      ResponseType: DEFAULT_4XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'POST'"
+  ApiGatewayResponse5XX:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref KifuApi
+      ResponseType: DEFAULT_5XX
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+        gatewayresponse.header.Access-Control-Allow-Methods: "'POST'"
   KifuApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -286,6 +308,9 @@ Outputs:
   UserPoolClientID:
     Description: "User Pool Client ID"
     Value: !Ref CognitoUserPoolClient
+  RestApiID:
+    Description: "REST API ID"
+    Value: !Ref KifuApi
   Endpoint:
     Description: "API Endpoint"
     Value: !Sub "https://${ApiDomain}/"
