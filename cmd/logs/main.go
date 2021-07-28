@@ -38,12 +38,14 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 
 	c.profile = f.String("profile", "default", "AWS CLI profile")
 	c.tz = f.String("tz", "Asia/Tokyo", "Time zone")
-	c.region = f.String("region", "us-east-1", "AWS region")
-	c.logGroupName = f.String("log-group-name", "/aws/lambda/kansousen-AuthFunction-znm27WHIxywg", "Log group name for CloudWatch")
+	c.region = f.String("region", "", "AWS region (default: config.json)")
+	c.logGroupName = f.String("log-group-name", "", "Log group name for CloudWatch")
 }
 
 // Execute executes the command and returns an ExitStatus.
 func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	cfg := args[0].(map[string]string)
+
 	loc, err := time.LoadLocation(*c.tz)
 	if err != nil {
 		log.Fatalf("LoadLocation: %v", err)
@@ -56,7 +58,11 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 		log.Fatalf("NewSession: %v", err)
 	}
 
-	client := cloudwatchlogs.New(sess, aws.NewConfig().WithRegion(*c.region))
+	region := cfg["Region"]
+	if *c.region != "" {
+		region = *c.region
+	}
+	client := cloudwatchlogs.New(sess, aws.NewConfig().WithRegion(region))
 
 	streams, err := client.DescribeLogStreamsWithContext(ctx, &cloudwatchlogs.DescribeLogStreamsInput{
 		LogGroupName: aws.String(*c.logGroupName),

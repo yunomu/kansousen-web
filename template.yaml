@@ -77,6 +77,7 @@ Resources:
       Policies: !Ref KansousenTablePolicy
       Environment:
         Variables:
+          REGION: !Ref AWS::Region
           TABLE_NAME: !Ref KansousenTable
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
@@ -210,7 +211,7 @@ Resources:
       PolicyDocument:
         Statement:
           - Effect: Allow
-            Principal: "*"
+            Principal: '*'
             Action: s3:GetObject
             Resource: !Sub "arn:aws:s3:::${StaticBucket}/*"
   CloudFrontOriginAccessIdentity:
@@ -252,9 +253,15 @@ Resources:
             ResponsePagePath: /index.html
 
 Outputs:
+  Region:
+    Description: "Region"
+    Value: !Ref AWS::Region
+  StackName:
+    Description: "StackName"
+    Value: !Ref AWS::StackName
   KifuTable:
-    Description: "Table ARN for Kifu"
-    Value: !GetAtt KansousenTable.Arn
+    Description: "Table name for Kifu"
+    Value: !Ref KansousenTable
   KifuFunction:
     Description: "KifuFunction Arn"
     Value: !GetAtt KifuFunction.Arn

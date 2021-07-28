@@ -95,9 +95,14 @@ func main() {
 		zap.L().Fatal("env TABLE_NAME is not found")
 	}
 
-	region := "ap-northeast-1"
+	region := os.Getenv("REGION")
 
 	session := session.New()
+
+	zap.L().Info("Start",
+		zap.String("region", region),
+		zap.String("table_name", tableName),
+	)
 
 	dynamodb := awsdynamodb.New(session, aws.NewConfig().WithRegion(region))
 

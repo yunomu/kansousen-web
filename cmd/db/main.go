@@ -48,8 +48,8 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.SetOutput(os.Stderr)
 
 	c.endpoint = f.String("endpoint", "", "Endpoint of DynamoDB")
-	c.region = f.String("region", "ap-northeast-1", "Endpoint of DynamoDB")
-	c.table = f.String("table", "kansousen", "Table name")
+	c.region = f.String("region", "", "Endpoint of DynamoDB (default: config.json)")
+	c.table = f.String("table", "", "Table name (default: config.json)")
 	c.log = f.Bool("log", false, "output log")
 
 	commander := subcommands.NewCommander(f, "")
@@ -77,8 +77,14 @@ func (l *logger) Info(function string, message string) {
 }
 
 func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
+	cfg := args[0].(map[string]string)
+
 	return c.commander.Execute(ctx, func() db.DB {
-		config := aws.NewConfig().WithRegion(*c.region)
+		region := cfg["Region"]
+		if *c.region != "" {
+			region = *c.region
+		}
+		config := aws.NewConfig().WithRegion(region)
 
 		if *c.endpoint != "" {
 			config.WithEndpoint(*c.endpoint)
@@ -89,9 +95,13 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 			opts = append(opts, dynamodb.SetLogger(&logger{}))
 		}
 
+		table := cfg["KifuTable"]
+		if *c.table != "" {
+			table = *c.table
+		}
 		tab := dynamodb.NewDynamoDBTable(
 			awsdynamodb.New(session.New(), config),
-			*c.table,
+			table,
 			opts...,
 		)
 
