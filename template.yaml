@@ -64,8 +64,12 @@ Resources:
         Statement:
           - Effect: Allow
             Action:
-              - dynamodb:PutItem
               - dynamodb:GetItem
+              - dynamodb:BatchGetItem
+              - dynamodb:Query
+              - dynamodb:DescribeTable
+              - dynamodb:PutItem
+              - dynamodb:BatchWriteItem
               - dynamodb:DeleteItem
             Resource: !GetAtt KansousenTable.Arn
   KifuFunction:
@@ -186,6 +190,11 @@ Resources:
       CodeUri: api/ok
       Handler: ok
       Runtime: go1.x
+      Policies: !Ref KansousenTablePolicy
+      Environment:
+        Variables:
+          REGION: !Ref AWS::Region
+          TABLE_NAME: !Ref KansousenTable
       Events:
         HealthApiEvent:
           Type: Api
