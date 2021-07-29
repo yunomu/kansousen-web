@@ -171,8 +171,14 @@ Resources:
       ResponseType: DEFAULT_4XX
       ResponseParameters:
         gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        gatewayresponse.header.Access-Control-Allow-Methods: "'POST'"
+  ApiGatewayResponse401:
+    Type: AWS::ApiGateway::GatewayResponse
+    Properties:
+      RestApiId: !Ref KifuApi
+      ResponseType: UNAUTHORIZED
+      StatusCode: 401
+      ResponseParameters:
+        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
   ApiGatewayResponse5XX:
     Type: AWS::ApiGateway::GatewayResponse
     Properties:
@@ -180,8 +186,6 @@ Resources:
       ResponseType: DEFAULT_5XX
       ResponseParameters:
         gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-        gatewayresponse.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
-        gatewayresponse.header.Access-Control-Allow-Methods: "'POST'"
   KifuApiFunction:
     Type: AWS::Serverless::Function
     Properties:
