@@ -53,13 +53,18 @@ type Msg
     | UploadMsg Upload.Msg
     | KifuMsg Kifu.Msg
     | Logout
-    | AuthTokenMsg (Result Http.Error AuthToken)
+    | AuthTokenMsg (Result Http.Error AuthTokenResponse)
+    | RefreshTokenMsg (Result Http.Error RefreshTokenResponse)
     | NOP
 
 
 type PreviousState
     = PrevNone
     | PrevRequest Api.Request
+
+
+type alias AuthToken =
+    { refreshToken : String, token : String }
 
 
 type alias Model =
@@ -147,21 +152,38 @@ httpErrorToString err =
             "BadBody: " ++ str
 
 
-type alias AuthToken =
+type alias AuthTokenResponse =
     { idToken : String
     , accessToken : String
-    , refreshToken : Maybe String
+    , refreshToken : String
     , expiresIn : Int
     , tokenType : String
     }
 
 
-authTokenDecoder : Decoder AuthToken
+type alias RefreshTokenResponse =
+    { idToken : String
+    , accessToken : String
+    , expiresIn : Int
+    , tokenType : String
+    }
+
+
+authTokenDecoder : Decoder AuthTokenResponse
 authTokenDecoder =
-    Decoder.map5 AuthToken
+    Decoder.map5 AuthTokenResponse
         (Decoder.field "id_token" Decoder.string)
         (Decoder.field "access_token" Decoder.string)
-        (Decoder.maybe <| Decoder.field "refresh_token" Decoder.string)
+        (Decoder.field "refresh_token" Decoder.string)
+        (Decoder.field "expires_in" Decoder.int)
+        (Decoder.field "token_type" Decoder.string)
+
+
+refreshTokenDecoder : Decoder RefreshTokenResponse
+refreshTokenDecoder =
+    Decoder.map4 RefreshTokenResponse
+        (Decoder.field "id_token" Decoder.string)
+        (Decoder.field "access_token" Decoder.string)
         (Decoder.field "expires_in" Decoder.int)
         (Decoder.field "token_type" Decoder.string)
 
@@ -322,6 +344,72 @@ apiResponse model req res =
                             ( model, Cmd.none )
 
 
+tokenResponse : Model -> Cmd Msg -> ( Model, Cmd Msg )
+tokenResponse model store =
+    case model.prevState of
+        PrevRequest req ->
+            ( { model | prevState = PrevNone }
+            , Cmd.batch
+                [ store
+                , Api.request ApiResponse (Maybe.map (\at -> at.token) model.authToken) req
+                ]
+            )
+
+        PrevNone ->
+            ( { model | prevState = PrevNone }
+            , Cmd.batch
+                [ store
+                , Nav.pushUrl model.key (Route.path Route.MyPage)
+                ]
+            )
+
+
+httpError : Model -> Route -> Http.Error -> ( Model, Cmd msg )
+httpError model route err =
+    let
+        errMsg =
+            case err of
+                Http.BadUrl str ->
+                    "Bad URL: " ++ str
+
+                Http.Timeout ->
+                    "Timeout"
+
+                Http.NetworkError ->
+                    "Network Error"
+
+                Http.BadStatus code ->
+                    "Bad status: " ++ String.fromInt code
+
+                Http.BadBody str ->
+                    "Bad body: " ++ str
+    in
+    ( { model
+        | errorMessage = Just errMsg
+      }
+    , Nav.pushUrl model.key (Route.path route)
+    )
+
+
+authResponse :
+    Model
+    -> Result Http.Error a
+    -> (a -> Maybe AuthToken)
+    -> (a -> Cmd Msg)
+    -> ( Model, Cmd Msg )
+authResponse model result f store =
+    case result of
+        Ok res ->
+            tokenResponse
+                { model
+                    | authToken = f res
+                }
+                (store res)
+
+        Err err ->
+            httpError model Route.Index err
+
+
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     let
@@ -431,71 +519,29 @@ update msg model =
             ( { model | authToken = Nothing }, removeTokens () )
 
         AuthTokenMsg result ->
-            case result of
-                Ok token ->
-                    let
-                        ( t, store ) =
-                            case ( token.idToken, token.refreshToken ) of
-                                ( idToken, Just refreshToken ) ->
-                                    ( Just
-                                        { refreshToken = refreshToken
-                                        , token = idToken
-                                        }
-                                    , storeTokens ( idToken, refreshToken )
-                                    )
+            authResponse model
+                result
+                (\res ->
+                    Just
+                        { refreshToken = res.refreshToken
+                        , token = res.idToken
+                        }
+                )
+                (\res -> storeTokens ( res.idToken, res.refreshToken ))
 
-                                ( idToken, Nothing ) ->
-                                    ( Maybe.map
-                                        (\at ->
-                                            { refreshToken = at.refreshToken
-                                            , token = idToken
-                                            }
-                                        )
-                                        model.authToken
-                                    , storeToken idToken
-                                    )
-                    in
-                    case model.prevState of
-                        PrevRequest req ->
-                            ( { model | authToken = t, prevState = PrevNone }
-                            , Cmd.batch
-                                [ store
-                                , Api.request ApiResponse (Just token.idToken) req
-                                ]
-                            )
-
-                        PrevNone ->
-                            ( { model | authToken = t, prevState = PrevNone }
-                            , Cmd.batch
-                                [ store
-                                , Nav.pushUrl model.key (Route.path Route.MyPage)
-                                ]
-                            )
-
-                Err err ->
-                    let
-                        errMsg =
-                            case err of
-                                Http.BadUrl str ->
-                                    "Bad URL: " ++ str
-
-                                Http.Timeout ->
-                                    "Timeout"
-
-                                Http.NetworkError ->
-                                    "Network Error"
-
-                                Http.BadStatus code ->
-                                    "Bad status: " ++ String.fromInt code
-
-                                Http.BadBody str ->
-                                    "Bad body: " ++ str
-                    in
-                    ( { model
-                        | errorMessage = Just errMsg
-                      }
-                    , Nav.pushUrl model.key (Route.path Route.Index)
-                    )
+        RefreshTokenMsg result ->
+            authResponse model
+                result
+                (\res ->
+                    Maybe.map
+                        (\at ->
+                            { refreshToken = at.refreshToken
+                            , token = res.idToken
+                            }
+                        )
+                        model.authToken
+                )
+                (\res -> storeToken res.idToken)
 
         NOP ->
             --let
