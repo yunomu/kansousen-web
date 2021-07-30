@@ -22,6 +22,9 @@ import Style
 import Url exposing (Url)
 
 
+port storeToken : String -> Cmd msg
+
+
 port storeTokens : ( String, String ) -> Cmd msg
 
 
@@ -39,15 +42,6 @@ type alias Flags =
     , authClientId : String
     , authRedirectURI : String
     , tokenEndpoint : String
-    }
-
-
-type alias AuthToken =
-    { idToken : String
-    , accessToken : String
-    , refreshToken : String
-    , expiresIn : Int
-    , tokenType : String
     }
 
 
@@ -153,12 +147,21 @@ httpErrorToString err =
             "BadBody: " ++ str
 
 
+type alias AuthToken =
+    { idToken : String
+    , accessToken : String
+    , refreshToken : Maybe String
+    , expiresIn : Int
+    , tokenType : String
+    }
+
+
 authTokenDecoder : Decoder AuthToken
 authTokenDecoder =
     Decoder.map5 AuthToken
         (Decoder.field "id_token" Decoder.string)
         (Decoder.field "access_token" Decoder.string)
-        (Decoder.field "refresh_token" Decoder.string)
+        (Decoder.maybe <| Decoder.field "refresh_token" Decoder.string)
         (Decoder.field "expires_in" Decoder.int)
         (Decoder.field "token_type" Decoder.string)
 
@@ -227,7 +230,6 @@ authorizedResponse model req result f =
                     )
 
         Err err ->
-            --Debug.log (Debug.toString err) ( model, Cmd.none )
             ( model, Cmd.none )
 
 
@@ -431,18 +433,44 @@ update msg model =
         AuthTokenMsg result ->
             case result of
                 Ok token ->
-                    ( { model
-                        | authToken =
-                            Just
-                                { refreshToken = token.refreshToken
-                                , token = token.idToken
-                                }
-                      }
-                    , Cmd.batch
-                        [ storeTokens ( token.idToken, token.refreshToken )
-                        , Nav.pushUrl model.key (Route.path Route.Index)
-                        ]
-                    )
+                    let
+                        ( t, store ) =
+                            case ( token.idToken, token.refreshToken ) of
+                                ( idToken, Just refreshToken ) ->
+                                    ( Just
+                                        { refreshToken = refreshToken
+                                        , token = idToken
+                                        }
+                                    , storeTokens ( idToken, refreshToken )
+                                    )
+
+                                ( idToken, Nothing ) ->
+                                    ( Maybe.map
+                                        (\at ->
+                                            { refreshToken = at.refreshToken
+                                            , token = idToken
+                                            }
+                                        )
+                                        model.authToken
+                                    , storeToken idToken
+                                    )
+                    in
+                    case model.prevState of
+                        PrevRequest req ->
+                            ( { model | authToken = t, prevState = PrevNone }
+                            , Cmd.batch
+                                [ store
+                                , Api.request ApiResponse (Just token.idToken) req
+                                ]
+                            )
+
+                        PrevNone ->
+                            ( { model | authToken = t, prevState = PrevNone }
+                            , Cmd.batch
+                                [ store
+                                , Nav.pushUrl model.key (Route.path Route.MyPage)
+                                ]
+                            )
 
                 Err err ->
                     let

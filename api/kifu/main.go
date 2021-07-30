@@ -64,8 +64,13 @@ func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, *res
 	case *apipb.KifuRequest_RequestPostKifu:
 		r := t.RequestPostKifu
 
-		encoding, ok := lambdakifu.PostKifuInput_Encoding_value[r.Encoding]
-		if !ok {
+		var encoding lambdakifu.PostKifuInput_Encoding
+		switch r.Encoding {
+		case "UTF-8":
+			encoding = lambdakifu.PostKifuInput_UTF8
+		case "Shift_JIS":
+			encoding = lambdakifu.PostKifuInput_SHIFT_JIS
+		default:
 			return nil, clientError(400, "unknown encoding")
 		}
 
