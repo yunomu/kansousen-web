@@ -41,6 +41,7 @@ type alias Flags =
     , windowHeight : Int
     , authClientId : String
     , authRedirectURI : String
+    , logoutRedirectURL : String
     , tokenEndpoint : String
     }
 
@@ -64,7 +65,9 @@ type PreviousState
 
 
 type alias AuthToken =
-    { refreshToken : String, token : String }
+    { refreshToken : String
+    , token : String
+    }
 
 
 type alias Model =
@@ -80,6 +83,8 @@ type alias Model =
     , authClientId : String
     , authRedirectURI : String
     , loginFormURL : String
+    , logoutURL : String
+    , logoutRedirectURL : String
     , tokenEndpoint : String
     }
 
@@ -114,6 +119,14 @@ init flags url key =
                 , "&redirect_uri="
                 , flags.authRedirectURI
                 ]
+
+        logoutURL =
+            String.concat
+                [ "https://kansousenauth.wagahai.info/logout?client_id="
+                , flags.authClientId
+                , "&redirect_uri="
+                , flags.logoutRedirectURL
+                ]
     in
     ( { key = key
       , route = Route.fromUrl url
@@ -127,6 +140,8 @@ init flags url key =
       , authClientId = flags.authClientId
       , authRedirectURI = flags.authRedirectURI
       , loginFormURL = loginFormURL
+      , logoutURL = logoutURL
+      , logoutRedirectURL = flags.logoutRedirectURL
       , tokenEndpoint = flags.tokenEndpoint
       }
     , Nav.pushUrl key (Url.toString url)
@@ -188,8 +203,8 @@ refreshTokenDecoder =
         (Decoder.field "token_type" Decoder.string)
 
 
-tokenRequest : Model -> List ( String, String ) -> Cmd Msg
-tokenRequest model params =
+tokenRequest : Model -> List ( String, String ) -> Decoder a -> (Result Http.Error a -> msg) -> Cmd msg
+tokenRequest model params decoder msg =
     let
         kv ( k, v ) =
             String.concat [ k, "=", v ]
@@ -197,15 +212,11 @@ tokenRequest model params =
         formParams =
             String.join "&" << List.map kv
     in
-    Http.request
-        { method = "POST"
-        , headers = []
-        , url = model.tokenEndpoint
+    Http.post
+        { url = model.tokenEndpoint
         , body =
             Http.stringBody "application/x-www-form-urlencoded" <| formParams params
-        , expect = Http.expectJson AuthTokenMsg authTokenDecoder
-        , timeout = Nothing
-        , tracker = Nothing
+        , expect = Http.expectJson msg decoder
         }
 
 
@@ -216,6 +227,8 @@ tokenRefreshRequest model refreshToken =
         , ( "client_id", model.authClientId )
         , ( "refresh_token", refreshToken )
         ]
+        authTokenDecoder
+        AuthTokenMsg
 
 
 authorizationRequest : Model -> String -> Cmd Msg
@@ -226,6 +239,8 @@ authorizationRequest model code =
         , ( "redirect_uri", model.authRedirectURI )
         , ( "code", code )
         ]
+        refreshTokenDecoder
+        RefreshTokenMsg
 
 
 authorizedResponse :
@@ -516,7 +531,12 @@ update msg model =
             ( { model | windowSize = ( w, h ) }, Cmd.none )
 
         Logout ->
-            ( { model | authToken = Nothing }, removeTokens () )
+            ( { model | authToken = Nothing }
+            , Cmd.batch
+                [ removeTokens ()
+                , Nav.load model.logoutURL
+                ]
+            )
 
         AuthTokenMsg result ->
             authResponse model

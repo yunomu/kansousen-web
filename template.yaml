@@ -124,6 +124,7 @@ Resources:
         - http://localhost:8080/callback
       LogoutURLs:
         - !Sub "https://${SiteDomainName}/"
+        - http://localhost:8080/
       AllowedOAuthFlowsUserPoolClient: true
       AllowedOAuthFlows:
         - code
