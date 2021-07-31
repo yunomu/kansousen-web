@@ -31,6 +31,9 @@ port storeTokens : ( String, String ) -> Cmd msg
 port removeTokens : () -> Cmd msg
 
 
+port removeTokensReturn : (Int -> msg) -> Sub msg
+
+
 port updateBoard : ( String, String ) -> Cmd msg
 
 
@@ -40,7 +43,7 @@ type alias Flags =
     , windowWidth : Int
     , windowHeight : Int
     , authClientId : String
-    , authRedirectURI : String
+    , authRedirectURL : String
     , logoutRedirectURL : String
     , tokenEndpoint : String
     }
@@ -54,6 +57,7 @@ type Msg
     | UploadMsg Upload.Msg
     | KifuMsg Kifu.Msg
     | Logout
+    | RemoveAuthTokens
     | AuthTokenMsg (Result Http.Error AuthTokenResponse)
     | RefreshTokenMsg (Result Http.Error RefreshTokenResponse)
     | NOP
@@ -81,7 +85,7 @@ type alias Model =
     , kifuModel : Kifu.Model
     , uploadModel : Upload.Model
     , authClientId : String
-    , authRedirectURI : String
+    , authRedirectURL : String
     , loginFormURL : String
     , logoutURL : String
     , logoutRedirectURL : String
@@ -117,7 +121,7 @@ init flags url key =
                 [ "https://kansousenauth.wagahai.info/login?response_type=code&client_id="
                 , flags.authClientId
                 , "&redirect_uri="
-                , flags.authRedirectURI
+                , flags.authRedirectURL
                 ]
 
         logoutURL =
@@ -138,7 +142,7 @@ init flags url key =
       , kifuModel = Kifu.init
       , uploadModel = Upload.init False
       , authClientId = flags.authClientId
-      , authRedirectURI = flags.authRedirectURI
+      , authRedirectURL = flags.authRedirectURL
       , loginFormURL = loginFormURL
       , logoutURL = logoutURL
       , logoutRedirectURL = flags.logoutRedirectURL
@@ -227,8 +231,8 @@ tokenRefreshRequest model refreshToken =
         , ( "client_id", model.authClientId )
         , ( "refresh_token", refreshToken )
         ]
-        authTokenDecoder
-        AuthTokenMsg
+        refreshTokenDecoder
+        RefreshTokenMsg
 
 
 authorizationRequest : Model -> String -> Cmd Msg
@@ -236,11 +240,11 @@ authorizationRequest model code =
     tokenRequest model
         [ ( "grant_type", "authorization_code" )
         , ( "client_id", model.authClientId )
-        , ( "redirect_uri", model.authRedirectURI )
+        , ( "redirect_uri", model.authRedirectURL )
         , ( "code", code )
         ]
-        refreshTokenDecoder
-        RefreshTokenMsg
+        authTokenDecoder
+        AuthTokenMsg
 
 
 authorizedResponse :
@@ -416,9 +420,7 @@ authResponse model result f store =
     case result of
         Ok res ->
             tokenResponse
-                { model
-                    | authToken = f res
-                }
+                { model | authToken = f res }
                 (store res)
 
         Err err ->
@@ -532,10 +534,12 @@ update msg model =
 
         Logout ->
             ( { model | authToken = Nothing }
-            , Cmd.batch
-                [ removeTokens ()
-                , Nav.load model.logoutURL
-                ]
+            , removeTokens ()
+            )
+
+        RemoveAuthTokens ->
+            ( model
+            , Nav.load model.logoutURL
             )
 
         AuthTokenMsg result ->
@@ -573,7 +577,10 @@ update msg model =
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Browser.Events.onResize OnResize
+    Sub.batch
+        [ Browser.Events.onResize OnResize
+        , removeTokensReturn (\_ -> RemoveAuthTokens)
+        ]
 
 
 routeToTitle : Route -> String

@@ -37,7 +37,8 @@ dl.kifuinfo dd {
               "windowWidth": window.innerWidth,
               "windowHeight": window.innerHeight,
               "authClientId": cfg.UserPoolClientID,
-              "authRedirectURI": cfg.Host + "callback",
+              "authRedirectURL": cfg.Host + "callback",
+              "logoutRedirectURL": cfg.Host,
               "tokenEndpoint": cfg.IDP + "oauth2/token"
           }
       });
@@ -51,6 +52,7 @@ dl.kifuinfo dd {
       app.ports.removeTokens.subscribe((req)=>{
           localStorage.removeItem('token');
           localStorage.removeItem('refresh_token');
+          app.ports.removeTokensReturn.send(0);
       });
       app.ports.updateBoard.subscribe((req)=>{
           const ctx = shogiboard.draw(req[0], img, req[1]);
