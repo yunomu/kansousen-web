@@ -265,19 +265,19 @@ func getRequestContext(ctx *events.APIGatewayProxyRequestContext) (*RequestConte
 
 func (s *APIHandler) handle(ctx context.Context, req *Request) (*Response, error) {
 	reqCtx, err := getRequestContext(&req.RequestContext)
-	if err == nil {
+	if err != nil {
 		s.logger.Error("sub is not found in claims", err)
 		return s.errorResponse(ServerError()), nil
 	}
 
 	path, ok := s.handlers[req.Path]
 	if !ok {
-		return s.errorResponse(ClientError(404, "")), nil
+		return s.errorResponse(ClientError(404, "NotFound")), nil
 	}
 
 	h, ok := path[req.HTTPMethod]
 	if !ok {
-		return s.errorResponse(ClientError(405, "")), nil
+		return s.errorResponse(ClientError(405, "MethodNotAllowed")), nil
 	}
 
 	msg, err := h(ctx, reqCtx, req)

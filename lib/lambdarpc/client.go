@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -68,14 +69,40 @@ func (e *LambdaError) Error() string {
 	return e.ErrorType + ": " + e.ErrorMessage
 }
 
+type clientContext struct {
+	RequestId string `json:"request_id"`
+}
+
+func (c *clientContext) encode(base64Encoding *base64.Encoding) (string, error) {
+	var buf strings.Builder
+	w := base64.NewEncoder(base64Encoding, &buf)
+	defer w.Close()
+
+	enc := json.NewEncoder(w)
+
+	if err := enc.Encode(c); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
+}
+
 func (c *Client) Invoke(ctx context.Context, requestId string, in, out proto.Message) error {
 	bs, err := c.marshaler.Marshal(in)
 	if err != nil {
 		return errors.Wrap(err, "json.Marshal(in)")
 	}
 
+	clientCtx := &clientContext{
+		RequestId: requestId,
+	}
+	clientCtxStr, err := clientCtx.encode(c.base64Encoding)
+	if err != nil {
+		return errors.Wrap(err, "clientContext.encode")
+	}
+
 	o, err := c.lambdaClient.InvokeWithContext(ctx, &lambda.InvokeInput{
-		ClientContext:  aws.String(c.base64Encoding.EncodeToString([]byte(requestId))),
+		ClientContext:  aws.String(clientCtxStr),
 		FunctionName:   aws.String(c.functionArn),
 		InvocationType: aws.String(lambda.InvocationTypeRequestResponse),
 		Payload:        bs,

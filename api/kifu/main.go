@@ -227,7 +227,7 @@ func main() {
 	}
 
 	h := lambdahandler.NewAPIHandler(
-		lambdahandler.AddAPIHandler("/v1/kifu", "GET", s.kifu),
+		lambdahandler.AddAPIHandler("/v1/kifu", "POST", s.kifu),
 		lambdahandler.SetLogger(&apiLogger{}),
 	)
 
