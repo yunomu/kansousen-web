@@ -1,9 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"os"
 	"strings"
 
@@ -20,6 +18,7 @@ import (
 	"github.com/yunomu/kansousen/proto/lambdakifu"
 
 	"github.com/yunomu/kansousen/lib/lambdahandler"
+	"github.com/yunomu/kansousen/lib/lambdarpc"
 )
 
 func init() {
@@ -41,11 +40,8 @@ func init() {
 }
 
 type server struct {
-	kifuFuncArn  string
-	lambdaClient *lambda.Lambda
-
-	marshaler   *protojson.MarshalOptions
-	unmarshaler *protojson.UnmarshalOptions
+	lambdaClient *lambdarpc.Client
+	unmarshaler  *protojson.UnmarshalOptions
 }
 
 func (s *server) convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, lambdahandler.Error) {
@@ -179,43 +175,21 @@ func (s *server) kifu(ctx context.Context, reqCtx *lambdahandler.RequestContext,
 		return nil, errRes
 	}
 
-	bs, err := s.marshaler.Marshal(in)
-	if err != nil {
-		zap.L().Error("json.Marshal(in)", zap.Error(err))
-		return nil, lambdahandler.ServerError()
-	}
-
-	o, err := s.lambdaClient.InvokeWithContext(ctx, &lambda.InvokeInput{
-		FunctionName:   aws.String(s.kifuFuncArn),
-		InvocationType: aws.String(lambda.InvocationTypeRequestResponse),
-		Payload:        bs,
-	})
-	if err != nil {
-		zap.L().Error("lambda.Invoke", zap.Error(err))
-		return nil, lambdahandler.ServerError()
-	}
-
-	if o.FunctionError != nil {
-		d := json.NewDecoder(bytes.NewReader(o.Payload))
-		errObj := map[string]interface{}{}
-		if err := d.Decode(&errObj); err != nil {
-			zap.L().Error("json.Decode", zap.Error(err), zap.ByteString("Payload", o.Payload))
+	out := &lambdakifu.Output{}
+	if err := s.lambdaClient.Invoke(ctx, reqCtx.RequestId, in, out); err != nil {
+		switch err.(type) {
+		case *lambdarpc.LambdaError:
+			e := err.(*lambdarpc.LambdaError)
+			// TODO: errorType client error
+			zap.L().Error("LambdaInvoke",
+				zap.String("errorType", e.ErrorType),
+				zap.String("errorMessage", e.ErrorMessage),
+			)
+			return nil, lambdahandler.ServerError()
+		default:
+			zap.L().Error("LambdaInvoke", zap.Error(err))
 			return nil, lambdahandler.ServerError()
 		}
-
-		// TODO: v["errorType"]判別
-		var fields []zap.Field
-		for k, v := range errObj {
-			fields = append(fields, zap.Any("payload_"+k, v))
-		}
-		zap.L().Error("FunctionError", fields...)
-		return nil, lambdahandler.ServerError()
-	}
-
-	out := &lambdakifu.Output{}
-	if err := s.unmarshaler.Unmarshal(o.Payload, out); err != nil {
-		zap.L().Error("json.Unmarshal(out)", zap.Error(err))
-		return nil, lambdahandler.ServerError()
 	}
 
 	res := convResponse(out)
@@ -246,11 +220,7 @@ func main() {
 	lambdaClient := lambda.New(session, aws.NewConfig().WithRegion(region))
 
 	s := &server{
-		kifuFuncArn:  kifuFuncArn,
-		lambdaClient: lambdaClient,
-		marshaler: &protojson.MarshalOptions{
-			UseProtoNames: true,
-		},
+		lambdaClient: lambdarpc.NewClient(lambdaClient, kifuFuncArn),
 		unmarshaler: &protojson.UnmarshalOptions{
 			DiscardUnknown: true,
 		},

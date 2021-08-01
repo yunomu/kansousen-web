@@ -9,6 +9,7 @@ require (
 	github.com/google/subcommands v1.2.0
 	github.com/google/uuid v1.1.2
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
+	github.com/pkg/errors v0.9.1
 	github.com/yunomu/kif v1.2.1
 	github.com/yunomu/usi v0.0.0-20201025224842-7cd1c0707663
 	go.uber.org/zap v1.16.0
