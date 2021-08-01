@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 
 	"go.uber.org/zap"
 
@@ -15,12 +16,10 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
 
-	"github.com/aws/aws-lambda-go/events"
-	runtime "github.com/aws/aws-lambda-go/lambda"
-
 	apipb "github.com/yunomu/kansousen/proto/api"
-
 	"github.com/yunomu/kansousen/proto/lambdakifu"
+
+	"github.com/yunomu/kansousen/lib/lambdahandler"
 )
 
 func init() {
@@ -49,7 +48,7 @@ type server struct {
 	unmarshaler *protojson.UnmarshalOptions
 }
 
-func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, *response) {
+func (s *server) convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, lambdahandler.Error) {
 	in := &lambdakifu.Input{}
 
 	switch t := req.KifuRequestSelect.(type) {
@@ -71,12 +70,12 @@ func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, *res
 		case "Shift_JIS":
 			encoding = lambdakifu.PostKifuInput_SHIFT_JIS
 		default:
-			return nil, clientError(400, "unknown encoding")
+			return nil, lambdahandler.ClientError(400, "unknown encoding")
 		}
 
 		format, ok := lambdakifu.PostKifuInput_Format_value[r.Format]
 		if !ok {
-			return nil, clientError(400, "unknown format")
+			return nil, lambdahandler.ClientError(400, "unknown format")
 		}
 
 		in.Select = &lambdakifu.Input_PostKifuInput{
@@ -114,7 +113,7 @@ func convRequest(userId string, req *apipb.KifuRequest) (*lambdakifu.Input, *res
 			},
 		}
 	default:
-		return nil, clientError(400, "unknown request")
+		return nil, lambdahandler.ClientError(400, "unknown request")
 	}
 
 	return in, nil
@@ -169,78 +168,21 @@ func convResponse(out *lambdakifu.Output) *apipb.KifuResponse {
 	return res
 }
 
-type request events.APIGatewayProxyRequest
-type response events.APIGatewayProxyResponse
-
-func getUserId(ctx *events.APIGatewayProxyRequestContext) string {
-	claimsVal, ok := ctx.Authorizer["claims"]
-	if !ok {
-		return ""
-	}
-
-	claims, ok := claimsVal.(map[string]interface{})
-	if !ok {
-		return ""
-	}
-
-	userIdVal, ok := claims["sub"]
-	if !ok {
-		return ""
-	}
-
-	userId, ok := userIdVal.(string)
-	if !ok {
-		return ""
-	}
-
-	return userId
-}
-
-func buildResponse(statusCode int, contentType string, body string) *response {
-	headers := map[string]string{
-		"Access-Control-Allow-Origin": "*",
-	}
-
-	if contentType != "" {
-		headers["Content-Type"] = contentType
-	}
-
-	return &response{
-		StatusCode: statusCode,
-		Headers:    headers,
-		Body:       body,
-	}
-}
-
-func clientError(statusCode int, msg string) *response {
-	return buildResponse(statusCode, "", msg)
-}
-
-func serverError() *response {
-	return buildResponse(500, "", "\"Internal Server Error\"")
-}
-
-func (s *server) kifu(ctx context.Context, r *request) *response {
-	userId := getUserId(&r.RequestContext)
-	if userId == "" {
-		zap.L().Error("sub is not found in claims", zap.Any("RequestContext", &r.RequestContext))
-		return serverError()
-	}
-
+func (s *server) kifu(ctx context.Context, reqCtx *lambdahandler.RequestContext, r *lambdahandler.Request) (proto.Message, lambdahandler.Error) {
 	req := &apipb.KifuRequest{}
 	if err := s.unmarshaler.Unmarshal([]byte(r.Body), req); err != nil {
-		return clientError(400, err.Error())
+		return nil, lambdahandler.ClientError(400, err.Error())
 	}
 
-	in, errRes := convRequest(userId, req)
+	in, errRes := s.convRequest(reqCtx.UserId, req)
 	if errRes != nil {
-		return errRes
+		return nil, errRes
 	}
 
 	bs, err := s.marshaler.Marshal(in)
 	if err != nil {
 		zap.L().Error("json.Marshal(in)", zap.Error(err))
-		return serverError()
+		return nil, lambdahandler.ServerError()
 	}
 
 	o, err := s.lambdaClient.InvokeWithContext(ctx, &lambda.InvokeInput{
@@ -250,7 +192,7 @@ func (s *server) kifu(ctx context.Context, r *request) *response {
 	})
 	if err != nil {
 		zap.L().Error("lambda.Invoke", zap.Error(err))
-		return serverError()
+		return nil, lambdahandler.ServerError()
 	}
 
 	if o.FunctionError != nil {
@@ -258,7 +200,7 @@ func (s *server) kifu(ctx context.Context, r *request) *response {
 		errObj := map[string]interface{}{}
 		if err := d.Decode(&errObj); err != nil {
 			zap.L().Error("json.Decode", zap.Error(err), zap.ByteString("Payload", o.Payload))
-			return serverError()
+			return nil, lambdahandler.ServerError()
 		}
 
 		// TODO: v["errorType"]判別
@@ -267,41 +209,27 @@ func (s *server) kifu(ctx context.Context, r *request) *response {
 			fields = append(fields, zap.Any("payload_"+k, v))
 		}
 		zap.L().Error("FunctionError", fields...)
-		return serverError()
+		return nil, lambdahandler.ServerError()
 	}
 
 	out := &lambdakifu.Output{}
 	if err := s.unmarshaler.Unmarshal(o.Payload, out); err != nil {
 		zap.L().Error("json.Unmarshal(out)", zap.Error(err))
-		return serverError()
+		return nil, lambdahandler.ServerError()
 	}
 
 	res := convResponse(out)
 	if res == nil {
-		return serverError()
+		return nil, lambdahandler.ServerError()
 	}
 
-	outBs, err := s.marshaler.Marshal(res)
-	if err != nil {
-		zap.L().Error("json.Marshal(response)", zap.Error(err))
-		return serverError()
-	}
-
-	return buildResponse(200, "application/json", string(outBs))
+	return res, nil
 }
 
-func (s *server) handler(ctx context.Context, req *request) (*response, error) {
-	switch req.HTTPMethod {
-	case "POST":
-		switch req.Path {
-		case "/v1/kifu":
-			return s.kifu(ctx, req), nil
-		default:
-			return clientError(404, ""), nil
-		}
-	default:
-		return clientError(405, ""), nil
-	}
+type apiLogger struct{}
+
+func (*apiLogger) Error(msg string, err error) {
+	zap.L().Error(msg, zap.Error(err))
 }
 
 func main() {
@@ -320,11 +248,18 @@ func main() {
 	s := &server{
 		kifuFuncArn:  kifuFuncArn,
 		lambdaClient: lambdaClient,
-		marshaler:    &protojson.MarshalOptions{},
+		marshaler: &protojson.MarshalOptions{
+			UseProtoNames: true,
+		},
 		unmarshaler: &protojson.UnmarshalOptions{
 			DiscardUnknown: true,
 		},
 	}
 
-	runtime.StartWithContext(ctx, s.handler)
+	h := lambdahandler.NewAPIHandler(
+		lambdahandler.AddAPIHandler("/v1/kifu", "GET", s.kifu),
+		lambdahandler.SetLogger(&apiLogger{}),
+	)
+
+	h.Start(ctx)
 }
