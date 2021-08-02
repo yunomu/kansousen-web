@@ -10,6 +10,11 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambdacontext"
+)
+
+const (
+	APIRequestIdField = "api_request_id"
 )
 
 type RequestContext struct {
@@ -263,12 +268,33 @@ func getRequestContext(ctx *events.APIGatewayProxyRequestContext) (*RequestConte
 	}, nil
 }
 
+func withAPIRequestId(ctx context.Context) context.Context {
+	lc, ok := lambdacontext.FromContext(ctx)
+	if !ok {
+		return ctx
+	}
+
+	custom := lc.ClientContext.Custom
+	if custom == nil {
+		return ctx
+	}
+
+	apiReqId, ok := custom[APIRequestIdField]
+	if !ok {
+		return ctx
+	}
+
+	return context.WithValue(ctx, APIRequestIdField, apiReqId)
+}
+
 func (s *APIHandler) handle(ctx context.Context, req *Request) (*Response, error) {
 	reqCtx, err := getRequestContext(&req.RequestContext)
 	if err != nil {
 		s.logger.Error("sub is not found in claims", err)
 		return s.errorResponse(ServerError()), nil
 	}
+
+	ctx = withAPIRequestId(ctx)
 
 	path, ok := s.handlers[req.Path]
 	if !ok {

@@ -10,6 +10,8 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/aws/aws-lambda-go/lambdacontext"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
@@ -176,7 +178,12 @@ func (s *server) kifu(ctx context.Context, reqCtx *lambdahandler.RequestContext,
 	}
 
 	out := &lambdakifu.Output{}
-	if err := s.lambdaClient.Invoke(ctx, reqCtx.RequestId, in, out); err != nil {
+	cc := &lambdacontext.ClientContext{
+		Custom: map[string]string{
+			"api_request_id": reqCtx.RequestId,
+		},
+	}
+	if err := s.lambdaClient.Invoke(ctx, cc, in, out); err != nil {
 		switch err.(type) {
 		case *lambdarpc.LambdaError:
 			e := err.(*lambdarpc.LambdaError)

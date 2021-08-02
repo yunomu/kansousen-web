@@ -3,20 +3,23 @@ package lambdarpc
 import (
 	"testing"
 
-	"encoding/base64"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-func TestClientContext_Encode(t *testing.T) {
-	ctx := &clientContext{
-		RequestId: "test",
+func TestClient_encodeClientContext(t *testing.T) {
+	cc := &lambdacontext.ClientContext{
+		Custom: map[string]string{
+			"key": "test",
+		},
 	}
 
-	str, err := ctx.encode(base64.URLEncoding)
+	client := NewClient(nil, "")
+	str, err := client.encodeClientContext(cc)
 	if err != nil {
 		t.Fatalf("encode: %v", err)
 	}
 
-	exp := "eyJyZXF1ZXN0X2lkIjoidGVzdCJ9"
+	exp := "eyJDbGllbnQiOnsiaW5zdGFsbGF0aW9uX2lkIjoiIiwiYXBwX3RpdGxlIjoiIiwiYXBwX3ZlcnNpb25fY29kZSI6IiIsImFwcF9wYWNrYWdlX25hbWUiOiIifSwiZW52IjpudWxsLCJjdXN0b20iOnsia2V5IjoidGVzdCJ9fQo="
 	if str != exp {
 		t.Errorf("mismatch: exp=%v act=%v", exp, str)
 	}

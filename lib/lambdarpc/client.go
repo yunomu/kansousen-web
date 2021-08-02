@@ -14,6 +14,8 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/lambda"
+
+	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
 type Client struct {
@@ -69,40 +71,42 @@ func (e *LambdaError) Error() string {
 	return e.ErrorType + ": " + e.ErrorMessage
 }
 
-type clientContext struct {
-	RequestId string `json:"request_id"`
-}
-
-func (c *clientContext) encode(base64Encoding *base64.Encoding) (string, error) {
+func (c *Client) encodeClientContext(cc *lambdacontext.ClientContext) (string, error) {
 	var buf strings.Builder
-	w := base64.NewEncoder(base64Encoding, &buf)
-	defer w.Close()
+
+	w := base64.NewEncoder(c.base64Encoding, &buf)
 
 	enc := json.NewEncoder(w)
 
-	if err := enc.Encode(c); err != nil {
+	if err := enc.Encode(cc); err != nil {
+		return "", err
+	}
+
+	if err := w.Close(); err != nil {
 		return "", err
 	}
 
 	return buf.String(), nil
 }
 
-func (c *Client) Invoke(ctx context.Context, requestId string, in, out proto.Message) error {
+func (c *Client) Invoke(ctx context.Context, clientCtx *lambdacontext.ClientContext, in, out proto.Message) error {
 	bs, err := c.marshaler.Marshal(in)
 	if err != nil {
 		return errors.Wrap(err, "json.Marshal(in)")
 	}
 
-	clientCtx := &clientContext{
-		RequestId: requestId,
-	}
-	clientCtxStr, err := clientCtx.encode(c.base64Encoding)
-	if err != nil {
-		return errors.Wrap(err, "clientContext.encode")
+	var cc *string
+	if clientCtx != nil {
+		s, err := c.encodeClientContext(clientCtx)
+		if err != nil {
+			return errors.Wrap(err, "clientContext.encode")
+		}
+
+		cc = aws.String(s)
 	}
 
 	o, err := c.lambdaClient.InvokeWithContext(ctx, &lambda.InvokeInput{
-		ClientContext:  aws.String(clientCtxStr),
+		ClientContext:  cc,
 		FunctionName:   aws.String(c.functionArn),
 		InvocationType: aws.String(lambda.InvocationTypeRequestResponse),
 		Payload:        bs,
