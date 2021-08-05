@@ -16,6 +16,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/lambda"
 
 	"github.com/aws/aws-lambda-go/lambdacontext"
+
+	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
 )
 
 type Client struct {
@@ -89,24 +91,24 @@ func (c *Client) encodeClientContext(cc *lambdacontext.ClientContext) (string, e
 	return buf.String(), nil
 }
 
-func (c *Client) Invoke(ctx context.Context, clientCtx *lambdacontext.ClientContext, in, out proto.Message) error {
+func (c *Client) Invoke(ctx context.Context, reqCtx *requestcontext.Context, in, out proto.Message) error {
 	bs, err := c.marshaler.Marshal(in)
 	if err != nil {
 		return errors.Wrap(err, "json.Marshal(in)")
 	}
 
-	var cc *string
-	if clientCtx != nil {
-		s, err := c.encodeClientContext(clientCtx)
-		if err != nil {
-			return errors.Wrap(err, "clientContext.encode")
-		}
+	clientCtx := lambdacontext.ClientContext{
+		Custom: map[string]string{},
+	}
+	reqCtx.Encode(clientCtx.Custom)
 
-		cc = aws.String(s)
+	clientContext, err := c.encodeClientContext(&clientCtx)
+	if err != nil {
+		return errors.Wrap(err, "clientContext.encode")
 	}
 
 	o, err := c.lambdaClient.InvokeWithContext(ctx, &lambda.InvokeInput{
-		ClientContext:  cc,
+		ClientContext:  aws.String(clientContext),
 		FunctionName:   aws.String(c.functionArn),
 		InvocationType: aws.String(lambda.InvocationTypeRequestResponse),
 		Payload:        bs,

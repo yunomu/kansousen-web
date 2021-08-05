@@ -1,17 +1,23 @@
-package lambdahandler
+package apihandler
 
 import (
 	"testing"
 
 	"context"
+
+	"google.golang.org/protobuf/proto"
+
+	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
 )
 
-func TestNewAPIHandler_AddAPIHandler(t *testing.T) {
+func TestNewHandler_AddHandler(t *testing.T) {
 	path := "/test"
 	method := "GET"
-	h := NewAPIHandler(AddAPIHandler(path, method, func(context.Context, *RequestContext, *Request) *Response {
-		return nil
-	}))
+	h := NewHandler(
+		AddHandler(path, method, func(context.Context, *requestcontext.Context, *Request) (proto.Message, Error) {
+			return nil, nil
+		}),
+	)
 
 	p, ok := h.handlers[path]
 	if !ok {

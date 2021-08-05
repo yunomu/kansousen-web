@@ -1,7 +1,7 @@
 module Page.MyPage exposing (view)
 
 import Element exposing (Element)
-import Proto.Api as PB
+import Proto.Kifu as PB
 import Route
 import Style
 
@@ -22,9 +22,9 @@ label kifu =
             String.concat
                 [ kifu.gameName
                 , ": "
-                , kifu.firstPlayer
+                , String.join "," kifu.firstPlayers
                 , " vs "
-                , kifu.secondPlayer
+                , String.join "," kifu.secondPlayers
                 ]
     in
     Element.text <|

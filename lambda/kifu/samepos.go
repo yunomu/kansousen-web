@@ -3,35 +3,37 @@ package main
 import (
 	"context"
 
-	"github.com/yunomu/kansousen/proto/lambdakifu"
+	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+
+	kifupb "github.com/yunomu/kansousen/proto/kifu"
 )
 
-func (h *handler) getSamePositions(ctx context.Context, in *lambdakifu.GetSamePositionsInput) (*lambdakifu.GetSamePositionsOutput, error) {
-	phases, err := h.service.GetSamePositions(ctx, in.UserId, in.Position, in.Steps, in.ExcludeKifuIds)
+func (h *handler) getSamePositions(ctx context.Context, reqCtx *requestcontext.Context, in *kifupb.GetSamePositionsRequest) (*kifupb.GetSamePositionsResponse, error) {
+	phases, err := h.service.GetSamePositions(ctx, reqCtx.UserId, in.Position, in.Steps, in.ExcludeKifuIds)
 	if err != nil {
 		return nil, err
 	}
 
-	var ret []*lambdakifu.GetSamePositionsOutput_Phase
+	var ret []*kifupb.GetSamePositionsResponse_Kifu
 	for _, p := range phases {
-		var steps []*lambdakifu.GetSamePositionsOutput_Step
+		var steps []*kifupb.GetSamePositionsResponse_Step
 		for _, s := range p.Steps {
-			steps = append(steps, &lambdakifu.GetSamePositionsOutput_Step{
+			steps = append(steps, &kifupb.GetSamePositionsResponse_Step{
 				Seq: s.Seq,
-				Src: &lambdakifu.Pos{
+				Src: &kifupb.Pos{
 					X: s.Src.X,
 					Y: s.Src.Y,
 				},
-				Dst: &lambdakifu.Pos{
+				Dst: &kifupb.Pos{
 					X: s.Dst.X,
 					Y: s.Dst.Y,
 				},
-				Piece:          lambdakifu.Piece_Id(s.Piece),
+				Piece:          kifupb.Piece_Id(s.Piece),
 				Promoted:       s.Promoted,
-				FinishedStatus: lambdakifu.FinishedStatus_Id(s.FinishedStatus),
+				FinishedStatus: kifupb.FinishedStatus_Id(s.FinishedStatus),
 			})
 		}
-		ret = append(ret, &lambdakifu.GetSamePositionsOutput_Phase{
+		ret = append(ret, &kifupb.GetSamePositionsResponse_Kifu{
 			UserId: p.UserId,
 			KifuId: p.KifuId,
 			Seq:    p.Seq,
@@ -39,8 +41,8 @@ func (h *handler) getSamePositions(ctx context.Context, in *lambdakifu.GetSamePo
 		})
 	}
 
-	return &lambdakifu.GetSamePositionsOutput{
+	return &kifupb.GetSamePositionsResponse{
 		Position: in.Position,
-		Phases:   ret,
+		Kifus:    ret,
 	}, nil
 }

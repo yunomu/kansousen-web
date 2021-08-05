@@ -1,12 +1,12 @@
 .PHONY: build clean deploy proto proto-clean elm
 
-SERVICES=auth kifu
-PROTOBUF=document api lambdakifu
+SERVICES=kifu
+PROTOBUF=document kifu
 ELM_DIR=elm
 
 TARGETS=$(addprefix bin/, $(SERVICES))
 PROTO_TARGETS=$(addprefix proto/, $(PROTOBUF))
-PROTO_ELM_TARGETS=$(ELM_DIR)/Proto/Api.proto
+PROTO_ELM_TARGETS=$(ELM_DIR)/Proto/Kifu.proto
 
 PUBLISH_DIR=public
 
@@ -27,7 +27,7 @@ proto: $(PROTO_TARGETS) $(PROTO_ELM_TARGETS)
 proto/%: proto/%.proto
 	protoc --go_out=. $<
 
-$(PROTO_ELM_TARGETS): proto/api.proto
+$(PROTO_ELM_TARGETS): proto/kifu.proto
 	protoc --elm_out=$(ELM_DIR) $< 2> /dev/null
 
 elm:

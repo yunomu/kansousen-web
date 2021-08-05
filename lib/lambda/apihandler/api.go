@@ -1,4 +1,4 @@
-package lambdahandler
+package apihandler
 
 import (
 	"context"
@@ -11,16 +11,13 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
+
+	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
 )
 
 const (
 	APIRequestIdField = "api_request_id"
 )
-
-type RequestContext struct {
-	RequestId string
-	UserId    string
-}
 
 type Request events.APIGatewayProxyRequest
 type Response events.APIGatewayProxyResponse
@@ -86,7 +83,7 @@ func (e *clientError) Error() string {
 	return e.errorMessage()
 }
 
-type handler func(context.Context, *RequestContext, *Request) (proto.Message, Error)
+type handler func(context.Context, *requestcontext.Context, *Request) (proto.Message, Error)
 
 type Logger interface {
 	Error(msg string, err error)
@@ -98,22 +95,22 @@ var _ Logger = (*defaultLogger)(nil)
 
 func (*defaultLogger) Error(msg string, err error) {}
 
-type APIHandler struct {
+type Handler struct {
 	marshaler *protojson.MarshalOptions
 	handlers  map[string]map[string]handler
 	logger    Logger
 }
 
-type APIHandlerOption func(*APIHandler)
+type HandlerOption func(*Handler)
 
-func SetMarshaler(marshaler *protojson.MarshalOptions) APIHandlerOption {
-	return func(s *APIHandler) {
+func SetMarshaler(marshaler *protojson.MarshalOptions) HandlerOption {
+	return func(s *Handler) {
 		s.marshaler = marshaler
 	}
 }
 
-func AddAPIHandler(path, method string, h func(context.Context, *RequestContext, *Request) (proto.Message, Error)) APIHandlerOption {
-	return func(s *APIHandler) {
+func AddHandler(path, method string, h func(context.Context, *requestcontext.Context, *Request) (proto.Message, Error)) HandlerOption {
+	return func(s *Handler) {
 		p, ok := s.handlers[path]
 		if !ok {
 			p = map[string]handler{}
@@ -124,8 +121,8 @@ func AddAPIHandler(path, method string, h func(context.Context, *RequestContext,
 	}
 }
 
-func SetLogger(logger Logger) APIHandlerOption {
-	return func(s *APIHandler) {
+func SetLogger(logger Logger) HandlerOption {
+	return func(s *Handler) {
 		if logger == nil {
 			logger = &defaultLogger{}
 		}
@@ -133,8 +130,8 @@ func SetLogger(logger Logger) APIHandlerOption {
 	}
 }
 
-func NewAPIHandler(opts ...APIHandlerOption) *APIHandler {
-	h := &APIHandler{
+func NewHandler(opts ...HandlerOption) *Handler {
+	h := &Handler{
 		marshaler: &protojson.MarshalOptions{
 			UseProtoNames:   true,
 			EmitUnpopulated: true,
@@ -150,7 +147,7 @@ func NewAPIHandler(opts ...APIHandlerOption) *APIHandler {
 	return h
 }
 
-func (s *APIHandler) buildResponse(statusCode int, contentType, body string) *Response {
+func (s *Handler) buildResponse(statusCode int, contentType, body string) *Response {
 	headers := map[string]string{
 		"Access-Control-Allow-Origin": "*",
 	}
@@ -183,7 +180,7 @@ func (e *ErrorDecodeError) Error() string {
 	return e.Err.Error()
 }
 
-func (s *APIHandler) errorResponse(e Error) *Response {
+func (s *Handler) errorResponse(e Error) *Response {
 	msg := &ErrorMessage{
 		ErrorType:    e.errorType(),
 		ErrorMessage: e.errorMessage(),
@@ -202,7 +199,7 @@ func (s *APIHandler) errorResponse(e Error) *Response {
 	return s.buildResponse(e.statusCode(), "application/josn", buf.String())
 }
 
-func (s *APIHandler) response(msg proto.Message) *Response {
+func (s *Handler) response(msg proto.Message) *Response {
 	var body, contentType string
 	if msg == nil {
 		bs, err := s.marshaler.Marshal(msg)
@@ -227,7 +224,7 @@ func (e *AuthorizerError) Error() string {
 	return e.Message
 }
 
-func getRequestContext(ctx *events.APIGatewayProxyRequestContext) (*RequestContext, error) {
+func getRequestContext(ctx *events.APIGatewayProxyRequestContext) (*requestcontext.Context, error) {
 	requestId := ctx.RequestID
 
 	claimsVal, ok := ctx.Authorizer["claims"]
@@ -262,7 +259,7 @@ func getRequestContext(ctx *events.APIGatewayProxyRequestContext) (*RequestConte
 		}
 	}
 
-	return &RequestContext{
+	return &requestcontext.Context{
 		RequestId: requestId,
 		UserId:    userId,
 	}, nil
@@ -287,7 +284,7 @@ func withAPIRequestId(ctx context.Context) context.Context {
 	return context.WithValue(ctx, APIRequestIdField, apiReqId)
 }
 
-func (s *APIHandler) handle(ctx context.Context, req *Request) (*Response, error) {
+func (s *Handler) handle(ctx context.Context, req *Request) (*Response, error) {
 	reqCtx, err := getRequestContext(&req.RequestContext)
 	if err != nil {
 		s.logger.Error("sub is not found in claims", err)
@@ -314,6 +311,6 @@ func (s *APIHandler) handle(ctx context.Context, req *Request) (*Response, error
 	return s.response(msg), nil
 }
 
-func (s *APIHandler) Start(ctx context.Context) {
+func (s *Handler) Start(ctx context.Context) {
 	lambda.StartWithContext(ctx, s.handle)
 }

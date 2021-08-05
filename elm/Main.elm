@@ -16,7 +16,7 @@ import Json.Decode as Decoder exposing (Decoder)
 import Page.Kifu as Kifu
 import Page.MyPage as MyPage
 import Page.Upload as Upload
-import Proto.Api as PB
+import Proto.Kifu as PB
 import Route exposing (Route)
 import Style
 import Url exposing (Url)

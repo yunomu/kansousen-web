@@ -4,7 +4,7 @@ import Element exposing (Element)
 import Element.Input as Input
 import Html exposing (Html)
 import Html.Attributes as Attr
-import Proto.Api as PB
+import Proto.Kifu as PB
 import Style
 
 

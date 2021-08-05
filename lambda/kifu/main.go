@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	"go.uber.org/zap"
@@ -9,6 +10,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-lambda-go/lambdacontext"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -16,9 +18,10 @@ import (
 
 	libdb "github.com/yunomu/kansousen/lib/db"
 	libdynamodb "github.com/yunomu/kansousen/lib/dynamodb"
+	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
 	"github.com/yunomu/kansousen/service/kifu"
 
-	"github.com/yunomu/kansousen/proto/lambdakifu"
+	kifupb "github.com/yunomu/kansousen/proto/kifu"
 )
 
 func init() {
@@ -46,42 +49,48 @@ type handler struct {
 }
 
 func (h *handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
-	in := &lambdakifu.Input{}
+	lc, ok := lambdacontext.FromContext(ctx)
+	if !ok {
+		return nil, errors.New("no lambdacontext")
+	}
+	reqCtx := requestcontext.Decode(lc.ClientContext.Custom)
+
+	in := &kifupb.KifuRequest{}
 	if err := h.unmarshaler.Unmarshal(payload, in); err != nil {
 		return nil, err
 	}
 
-	output := &lambdakifu.Output{}
-	switch t := in.Select.(type) {
-	case *lambdakifu.Input_GetKifuInput:
-		out, err := h.getKifu(ctx, t.GetKifuInput)
+	output := &kifupb.KifuResponse{}
+	switch t := in.KifuRequestSelect.(type) {
+	case *kifupb.KifuRequest_RequestGetKifu:
+		out, err := h.getKifu(ctx, reqCtx, t.RequestGetKifu)
 		if err != nil {
 			return nil, err
 		}
-		output.Select = &lambdakifu.Output_GetKifuOutput{
-			GetKifuOutput: out,
+		output.KifuResponseSelect = &kifupb.KifuResponse_ResponseGetKifu{
+			ResponseGetKifu: out,
 		}
-	case *lambdakifu.Input_PostKifuInput:
-		out, err := h.postKifu(ctx, t.PostKifuInput)
+	case *kifupb.KifuRequest_RequestPostKifu:
+		out, err := h.postKifu(ctx, reqCtx, t.RequestPostKifu)
 		if err != nil {
 			return nil, err
 		}
-		output.Select = &lambdakifu.Output_PostKifuOutput{
-			PostKifuOutput: out,
+		output.KifuResponseSelect = &kifupb.KifuResponse_ResponsePostKifu{
+			ResponsePostKifu: out,
 		}
-	case *lambdakifu.Input_RecentKifuInput:
-		out, err := h.recentKifu(ctx, t.RecentKifuInput)
+	case *kifupb.KifuRequest_RequestRecentKifu:
+		out, err := h.recentKifu(ctx, reqCtx, t.RequestRecentKifu)
 		if err != nil {
 			return nil, err
 		}
-		output.Select = &lambdakifu.Output_RecentKifuOutput{
-			RecentKifuOutput: out,
+		output.KifuResponseSelect = &kifupb.KifuResponse_ResponseRecentKifu{
+			ResponseRecentKifu: out,
 		}
-	case *lambdakifu.Input_DeleteKifuInput:
-		if err := h.deleteKifu(ctx, t.DeleteKifuInput); err != nil {
+	case *kifupb.KifuRequest_RequestDeleteKifu:
+		if err := h.deleteKifu(ctx, reqCtx, t.RequestDeleteKifu); err != nil {
 			return nil, err
 		}
-		output.Select = &lambdakifu.Output_DeleteKifuOutput{}
+		output.KifuResponseSelect = &kifupb.KifuResponse_ResponseDeleteKifu{}
 	}
 
 	return h.marshaler.Marshal(output)

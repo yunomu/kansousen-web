@@ -3,7 +3,7 @@ module Page.Upload exposing (..)
 import Element exposing (Element)
 import Element.Input as Input
 import Html
-import Proto.Api as Api
+import Proto.Kifu as Api
 import Style
 
 

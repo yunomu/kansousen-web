@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package api;
+package kifu;
 
-option go_package = "proto/api";
+option go_package = "proto/kifu";
 
 message RecentKifuRequest {
   int32 limit = 1;
@@ -16,8 +16,8 @@ message RecentKifuResponse {
 
     string handicap = 4;
     string game_name = 5;
-    string first_player = 6;
-    string second_player = 7;
+    repeated string first_players = 6;
+    repeated string second_players = 7;
     string note = 8;
   }
   repeated Kifu kifus = 1;

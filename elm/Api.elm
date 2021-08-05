@@ -3,7 +3,7 @@ module Api exposing (Error(..), Request(..), Response(..), errorToString, reques
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
-import Proto.Api as PB
+import Proto.Kifu as PB
 import Task
 
 

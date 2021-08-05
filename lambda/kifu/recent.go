@@ -3,18 +3,20 @@ package main
 import (
 	"context"
 
-	"github.com/yunomu/kansousen/proto/lambdakifu"
+	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+
+	kifupb "github.com/yunomu/kansousen/proto/kifu"
 )
 
-func (h *handler) recentKifu(ctx context.Context, in *lambdakifu.RecentKifuInput) (*lambdakifu.RecentKifuOutput, error) {
-	kifus, err := h.service.RecentKifu(ctx, in.UserId, in.Limit)
+func (h *handler) recentKifu(ctx context.Context, reqCtx *requestcontext.Context, in *kifupb.RecentKifuRequest) (*kifupb.RecentKifuResponse, error) {
+	kifus, err := h.service.RecentKifu(ctx, reqCtx.UserId, in.Limit)
 	if err != nil {
 		return nil, err
 	}
 
-	var ret []*lambdakifu.RecentKifuOutput_Kifu
+	var ret []*kifupb.RecentKifuResponse_Kifu
 	for _, k := range kifus {
-		ret = append(ret, &lambdakifu.RecentKifuOutput_Kifu{
+		ret = append(ret, &kifupb.RecentKifuResponse_Kifu{
 			UserId:        k.UserId,
 			KifuId:        k.KifuId,
 			StartTs:       k.Start.Unix(),
@@ -26,5 +28,5 @@ func (h *handler) recentKifu(ctx context.Context, in *lambdakifu.RecentKifuInput
 		})
 	}
 
-	return &lambdakifu.RecentKifuOutput{Kifus: ret}, nil
+	return &kifupb.RecentKifuResponse{Kifus: ret}, nil
 }
