@@ -4,20 +4,16 @@ import (
 	"context"
 	"os"
 
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
-
 	"go.uber.org/zap"
+
+	lambdaclient "github.com/aws/aws-lambda-go/lambda"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/lambda"
 
-	apipb "github.com/yunomu/kansousen/proto/kifu"
-
-	"github.com/yunomu/kansousen/lib/lambda/apihandler"
-	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
-	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+	"github.com/yunomu/kansousen/lib/config"
+	"github.com/yunomu/kansousen/lib/lambda/lambdagateway"
 )
 
 func init() {
@@ -38,37 +34,6 @@ func init() {
 	zap.ReplaceGlobals(logger)
 }
 
-type server struct {
-	lambdaClient *lambdarpc.Client
-	unmarshaler  *protojson.UnmarshalOptions
-}
-
-func (s *server) kifu(ctx context.Context, reqCtx *requestcontext.Context, r *apihandler.Request) (proto.Message, apihandler.Error) {
-	req := &apipb.KifuRequest{}
-	if err := s.unmarshaler.Unmarshal([]byte(r.Body), req); err != nil {
-		return nil, apihandler.ClientError(400, err.Error())
-	}
-
-	res := &apipb.KifuResponse{}
-	if err := s.lambdaClient.Invoke(ctx, reqCtx, req, res); err != nil {
-		switch err.(type) {
-		case *lambdarpc.LambdaError:
-			e := err.(*lambdarpc.LambdaError)
-			// TODO: errorType client error
-			zap.L().Error("LambdaInvoke",
-				zap.String("errorType", e.ErrorType),
-				zap.String("errorMessage", e.ErrorMessage),
-			)
-			return nil, apihandler.ServerError()
-		default:
-			zap.L().Error("LambdaInvoke", zap.Error(err))
-			return nil, apihandler.ServerError()
-		}
-	}
-
-	return res, nil
-}
-
 type apiLogger struct{}
 
 func (*apiLogger) Error(msg string, err error) {
@@ -85,20 +50,36 @@ func main() {
 
 	region := os.Getenv("REGION")
 
+	configURL := os.Getenv("CONFIG_URL")
+	cfg, err := config.Load(configURL)
+	if err != nil {
+		zap.L().Fatal("Load config error", zap.Error(err), zap.String("configURL", configURL))
+	}
+
+	kifuRecentFunc, ok := cfg["RecentKifuFunction"]
+	if !ok {
+		zap.L().Fatal("RecentKifuFunction not found in config", zap.Any("config", cfg))
+	}
+
 	session := session.New()
 	lambdaClient := lambda.New(session, aws.NewConfig().WithRegion(region))
 
-	s := &server{
-		lambdaClient: lambdarpc.NewClient(lambdaClient, kifuFuncArn),
-		unmarshaler: &protojson.UnmarshalOptions{
-			DiscardUnknown: true,
-		},
-	}
-
-	h := apihandler.NewHandler(
-		apihandler.AddHandler("/v1/kifu", "POST", s.kifu),
-		apihandler.SetLogger(&apiLogger{}),
+	gw := lambdagateway.NewLambdaGateway(lambdaClient,
+		lambdagateway.WithAPIRequestID(),
+		lambdagateway.WithClaimSubID(),
+		lambdagateway.AddFunction("/v1/kifu", "POST", kifuFuncArn),
+		lambdagateway.AddFunction("/v1/recent-kifu", "POST", kifuRecentFunc),
+		lambdagateway.SetLogger(&apiLogger{}),
+		lambdagateway.SetFunctionErrorHandler(func(e *lambdagateway.LambdaError) error {
+			switch e.ErrorType {
+			case "InvalidArgumentError":
+				return lambdagateway.ClientError(400, e.ErrorMessage)
+			default:
+				zap.L().Error("lambda.Invoke", zap.Any("error", e))
+				return lambdagateway.ServerError()
+			}
+		}),
 	)
 
-	h.Start(ctx)
+	lambdaclient.StartWithContext(ctx, gw.Serve)
 }

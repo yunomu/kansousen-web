@@ -48,52 +48,56 @@ type handler struct {
 	marshaler   *protojson.MarshalOptions
 }
 
-func (h *handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
+func (h *handler) recentKifu(ctx context.Context, reqCtx *requestcontext.Context, in *kifupb.RecentKifuRequest) (*kifupb.RecentKifuResponse, error) {
+	kifus, err := h.service.RecentKifu(ctx, reqCtx.UserId, in.Limit)
+	if err != nil {
+		return nil, err
+	}
+
+	var ret []*kifupb.RecentKifuResponse_Kifu
+	for _, k := range kifus {
+		ret = append(ret, &kifupb.RecentKifuResponse_Kifu{
+			UserId:        k.UserId,
+			KifuId:        k.KifuId,
+			StartTs:       k.Start.Unix(),
+			Handicap:      k.Handicap,
+			GameName:      k.GameName,
+			FirstPlayers:  k.FirstPlayers,
+			SecondPlayers: k.SecondPlayers,
+			Note:          k.Note,
+		})
+	}
+
+	return &kifupb.RecentKifuResponse{Kifus: ret}, nil
+}
+
+func (h *handler) Invoke(ctx context.Context, in *kifupb.RecentKifuRequest) (*kifupb.RecentKifuResponse, error) {
 	lc, ok := lambdacontext.FromContext(ctx)
 	if !ok {
 		return nil, errors.New("no lambdacontext")
 	}
 	reqCtx := requestcontext.FromCustomMap(lc.ClientContext.Custom)
 
-	in := &kifupb.KifuRequest{}
-	if err := h.unmarshaler.Unmarshal(payload, in); err != nil {
+	kifus, err := h.service.RecentKifu(ctx, reqCtx.UserId, in.Limit)
+	if err != nil {
 		return nil, err
 	}
 
-	output := &kifupb.KifuResponse{}
-	switch t := in.KifuRequestSelect.(type) {
-	case *kifupb.KifuRequest_RequestGetKifu:
-		out, err := h.getKifu(ctx, reqCtx, t.RequestGetKifu)
-		if err != nil {
-			return nil, err
-		}
-		output.KifuResponseSelect = &kifupb.KifuResponse_ResponseGetKifu{
-			ResponseGetKifu: out,
-		}
-	case *kifupb.KifuRequest_RequestPostKifu:
-		out, err := h.postKifu(ctx, reqCtx, t.RequestPostKifu)
-		if err != nil {
-			return nil, err
-		}
-		output.KifuResponseSelect = &kifupb.KifuResponse_ResponsePostKifu{
-			ResponsePostKifu: out,
-		}
-	case *kifupb.KifuRequest_RequestRecentKifu:
-		out, err := h.recentKifu(ctx, reqCtx, t.RequestRecentKifu)
-		if err != nil {
-			return nil, err
-		}
-		output.KifuResponseSelect = &kifupb.KifuResponse_ResponseRecentKifu{
-			ResponseRecentKifu: out,
-		}
-	case *kifupb.KifuRequest_RequestDeleteKifu:
-		if err := h.deleteKifu(ctx, reqCtx, t.RequestDeleteKifu); err != nil {
-			return nil, err
-		}
-		output.KifuResponseSelect = &kifupb.KifuResponse_ResponseDeleteKifu{}
+	var ret []*kifupb.RecentKifuResponse_Kifu
+	for _, k := range kifus {
+		ret = append(ret, &kifupb.RecentKifuResponse_Kifu{
+			UserId:        k.UserId,
+			KifuId:        k.KifuId,
+			StartTs:       k.Start.Unix(),
+			Handicap:      k.Handicap,
+			GameName:      k.GameName,
+			FirstPlayers:  k.FirstPlayers,
+			SecondPlayers: k.SecondPlayers,
+			Note:          k.Note,
+		})
 	}
 
-	return h.marshaler.Marshal(output)
+	return &kifupb.RecentKifuResponse{Kifus: ret}, nil
 }
 
 func main() {
@@ -128,5 +132,5 @@ func main() {
 		},
 	}
 
-	lambda.StartHandlerWithContext(ctx, h)
+	lambda.StartWithContext(ctx, h.Invoke)
 }
