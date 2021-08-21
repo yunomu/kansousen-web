@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/lambda"
 
-	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
 )
 
 const (
@@ -103,7 +103,10 @@ var _ Logger = (*defaultLogger)(nil)
 
 func (*defaultLogger) Error(msg string, err error) {}
 
-type function string
+type function struct {
+	lambdaArn string
+	method    string
+}
 
 type Gateway struct {
 	lambdaClient         *lambda.Lambda
@@ -115,14 +118,17 @@ type Gateway struct {
 
 type GatewayOption func(*Gateway)
 
-func AddFunction(path, method, functionArn string) GatewayOption {
+func AddFunction(path, method, lambdaArn string, fn string) GatewayOption {
 	return func(s *Gateway) {
 		p, ok := s.functions[path]
 		if !ok {
 			p = map[string]function{}
 		}
 
-		p[method] = function(functionArn)
+		p[method] = function{
+			lambdaArn: lambdaArn,
+			method:    fn,
+		}
 		s.functions[path] = p
 	}
 }
@@ -147,7 +153,7 @@ func WithAPIRequestID() GatewayOption {
 				cc.Custom = make(map[string]string)
 			}
 
-			cc.Custom[requestcontext.RequestIdField] = req.RequestContext.RequestID
+			cc.Custom[lambdarpc.ApiRequestIdField] = req.RequestContext.RequestID
 
 			return nil
 		})
@@ -208,7 +214,7 @@ func WithClaimSubID() GatewayOption {
 				}
 			}
 
-			cc.Custom[requestcontext.UserIdField] = userId
+			cc.Custom[lambdarpc.UserIdField] = userId
 
 			return nil
 		})
@@ -224,7 +230,10 @@ func SetLogger(logger Logger) GatewayOption {
 	}
 }
 
-func NewLambdaGateway(lambdaClient *lambda.Lambda, opts ...GatewayOption) *Gateway {
+func NewLambdaGateway(
+	lambdaClient *lambda.Lambda,
+	opts ...GatewayOption,
+) *Gateway {
 	h := &Gateway{
 		lambdaClient:         lambdaClient,
 		functions:            map[string]map[string]function{},
@@ -291,47 +300,6 @@ func (s *Gateway) errorResponse(e Error) *Response {
 	return s.buildResponse(e.statusCode(), "application/josn", buf.String())
 }
 
-func getRequestContext(ctx *events.APIGatewayProxyRequestContext) (*requestcontext.Context, error) {
-	requestId := ctx.RequestID
-
-	claimsVal, ok := ctx.Authorizer["claims"]
-	if !ok {
-		return nil, &AuthorizerError{
-			Message:        "claims not found",
-			RequestContext: ctx,
-		}
-	}
-
-	claims, ok := claimsVal.(map[string]interface{})
-	if !ok {
-		return nil, &AuthorizerError{
-			Message:        "unknown claims format",
-			RequestContext: ctx,
-		}
-	}
-
-	userIdVal, ok := claims["sub"]
-	if !ok {
-		return nil, &AuthorizerError{
-			Message:        "claims sub not found",
-			RequestContext: ctx,
-		}
-	}
-
-	userId, ok := userIdVal.(string)
-	if !ok {
-		return nil, &AuthorizerError{
-			Message:        "unknown claims sub format",
-			RequestContext: ctx,
-		}
-	}
-
-	return &requestcontext.Context{
-		RequestId: requestId,
-		UserId:    userId,
-	}, nil
-}
-
 func encodeClientContext(cc *lambdacontext.ClientContext) (string, error) {
 	var buf strings.Builder
 
@@ -362,7 +330,9 @@ func (s *Gateway) Serve(ctx context.Context, req *Request) (*Response, error) {
 	}
 
 	clientContext := lambdacontext.ClientContext{
-		Custom: map[string]string{},
+		Custom: map[string]string{
+			lambdarpc.MethodField: function.method,
+		},
 	}
 	for _, f := range s.contextModifiers {
 		if err := f(&clientContext, req); err != nil {
@@ -379,7 +349,7 @@ func (s *Gateway) Serve(ctx context.Context, req *Request) (*Response, error) {
 
 	in := &lambda.InvokeInput{
 		ClientContext:  aws.String(cc),
-		FunctionName:   aws.String(string(function)),
+		FunctionName:   aws.String(function.lambdaArn),
 		InvocationType: aws.String(lambda.InvocationTypeRequestResponse),
 		Payload:        []byte(req.Body),
 	}

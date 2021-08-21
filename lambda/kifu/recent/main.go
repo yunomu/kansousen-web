@@ -18,7 +18,7 @@ import (
 
 	libdb "github.com/yunomu/kansousen/lib/db"
 	libdynamodb "github.com/yunomu/kansousen/lib/dynamodb"
-	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
 	"github.com/yunomu/kansousen/service/kifu"
 
 	kifupb "github.com/yunomu/kansousen/proto/kifu"
@@ -48,7 +48,7 @@ type handler struct {
 	marshaler   *protojson.MarshalOptions
 }
 
-func (h *handler) recentKifu(ctx context.Context, reqCtx *requestcontext.Context, in *kifupb.RecentKifuRequest) (*kifupb.RecentKifuResponse, error) {
+func (h *handler) recentKifu(ctx context.Context, reqCtx *lambdarpc.Context, in *kifupb.RecentKifuRequest) (*kifupb.RecentKifuResponse, error) {
 	kifus, err := h.service.RecentKifu(ctx, reqCtx.UserId, in.Limit)
 	if err != nil {
 		return nil, err
@@ -76,7 +76,7 @@ func (h *handler) Invoke(ctx context.Context, in *kifupb.RecentKifuRequest) (*ki
 	if !ok {
 		return nil, errors.New("no lambdacontext")
 	}
-	reqCtx := requestcontext.FromCustomMap(lc.ClientContext.Custom)
+	reqCtx := lambdarpc.FromCustomMap(lc.ClientContext.Custom)
 
 	kifus, err := h.service.RecentKifu(ctx, reqCtx.UserId, in.Limit)
 	if err != nil {

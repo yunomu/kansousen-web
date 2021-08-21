@@ -67,8 +67,8 @@ func main() {
 	gw := lambdagateway.NewLambdaGateway(lambdaClient,
 		lambdagateway.WithAPIRequestID(),
 		lambdagateway.WithClaimSubID(),
-		lambdagateway.AddFunction("/v1/kifu", "POST", kifuFuncArn),
-		lambdagateway.AddFunction("/v1/recent-kifu", "POST", kifuRecentFunc),
+		lambdagateway.AddFunction("/v1/kifu", "POST", kifuFuncArn, ""),
+		lambdagateway.AddFunction("/v1/recent-kifu", "POST", kifuRecentFunc, "RecentKifu"),
 		lambdagateway.SetLogger(&apiLogger{}),
 		lambdagateway.SetFunctionErrorHandler(func(e *lambdagateway.LambdaError) error {
 			switch e.ErrorType {

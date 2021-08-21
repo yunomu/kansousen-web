@@ -18,7 +18,7 @@ import (
 
 	libdb "github.com/yunomu/kansousen/lib/db"
 	libdynamodb "github.com/yunomu/kansousen/lib/dynamodb"
-	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
 	"github.com/yunomu/kansousen/service/kifu"
 
 	kifupb "github.com/yunomu/kansousen/proto/kifu"
@@ -53,7 +53,7 @@ func (h *handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 	if !ok {
 		return nil, errors.New("no lambdacontext")
 	}
-	reqCtx := requestcontext.FromCustomMap(lc.ClientContext.Custom)
+	reqCtx := lambdarpc.FromCustomMap(lc.ClientContext.Custom)
 
 	in := &kifupb.KifuRequest{}
 	if err := h.unmarshaler.Unmarshal(payload, in); err != nil {

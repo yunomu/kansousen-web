@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 
-	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
 
 	kifupb "github.com/yunomu/kansousen/proto/kifu"
 )
 
-func (h *handler) getSamePositions(ctx context.Context, reqCtx *requestcontext.Context, in *kifupb.GetSamePositionsRequest) (*kifupb.GetSamePositionsResponse, error) {
+func (h *handler) getSamePositions(ctx context.Context, reqCtx *lambdarpc.Context, in *kifupb.GetSamePositionsRequest) (*kifupb.GetSamePositionsResponse, error) {
 	phases, err := h.service.GetSamePositions(ctx, reqCtx.UserId, in.Position, in.Steps, in.ExcludeKifuIds)
 	if err != nil {
 		return nil, err

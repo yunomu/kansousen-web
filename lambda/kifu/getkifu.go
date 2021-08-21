@@ -3,12 +3,12 @@ package main
 import (
 	"context"
 
-	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
 
 	kifupb "github.com/yunomu/kansousen/proto/kifu"
 )
 
-func (h *handler) getKifu(ctx context.Context, reqCtx *requestcontext.Context, in *kifupb.GetKifuRequest) (*kifupb.GetKifuResponse, error) {
+func (h *handler) getKifu(ctx context.Context, reqCtx *lambdarpc.Context, in *kifupb.GetKifuRequest) (*kifupb.GetKifuResponse, error) {
 	kifu, err := h.service.GetKifu(ctx, reqCtx.UserId, in.KifuId)
 	if err != nil {
 		return nil, err

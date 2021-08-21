@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/yunomu/kansousen/lib/lambda/requestcontext"
+	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
 
 	"github.com/yunomu/kansousen/service/kifu"
 
@@ -27,7 +27,7 @@ func (e *UnknownFormatError) Error() string {
 	return "unknown format: " + e.format
 }
 
-func (h *handler) postKifu(ctx context.Context, reqCtx *requestcontext.Context, in *kifupb.PostKifuRequest) (*kifupb.PostKifuResponse, error) {
+func (h *handler) postKifu(ctx context.Context, reqCtx *lambdarpc.Context, in *kifupb.PostKifuRequest) (*kifupb.PostKifuResponse, error) {
 	var ops []kifu.PostKifuOption
 	switch in.Encoding {
 	case "UTF-8":
