@@ -36,26 +36,73 @@ Resources:
     Properties:
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: PK
+        - AttributeName: kifuId
           AttributeType: S
-        - AttributeName: SK
-          AttributeType: S
-        - AttributeName: InversedVersion
+        - AttributeName: seq
           AttributeType: N
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: createdTs
+          AttributeType: N
+        - AttributeName: startTs
+          AttributeType: N
+        - AttributeName: sfen
+          AttributeType: S
+        - AttributeName: pos
+          AttributeType: S
       KeySchema:
-        - AttributeName: PK
+        - AttributeName: kifuId
           KeyType: HASH
-        - AttributeName: SK
+        - AttributeName: seq
           KeyType: RANGE
-      LocalSecondaryIndexes:
-        - IndexName: InversedVersionIndex
+      GlobalSecondaryIndexes:
+        - IndexName: User
           KeySchema:
-            - AttributeName: PK
+            - AttributeName: userId
               KeyType: HASH
-            - AttributeName: InversedVersion
+            - AttributeName: seq
+              KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - kifu
+              - version
+        - IndexName: Created
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: createdTs
+              KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - kifu
+        - IndexName: Start
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: startTs
+              KeyType: RANGE
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - kifu
+        - IndexName: Sfen
+          KeySchema:
+            - AttributeName: sfen
+              KeyType: HASH
+            - AttributeName: userId
               KeyType: RANGE
           Projection:
             ProjectionType: KEYS_ONLY
+        - IndexName: Position
+          KeySchema:
+            - AttributeName: pos
+              KeyType: HASH
+          Projection:
+            ProjectionType: INCLUDE
+            NonKeyAttributes:
+              - userId
   KansousenTablePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
