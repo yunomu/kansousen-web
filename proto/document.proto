@@ -49,17 +49,6 @@ message Handicap {
   }
 }
 
-message Date {
-  int32 year = 1;
-  int32 month = 2;
-  int32 day = 3;
-}
-
-message DateTime {
-  Date date = 1;
-  int32 time_sec = 2; // -1 is null
-}
-
 message Piece {
   enum Id {
     NULL = 0;
@@ -88,11 +77,9 @@ message Pos {
 message Kifu {
   string user_id = 1;
   string kifu_id = 2;
-  int64 version = 3;
 
-  DateTime start = 4;
-  DateTime end = 5;
-  string timezone = 14;
+  int64 start_ts = 4;
+  int64 end_ts = 5;
   Handicap.Id handicap = 6;
   string game_name = 7;
   repeated Player players = 8;
@@ -108,7 +95,6 @@ message Step {
   string user_id = 1;
   string kifu_id = 2;
   int32 seq = 3;
-  int64 version = 4;
 
   string position = 5;
   Pos src = 6;
@@ -122,30 +108,4 @@ message Step {
   int32 timestamp_sec = 14;
   int32 thinking_sec = 15;
   repeated string notes = 16;
-}
-
-message Position {
-  string user_id = 1;
-  string position = 2;
-  string kifu_id = 3;
-  int32 seq = 4;
-  int64 version = 5;
-}
-
-message KifuSignature {
-  string sfen = 1;
-  string user_id = 2;
-  string kifu_id = 3;
-  int64 version = 4;
-
-  int64 created_ts = 5;
-}
-
-message Document {
-  oneof select {
-    Kifu kifu = 1;
-    Step step = 2;
-    Position position = 3;
-    KifuSignature kifu_signature = 4;
-  }
 }

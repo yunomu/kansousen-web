@@ -2,22 +2,40 @@ package db
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
+	"strconv"
+	"strings"
+	"time"
 
 	"golang.org/x/sync/errgroup"
 
-	"github.com/golang/protobuf/proto"
+	"google.golang.org/protobuf/proto"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 
 	documentpb "github.com/yunomu/kansousen/proto/document"
+)
 
-	"github.com/yunomu/kansousen/lib/dynamodb"
-	"github.com/yunomu/kansousen/lib/pbconv"
+const (
+	kifuAttr      = "kifu"
+	stepAttr      = "step"
+	versionAttr   = "version"
+	seqAttr       = "seq"
+	userIdAttr    = "userId"
+	kifuIdAttr    = "kifuId"
+	createdTsAttr = "createdTs"
+	sfenAttr      = "sfen"
+	posAttr       = "pos"
+
+	BatchUnit = 25
 )
 
 type DynamoDB struct {
-	table       *dynamodb.DynamoDB
+	client    *dynamodb.DynamoDB
+	tableName string
+
 	parallelism int
 }
 
@@ -31,9 +49,11 @@ func SetParallelism(i int) DynamoDBOption {
 	}
 }
 
-func NewDynamoDB(table *dynamodb.DynamoDB, ops ...DynamoDBOption) *DynamoDB {
+func NewDynamoDB(client *dynamodb.DynamoDB, tableName string, ops ...DynamoDBOption) *DynamoDB {
 	db := &DynamoDB{
-		table:       table,
+		client:    client,
+		tableName: tableName,
+
 		parallelism: 2,
 	}
 	for _, f := range ops {
@@ -43,124 +63,90 @@ func NewDynamoDB(table *dynamodb.DynamoDB, ops ...DynamoDBOption) *DynamoDB {
 	return db
 }
 
-func buildKifuKey(userId, kifuId string) (string, string) {
-	return fmt.Sprintf("KIFU:%s", userId), kifuId
-}
-
-func buildStepKey(userId, kifuId string, seq int32) (string, string) {
-	return fmt.Sprintf("STEP:%s:%s", userId, kifuId), fmt.Sprintf("%04d", seq)
-}
-
-func buildPositionKey(userId, sfenPos, kifuId string, seq int32) (string, string) {
-	return fmt.Sprintf("POSITION:%s:%s", userId, sfenPos), fmt.Sprintf("%s:%04d", kifuId, seq)
-}
-
-func buildKifuSignatureKey(sfen, userId, kifuId string) (string, string) {
-	return fmt.Sprintf("KIFU_SIG:%s", sfen), fmt.Sprintf("%s:%s", userId, kifuId)
-}
-
 func (db *DynamoDB) PutKifu(ctx context.Context,
 	kifu *documentpb.Kifu,
 	steps []*documentpb.Step,
+	version int64,
 ) error {
-	type writeItem struct {
-		pk, sk  string
-		doc     *documentpb.Document
-		version int64
+	bs, err := proto.Marshal(kifu)
+	if err != nil {
+		return err
 	}
-	var wis []*writeItem
-
-	pk, sk := buildKifuKey(kifu.UserId, kifu.KifuId)
-	wis = append(wis, &writeItem{
-		pk: pk,
-		sk: sk,
-		doc: &documentpb.Document{
-			Select: &documentpb.Document_Kifu{
-				Kifu: kifu,
-			},
-		},
-		version: kifu.Version,
-	})
-
-	for _, step := range steps {
-		pk, sk := buildStepKey(step.UserId, step.KifuId, step.Seq)
-		wis = append(wis, &writeItem{
-			pk: pk,
-			sk: sk,
-			doc: &documentpb.Document{
-				Select: &documentpb.Document_Step{
-					Step: step,
-				},
-			},
-			version: step.Version,
-		})
-	}
-
-	for _, p := range pbconv.StepsToPositions(steps) {
-		pk, sk := buildPositionKey(p.UserId, p.Position, p.KifuId, p.Seq)
-		wis = append(wis, &writeItem{
-			pk: pk,
-			sk: sk,
-			doc: &documentpb.Document{
-				Select: &documentpb.Document_Position{
-					Position: p,
-				},
-			},
-		})
-	}
-
-	pk, sk = buildKifuSignatureKey(kifu.Sfen, kifu.UserId, kifu.KifuId)
-	wis = append(wis, &writeItem{
-		pk: pk,
-		sk: sk,
-		doc: &documentpb.Document{
-			Select: &documentpb.Document_KifuSignature{
-				KifuSignature: &documentpb.KifuSignature{
-					Sfen:      kifu.Sfen,
-					UserId:    kifu.UserId,
-					KifuId:    kifu.KifuId,
-					CreatedTs: kifu.CreatedTs,
+	newVersion := time.Now().UnixNano()
+	ckKifuIdSeq := fmt.Sprintf("%s#0", kifu.GetKifuId())
+	out, err := db.client.TransactWriteItemsWithContext(ctx, &dynamodb.TransactWriteItemsInput{
+		TransactItems: []*dynamodb.TransactWriteItem{
+			{
+				Put: &dynamodb.Put{
+					ConditionExpression: aws.String("attribute_not_exists(#version) OR #version = :version"),
+					ExpressionAttributeNames: map[string]*string{
+						"#version": aws.String(versionAttr),
+					},
+					ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+						":version": &dynamodb.AttributeValue{
+							N: aws.String(fmt.Sprintf("%d", version)),
+						},
+					},
+					Item: map[string]*dynamodb.AttributeValue{
+						userIdAttr:    &dynamodb.AttributeValue{S: aws.String(kifu.GetUserId())},
+						kifuIdAttr:    &dynamodb.AttributeValue{S: aws.String(kifu.GetKifuId())},
+						"createdTs":   &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", kifu.GetCreatedTs()))},
+						"startTs":     &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", kifu.GetStartTs()))},
+						"sfen":        &dynamodb.AttributeValue{S: aws.String(kifu.GetSfen())},
+						seqAttr:       &dynamodb.AttributeValue{N: aws.String("0")},
+						"ckKifuIdSeq": &dynamodb.AttributeValue{S: aws.String(ckKifuIdSeq)},
+						kifuAttr:      &dynamodb.AttributeValue{B: bs},
+						versionAttr:   &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", newVersion))},
+					},
 				},
 			},
 		},
 	})
-
-	var items []*dynamodb.WriteItem
-	for _, writeItem := range wis {
-		bytes, err := proto.Marshal(writeItem.doc)
-		if err != nil {
-			return err
-		}
-
-		items = append(items, &dynamodb.WriteItem{
-			PK:      writeItem.pk,
-			SK:      writeItem.sk,
-			Bytes:   bytes,
-			Version: writeItem.version,
-		})
+	if err != nil {
+		return err
 	}
+	var _ = out
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	itemsCh := make(chan []*dynamodb.WriteItem, db.parallelism)
+	reqsCh := make(chan []*dynamodb.WriteRequest, db.parallelism)
 	g.Go(func() error {
-		defer close(itemsCh)
+		defer close(reqsCh)
 
-		for i, l := 0, len(items); i < l; i += dynamodb.BatchWriteUnit {
-			t := i + dynamodb.BatchWriteUnit
-			if t > l {
-				t = l
+		var reqs []*dynamodb.WriteRequest
+		for _, step := range steps {
+			bs, err := proto.Marshal(kifu)
+			if err != nil {
+				return err
 			}
+			ckKifuIdSeq := fmt.Sprintf("%s#%d", step.GetKifuId(), step.GetSeq())
 
-			select {
-			case itemsCh <- items[i:t]:
-			case <-ctx.Done():
-				if err := ctx.Err(); err == context.Canceled {
-					return errors.New("canceled: split items")
-				} else {
+			reqs = append(reqs, &dynamodb.WriteRequest{
+				PutRequest: &dynamodb.PutRequest{
+					Item: map[string]*dynamodb.AttributeValue{
+						userIdAttr:    &dynamodb.AttributeValue{S: aws.String(step.GetUserId())},
+						kifuIdAttr:    &dynamodb.AttributeValue{S: aws.String(step.GetKifuId())},
+						seqAttr:       &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", step.GetSeq()))},
+						"ckKifuIdSeq": &dynamodb.AttributeValue{S: aws.String(ckKifuIdSeq)},
+						stepAttr:      &dynamodb.AttributeValue{B: bs},
+					},
+				},
+			})
+
+			if len(reqs) == BatchUnit {
+				select {
+				case reqsCh <- reqs:
+					reqs = nil
+				case <-ctx.Done():
 					return ctx.Err()
 				}
 			}
+		}
+
+		select {
+		case reqsCh <- reqs:
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 
 		return nil
@@ -168,10 +154,17 @@ func (db *DynamoDB) PutKifu(ctx context.Context,
 
 	for i := 0; i < db.parallelism; i++ {
 		g.Go(func() error {
-			for is := range itemsCh {
-				if _, err := db.table.BatchPut(ctx, is); err != nil {
+			for reqs := range reqsCh {
+				out, err := db.client.BatchWriteItemWithContext(ctx, &dynamodb.BatchWriteItemInput{
+					RequestItems: map[string][]*dynamodb.WriteRequest{
+						db.tableName: reqs,
+					},
+				})
+				if err == nil {
 					return err
 				}
+
+				var _ = out
 			}
 
 			return nil
@@ -181,29 +174,122 @@ func (db *DynamoDB) PutKifu(ctx context.Context,
 	return g.Wait()
 }
 
+func kifuFromItem(item map[string]*dynamodb.AttributeValue) (*documentpb.Kifu, int64, error) {
+	attr, ok := item[kifuAttr]
+	if !ok {
+		return nil, 0, &ErrInvalidValue{
+			Details: "kifu field not found",
+		}
+	} else if attr.B == nil {
+		return nil, 0, &ErrInvalidValue{
+			Details: "kifu field is not bytes",
+		}
+	}
+
+	attrVer, ok := item[versionAttr]
+	if !ok {
+		return nil, 0, &ErrInvalidValue{
+			Details: "version field not found",
+		}
+	} else if attrVer.N == nil {
+		return nil, 0, &ErrInvalidValue{
+			Details: "version field is not string",
+		}
+	}
+
+	var kifu documentpb.Kifu
+	if err := proto.Unmarshal(attr.B, &kifu); err != nil {
+		return nil, 0, &ErrInvalidValue{
+			Details: err.Error(),
+		}
+	}
+
+	ver, err := strconv.ParseInt(aws.StringValue(attrVer.N), 10, 64)
+	if err != nil {
+		return nil, 0, &ErrInvalidValue{
+			Details: err.Error(),
+		}
+	}
+
+	return &kifu, ver, nil
+}
+
+func stepFromItem(item map[string]*dynamodb.AttributeValue) (*documentpb.Step, error) {
+	attr, ok := item[stepAttr]
+	if !ok {
+		return nil, &ErrInvalidValue{
+			Details: "step field not found",
+		}
+	} else if attr.B == nil {
+		return nil, &ErrInvalidValue{
+			Details: "step field is not number",
+		}
+	}
+
+	var step documentpb.Step
+	if err := proto.Unmarshal(attr.B, &step); err != nil {
+		return nil, &ErrInvalidValue{
+			Details: err.Error(),
+		}
+	}
+
+	return &step, nil
+}
+
+func stringFromItem(name string, item map[string]*dynamodb.AttributeValue) (string, error) {
+	attr, ok := item[name]
+	if !ok {
+		return "", &ErrInvalidValue{
+			Details: fmt.Sprintf("%s field not found", name),
+		}
+	} else if attr.S == nil {
+		return "", &ErrInvalidValue{
+			Details: fmt.Sprintf("%s field is not string", name),
+		}
+	}
+
+	return aws.StringValue(attr.S), nil
+}
+
+func intFromItem(name string, item map[string]*dynamodb.AttributeValue) (int64, error) {
+	attr, ok := item[name]
+	if !ok {
+		return 0, &ErrInvalidValue{
+			Details: fmt.Sprintf("%s field not found", name),
+		}
+	} else if attr.N == nil {
+		return 0, &ErrInvalidValue{
+			Details: fmt.Sprintf("%s field is not number", name),
+		}
+	}
+
+	i, err := strconv.ParseInt(aws.StringValue(attr.N), 10, 64)
+	if err != nil {
+		return 0, &ErrInvalidValue{
+			Details: err.Error(),
+		}
+	}
+
+	return i, nil
+}
+
 func (db *DynamoDB) GetKifu(
 	ctx context.Context,
-	userId string,
 	kifuId string,
-) (*documentpb.Kifu, error) {
-	pk, sk := buildKifuKey(userId, kifuId)
-	item, err := db.table.Get(ctx, pk, sk)
+) (*documentpb.Kifu, int64, error) {
+	out, err := db.client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
+		TableName: aws.String(db.tableName),
+		Key: map[string]*dynamodb.AttributeValue{
+			kifuIdAttr: &dynamodb.AttributeValue{S: aws.String(kifuId)},
+			seqAttr:    &dynamodb.AttributeValue{N: aws.String("0")},
+		},
+		ProjectionExpression: aws.String(strings.Join([]string{kifuAttr, versionAttr}, ",")),
+	})
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	doc := &documentpb.Document{}
-	if err := proto.Unmarshal(item.Bytes, doc); err != nil {
-		return nil, err
-	}
-
-	kifu := doc.GetKifu()
-	if kifu == nil {
-		return nil, ErrEmpty
-	}
-	kifu.Version = item.Version
-
-	return kifu, nil
+	return kifuFromItem(out.Item)
 }
 
 type StepSlice []*documentpb.Step
@@ -214,323 +300,76 @@ func (s StepSlice) Swap(i int, j int)      { s[i], s[j] = s[j], s[i] }
 
 func (db *DynamoDB) GetKifuAndSteps(
 	ctx context.Context,
-	userId string,
 	kifuId string,
-) (*documentpb.Kifu, []*documentpb.Step, error) {
+) (*documentpb.Kifu, []*documentpb.Step, int64, error) {
 	g, ctx := errgroup.WithContext(ctx)
 
-	var kifu *documentpb.Kifu
+	itemsCh := make(chan []map[string]*dynamodb.AttributeValue, db.parallelism)
 	g.Go(func() error {
-		k, err := db.GetKifu(ctx, userId, kifuId)
-		if err != nil {
-			return err
-		}
-		kifu = k
+		defer close(itemsCh)
 
-		return nil
-	})
-
-	var steps []*documentpb.Step
-	g.Go(func() error {
-		ss, err := db.GetSteps(ctx, userId, kifuId)
-		if err != nil {
-			return err
-		}
-		steps = ss
-
-		return nil
-	})
-
-	if err := g.Wait(); err != nil {
-		return nil, nil, err
-	}
-
-	return kifu, steps, nil
-}
-
-func (db *DynamoDB) ListKifu(ctx context.Context, userId string, f func(kifu *documentpb.Kifu)) error {
-	ctx, cancel := context.WithCancel(ctx)
-	pk, _ := buildKifuKey(userId, "")
-	var rerr error
-	if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
-		select {
-		case <-ctx.Done():
-			if err := ctx.Err(); err == context.Canceled {
-				rerr = errors.New("canceled: ListKifu(Scan)")
-			} else {
-				rerr = err
-			}
-			cancel()
-			return
-		default:
-		}
-
-		doc := &documentpb.Document{}
-		if err := proto.Unmarshal(item.Bytes, doc); err != nil {
-			rerr = err
-			cancel()
-			return
-		}
-
-		kifu := doc.GetKifu()
-		if kifu == nil {
-			rerr = ErrInvalidValue
-			cancel()
-			return
-		}
-		kifu.Version = item.Version
-
-		f(kifu)
-	}); err != nil {
-		if rerr != nil {
-			return rerr
-		}
-		return err
-	}
-
-	return nil
-}
-
-func (db *DynamoDB) DuplicateKifu(ctx context.Context, sfen string) ([]*documentpb.KifuSignature, error) {
-	ctx, cancel := context.WithCancel(ctx)
-	var rerr error
-	var ret []*documentpb.KifuSignature
-	pk, _ := buildKifuSignatureKey(sfen, "", "")
-	if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
-		doc := &documentpb.Document{}
-		if err := proto.Unmarshal(item.Bytes, doc); err != nil {
-			rerr = err
-			cancel()
-			return
-		}
-
-		sig := doc.GetKifuSignature()
-		if sig == nil {
-			rerr = ErrInvalidValue
-			cancel()
-			return
-		}
-		sig.Version = item.Version
-
-		ret = append(ret, sig)
-	}); err != nil {
-		if rerr != nil {
-			return nil, rerr
-		}
-		return nil, err
-	}
-
-	return ret, nil
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	} else {
-		return b
-	}
-}
-
-func (db *DynamoDB) GetSteps(ctx context.Context, userId, kifuId string, options ...GetStepsOption) ([]*documentpb.Step, error) {
-	o := &getStepsOptions{}
-	for _, f := range options {
-		f(o)
-	}
-
-	var opts []dynamodb.QueryOption
-	switch {
-	case o.start > 0 && o.end > 0:
-		_, start := buildStepKey(userId, kifuId, o.start)
-		_, end := buildStepKey(userId, kifuId, o.end)
-		opts = append(opts, dynamodb.SetQueryRange(start, end))
-	}
-
-	pk, _ := buildStepKey(userId, kifuId, 0)
-	ctx, cancel := context.WithCancel(ctx)
-	var rerr error
-	var ret []*documentpb.Step
-	if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
-		doc := &documentpb.Document{}
-		if err := proto.Unmarshal(item.Bytes, doc); err != nil {
-			rerr = err
-			cancel()
-			return
-		}
-
-		step := doc.GetStep()
-		if step == nil {
-			rerr = ErrInvalidValue
-			cancel()
-			return
-		}
-		step.Version = item.Version
-
-		ret = append(ret, step)
-	}, opts...); err != nil {
-		if rerr != nil {
-			return nil, rerr
-		}
-		return nil, err
-	}
-
-	sort.Sort(StepSlice(ret))
-
-	return ret, nil
-}
-
-func include(ss []string, o string) bool {
-	for _, s := range ss {
-		if s == o {
-			return true
-		}
-	}
-	return false
-}
-
-func (db *DynamoDB) getPositions(
-	ctx context.Context,
-	userId, pos string,
-	opts *getSamePositionsOptions,
-) ([]*PositionAndSteps, error) {
-	g, ctx := errgroup.WithContext(ctx)
-
-	posCh := make(chan *documentpb.Position)
-	g.Go(func() error {
-		defer close(posCh)
-
-		pk, _ := buildPositionKey(userId, pos, "", 0)
-		ctx, cancel := context.WithCancel(ctx)
 		var rerr error
-		if err := db.table.Query(ctx, pk, func(item *dynamodb.Item) {
-			doc := &documentpb.Document{}
-			if err := proto.Unmarshal(item.Bytes, doc); err != nil {
-				rerr = err
-				cancel()
-				return
-			}
-
-			position := doc.GetPosition()
-			if position == nil {
-				rerr = ErrInvalidValue
-				cancel()
-				return
-			}
-			position.Version = item.Version
-
-			if include(opts.excludeKifuIds, position.GetKifuId()) {
-				return
-			}
-
+		if err := db.client.QueryPagesWithContext(ctx, &dynamodb.QueryInput{
+			TableName:              aws.String(db.tableName),
+			KeyConditionExpression: aws.String("#kifuId = :kifuId AND #seq = :seq"),
+			ExpressionAttributeNames: map[string]*string{
+				"#kifuId": aws.String(kifuIdAttr),
+				"#seq":    aws.String(seqAttr),
+			},
+			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+				":kifuId": &dynamodb.AttributeValue{S: aws.String(kifuId)},
+				":seq":    &dynamodb.AttributeValue{N: aws.String("0")},
+			},
+			ProjectionExpression: aws.String(strings.Join([]string{kifuAttr, versionAttr, stepAttr}, ",")),
+		}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
 			select {
 			case <-ctx.Done():
-				if err := ctx.Err(); err == context.Canceled {
-					rerr = errors.New("canceled: send position")
-				} else {
-					rerr = err
-				}
-				cancel()
-				return
-			case posCh <- position:
+				rerr = ctx.Err()
+				return false
+			case itemsCh <- out.Items:
+				return true
 			}
 		}); err != nil {
-			if rerr != nil {
-				return rerr
-			}
 			return err
 		}
 
-		return nil
+		return rerr
 	})
 
-	psCh := make(chan *PositionAndSteps)
-	g.Go(func() error {
-		for pos := range posCh {
-			var steps []*documentpb.Step
-			if opts.numStep > 0 {
-				start := pos.Seq + 1
-				end := start + opts.numStep - 1
-				ss, err := db.GetSteps(ctx, pos.UserId, pos.KifuId, GetStepsSetRange(start, end))
-				if err != nil {
-					return err
-				}
-				steps = ss
-			}
-
-			select {
-			case <-ctx.Done():
-				return ctx.Err()
-			case psCh <- &PositionAndSteps{Position: pos, Steps: steps}:
-			}
-		}
-
-		return nil
-	})
-
-	go func() {
-		g.Wait()
-		close(psCh)
-	}()
-
-	var ret []*PositionAndSteps
-	for ps := range psCh {
-		ret = append(ret, ps)
-	}
-
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	return ret, nil
-}
-
-func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*PositionAndSteps, error) {
-	if pos == "" {
-		return nil, ErrPositionIsEmpty
-	}
-
-	if len(userIds) == 0 {
-		return nil, nil
-	}
-
-	o := &getSamePositionsOptions{}
-	for _, f := range options {
-		f(o)
-	}
-
-	g, ctx := errgroup.WithContext(ctx)
-
-	userIdCh := make(chan string, db.parallelism)
-	g.Go(func() error {
-		defer close(userIdCh)
-
-		for _, userId := range userIds {
-			select {
-			case userIdCh <- userId:
-			case <-ctx.Done():
-				if err := ctx.Err(); err == context.Canceled {
-					return errors.New("canceled: paralellize user")
-				} else {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
-
-	psCh := make(chan []*PositionAndSteps)
+	var kifu *documentpb.Kifu
+	var version int64
+	stepsCh := make(chan []*documentpb.Step, db.parallelism)
 	for i := 0; i < db.parallelism; i++ {
 		g.Go(func() error {
-			for userId := range userIdCh {
-				ps, err := db.getPositions(ctx, userId, pos, o)
-				if err != nil {
-					return err
+			for items := range itemsCh {
+				var steps []*documentpb.Step
+				for _, item := range items {
+					seq, err := intFromItem(seqAttr, item)
+					if err != nil {
+						return err
+					}
+
+					switch seq {
+					case 0: // Kifu
+						k, v, err := kifuFromItem(item)
+						if err != nil {
+							return err
+						}
+						kifu = k
+						version = v
+					default: // Step
+						s, err := stepFromItem(item)
+						if err != nil {
+							return err
+						}
+						steps = append(steps, s)
+					}
 				}
 
 				select {
+				case stepsCh <- steps:
 				case <-ctx.Done():
 					return ctx.Err()
-				case psCh <- ps:
 				}
 			}
 
@@ -540,12 +379,307 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 
 	go func() {
 		g.Wait()
-		close(psCh)
+		close(stepsCh)
 	}()
 
-	var ret []*PositionAndSteps
-	for ps := range psCh {
-		ret = append(ret, ps...)
+	var steps []*documentpb.Step
+	for ss := range stepsCh {
+		steps = append(steps, ss...)
+	}
+
+	if err := g.Wait(); err != nil {
+		return nil, nil, 0, err
+	}
+
+	sort.Sort(StepSlice(steps))
+
+	return kifu, steps, version, nil
+}
+
+type versionedKifu struct {
+	kifu    *documentpb.Kifu
+	version int64
+}
+
+func (db *DynamoDB) ListKifu(ctx context.Context, userId string, f func(kifu *documentpb.Kifu, version int64)) error {
+	g, ctx := errgroup.WithContext(ctx)
+
+	itemsCh := make(chan []map[string]*dynamodb.AttributeValue, db.parallelism)
+	g.Go(func() error {
+		defer close(itemsCh)
+
+		var rerr error
+		if err := db.client.QueryPagesWithContext(ctx, &dynamodb.QueryInput{
+			TableName:              aws.String(db.tableName),
+			IndexName:              aws.String("User"),
+			KeyConditionExpression: aws.String("#userId = :userId AND #seq = :seq"),
+			ExpressionAttributeNames: map[string]*string{
+				"#userId": aws.String(userIdAttr),
+				"#seq":    aws.String(seqAttr),
+			},
+			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+				":userId": &dynamodb.AttributeValue{S: aws.String(userId)},
+				":seq":    &dynamodb.AttributeValue{N: aws.String("0")},
+			},
+			ProjectionExpression: aws.String(strings.Join([]string{kifuAttr, versionAttr}, ",")),
+		}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+			select {
+			case <-ctx.Done():
+				rerr = ctx.Err()
+				return false
+			case itemsCh <- out.Items:
+				return true
+			}
+		}); err != nil {
+			return err
+		}
+
+		return rerr
+	})
+
+	ch := make(chan *versionedKifu, db.parallelism)
+	for i := 0; i < db.parallelism; i++ {
+		g.Go(func() error {
+			for items := range itemsCh {
+				for _, item := range items {
+					kifu, version, err := kifuFromItem(item)
+					if err != nil {
+						return err
+					}
+
+					select {
+					case ch <- &versionedKifu{kifu: kifu, version: version}:
+					case <-ctx.Done():
+					}
+				}
+			}
+
+			return nil
+		})
+	}
+
+	go func() {
+		g.Wait()
+		close(ch)
+	}()
+
+	for vk := range ch {
+		f(vk.kifu, vk.version)
+	}
+
+	return g.Wait()
+}
+
+func (db *DynamoDB) GetKifuIdsBySfen(ctx context.Context, sfen string) ([]*UserKifu, error) {
+	var ret []*UserKifu
+	var rerr error
+	if err := db.client.QueryPagesWithContext(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(db.tableName),
+		IndexName:              aws.String("Sfen"),
+		KeyConditionExpression: aws.String("#sfen = :sfen"),
+		ExpressionAttributeNames: map[string]*string{
+			"#sfen": aws.String(sfenAttr),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":sfen": &dynamodb.AttributeValue{S: aws.String(sfen)},
+		},
+		ProjectionExpression: aws.String(strings.Join([]string{kifuIdAttr, userIdAttr}, ",")),
+	}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+		select {
+		case <-ctx.Done():
+			rerr = ctx.Err()
+			return false
+		default:
+		}
+
+		for _, item := range out.Items {
+			kifuId, err := stringFromItem(kifuIdAttr, item)
+			if err != nil {
+				rerr = err
+				return false
+			}
+
+			userId, err := stringFromItem(userIdAttr, item)
+			if err != nil {
+				rerr = err
+				return false
+			}
+
+			ret = append(ret, &UserKifu{
+				UserId: userId,
+				KifuId: kifuId,
+			})
+		}
+
+		return true
+	}); err != nil {
+		return nil, err
+	} else if rerr != nil {
+		return nil, rerr
+	}
+
+	return ret, nil
+}
+
+type stepKey struct {
+	kifuId string
+	userId string
+	seq    int64
+}
+
+func strInclude(ss []string, t string) bool {
+	for _, s := range ss {
+		if s == t {
+			return true
+		}
+	}
+	return false
+}
+
+func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*Position, error) {
+	opts := &getSamePositionsOptions{
+		numStep: 5,
+	}
+	for _, f := range options {
+		f(opts)
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	stepKeyCh := make(chan *stepKey, db.parallelism)
+	g.Go(func() error {
+		defer close(stepKeyCh)
+
+		var rerr error
+		if err := db.client.QueryPagesWithContext(ctx, &dynamodb.QueryInput{
+			TableName:              aws.String(db.tableName),
+			IndexName:              aws.String("Position"),
+			KeyConditionExpression: aws.String("#pos = :pos"),
+			ExpressionAttributeNames: map[string]*string{
+				"#pos": aws.String(posAttr),
+			},
+			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+				":pos": &dynamodb.AttributeValue{S: aws.String(pos)},
+			},
+			ProjectionExpression: aws.String(strings.Join([]string{kifuIdAttr, seqAttr, userIdAttr}, ",")),
+		}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+			select {
+			case <-ctx.Done():
+				rerr = ctx.Err()
+				return false
+			default:
+			}
+
+			for _, item := range out.Items {
+				kifuId, err := stringFromItem(kifuIdAttr, item)
+				if err != nil {
+					rerr = err
+					return false
+				}
+
+				if strInclude(opts.excludeKifuIds, kifuId) {
+					return true
+				}
+
+				userId, err := stringFromItem(userIdAttr, item)
+				if err != nil {
+					rerr = err
+					return false
+				}
+
+				seq, err := intFromItem(seqAttr, item)
+				if err != nil {
+					rerr = err
+					return false
+				}
+
+				select {
+				case stepKeyCh <- &stepKey{
+					kifuId: kifuId,
+					userId: userId,
+					seq:    seq,
+				}:
+				case <-ctx.Done():
+					rerr = err
+					return false
+				}
+			}
+
+			return true
+		}); err != nil {
+			return err
+		}
+
+		return rerr
+	})
+
+	posCh := make(chan *Position, db.parallelism)
+	for i := 0; i < db.parallelism; i++ {
+		g.Go(func() error {
+			for stepKey := range stepKeyCh {
+				var steps []*documentpb.Step
+				var rerr error
+				if err := db.client.QueryPagesWithContext(ctx, &dynamodb.QueryInput{
+					TableName:              aws.String(db.tableName),
+					KeyConditionExpression: aws.String("#kifuId = :kifuId AND #seq >= :seqStart AND #seq < :seqEnd"),
+					ExpressionAttributeNames: map[string]*string{
+						"#kifuId": aws.String(kifuIdAttr),
+						"#seq":    aws.String(seqAttr),
+					},
+					ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+						":kifuId":   &dynamodb.AttributeValue{S: aws.String(stepKey.kifuId)},
+						":seqStart": &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", stepKey.seq))},
+						":seqEnd":   &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", int32(stepKey.seq)+opts.numStep))},
+					},
+					ProjectionExpression: aws.String(stepAttr),
+				}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+					select {
+					case <-ctx.Done():
+						rerr = ctx.Err()
+						return false
+					default:
+					}
+
+					for _, item := range out.Items {
+						step, err := stepFromItem(item)
+						if err != nil {
+							rerr = err
+							return false
+						}
+
+						steps = append(steps, step)
+					}
+
+					return true
+				}); err != nil {
+					return err
+				} else if rerr != nil {
+					return rerr
+				}
+
+				select {
+				case posCh <- &Position{
+					KifuId: stepKey.kifuId,
+					UserId: stepKey.userId,
+					Steps:  steps,
+				}:
+				case <-ctx.Done():
+					return ctx.Err()
+				}
+			}
+
+			return nil
+		})
+	}
+
+	go func() {
+		g.Wait()
+		close(posCh)
+	}()
+
+	var ret []*Position
+	for pos := range posCh {
+		ret = append(ret, pos)
 	}
 
 	if err := g.Wait(); err != nil {
@@ -557,162 +691,49 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 
 func (db *DynamoDB) GetRecentKifu(ctx context.Context, userId string, limit int) ([]*documentpb.Kifu, error) {
 	var ret []*documentpb.Kifu
-
-	pk, _ := buildKifuKey(userId, "")
-	keys, err := db.table.RecentlyUpdated(ctx, pk, limit)
-	if err != nil {
-		return nil, err
-	}
-
-	items, err := db.table.BatchGet(ctx, keys)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, item := range items {
-		var doc documentpb.Document
-		if err := proto.Unmarshal(item.Bytes, &doc); err != nil {
-			return nil, err
+	var rerr error
+	if err := db.client.QueryPagesWithContext(ctx, &dynamodb.QueryInput{
+		TableName:              aws.String(db.tableName),
+		IndexName:              aws.String("Created"),
+		KeyConditionExpression: aws.String("#userId = :userId"),
+		ExpressionAttributeNames: map[string]*string{
+			"#userId": aws.String(userIdAttr),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":userId": &dynamodb.AttributeValue{S: aws.String(userId)},
+		},
+		ProjectionExpression: aws.String(kifuAttr),
+		ScanIndexForward:     aws.Bool(false),
+		Limit:                aws.Int64(int64(limit)),
+	}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
+		select {
+		case <-ctx.Done():
+			rerr = ctx.Err()
+			return false
+		default:
 		}
 
-		kifu := doc.GetKifu()
-		if kifu == nil {
-			return nil, err
+		for _, item := range out.Items {
+			kifu, _, err := kifuFromItem(item)
+			if err != nil {
+				rerr = err
+				return false
+			}
+
+			ret = append(ret, kifu)
 		}
-		kifu.Version = item.Version
 
-		ret = append(ret, kifu)
-	}
-
-	if err != nil {
+		return true
+	}); err != nil {
 		return nil, err
+	} else if rerr != nil {
+		return nil, rerr
 	}
 
 	return ret, nil
 }
 
-func (db *DynamoDB) getAllKifuKeys(ctx context.Context, userId, kifuId string) ([]*dynamodb.Key, error) {
-	keyCh := make(chan *dynamodb.Key, db.parallelism)
-
-	g, ctx := errgroup.WithContext(ctx)
-
-	g.Go(func() error {
-		pk, sk := buildKifuKey(userId, kifuId)
-		select {
-		case keyCh <- &dynamodb.Key{PK: pk, SK: sk}:
-		case <-ctx.Done():
-			if err := ctx.Err(); err == context.Canceled {
-				return errors.New("canceled: build kifu key")
-			} else {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	g.Go(func() error {
-		kifu, err := db.GetKifu(ctx, userId, kifuId)
-		if err != nil {
-			return err
-		}
-
-		pk, sk := buildKifuSignatureKey(kifu.Sfen, userId, kifuId)
-		select {
-		case keyCh <- &dynamodb.Key{PK: pk, SK: sk}:
-		case <-ctx.Done():
-			if err := ctx.Err(); err == context.Canceled {
-				return errors.New("canceled: build signature key")
-			} else {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	g.Go(func() error {
-		steps, err := db.GetSteps(ctx, userId, kifuId)
-		if err != nil {
-			return err
-		}
-
-		for _, step := range steps {
-			pk, sk := buildStepKey(step.UserId, step.KifuId, step.Seq)
-			select {
-			case keyCh <- &dynamodb.Key{PK: pk, SK: sk}:
-			case <-ctx.Done():
-				if err := ctx.Err(); err == context.Canceled {
-					return errors.New("canceled: build step key")
-				} else {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
-
-	go func() {
-		g.Wait()
-		close(keyCh)
-	}()
-
-	var keys []*dynamodb.Key
-	for key := range keyCh {
-		keys = append(keys, key)
-	}
-
-	if err := g.Wait(); err != nil {
-		return nil, err
-	}
-
-	return keys, nil
-}
-
 func (db *DynamoDB) DeleteKifu(ctx context.Context, userId, kifuId string) error {
-	keys, err := db.getAllKifuKeys(ctx, userId, kifuId)
-	if err != nil {
-		return err
-	}
-
-	g, ctx := errgroup.WithContext(ctx)
-
-	keysCh := make(chan []*dynamodb.Key, db.parallelism)
-	g.Go(func() error {
-		defer close(keysCh)
-
-		for i, l := 0, len(keys); i < l; i += dynamodb.BatchWriteUnit {
-			t := i + dynamodb.BatchWriteUnit
-			if t > l {
-				t = l
-			}
-
-			select {
-			case keysCh <- keys[i:t]:
-			case <-ctx.Done():
-				if err := ctx.Err(); err == context.Canceled {
-					return errors.New("canceled: keys split")
-				} else {
-					return err
-				}
-			}
-		}
-
-		return nil
-	})
-
-	for i := 0; i < db.parallelism; i++ {
-		g.Go(func() error {
-			for ks := range keysCh {
-				if err := db.table.Delete(ctx, ks); err != nil {
-					return err
-				}
-			}
-
-			return nil
-		})
-	}
-
-	return g.Wait()
+	// TODO
+	return fmt.Errorf("not implemented")
 }

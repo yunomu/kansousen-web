@@ -27,9 +27,10 @@ func GetStepsSetRange(start, end int32) GetStepsOption {
 	}
 }
 
-type PositionAndSteps struct {
-	Position *documentpb.Position
-	Steps    []*documentpb.Step
+type Position struct {
+	UserId string
+	KifuId string
+	Steps  []*documentpb.Step
 }
 
 type getSamePositionsOptions struct {
@@ -57,19 +58,30 @@ func GetSamePositionsAddExcludeKifuIds(kifuIds []string) GetSamePositionsOption 
 	}
 }
 
+type UserKifu struct {
+	UserId string
+	KifuId string
+}
+
 type DB interface {
-	PutKifu(ctx context.Context, kifu *documentpb.Kifu, steps []*documentpb.Step) error
-	GetKifu(ctx context.Context, userId, kifuId string) (*documentpb.Kifu, error)
-	GetKifuAndSteps(ctx context.Context, userId, kifuId string) (*documentpb.Kifu, []*documentpb.Step, error)
-	ListKifu(ctx context.Context, userId string, f func(*documentpb.Kifu)) error
-	DuplicateKifu(ctx context.Context, sfen string) ([]*documentpb.KifuSignature, error)
-	GetSteps(ctx context.Context, userId, kifuId string, options ...GetStepsOption) ([]*documentpb.Step, error)
-	GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*PositionAndSteps, error)
+	PutKifu(ctx context.Context, kifu *documentpb.Kifu, steps []*documentpb.Step, version int64) error
+	GetKifu(ctx context.Context, kifuId string) (*documentpb.Kifu, int64, error)
+	GetKifuAndSteps(ctx context.Context, kifuId string) (*documentpb.Kifu, []*documentpb.Step, int64, error)
+	ListKifu(ctx context.Context, userId string, f func(*documentpb.Kifu, int64)) error
+	GetKifuIdsBySfen(ctx context.Context, sfen string) ([]*UserKifu, error)
+	GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*Position, error)
 	GetRecentKifu(ctx context.Context, userId string, limit int) ([]*documentpb.Kifu, error)
 	DeleteKifu(ctx context.Context, userId, kifuId string) error
 }
 
 var (
-	ErrEmpty        = errors.New("result is empty")
-	ErrInvalidValue = errors.New("internal: invalid value")
+	ErrEmpty = errors.New("result is empty")
 )
+
+type ErrInvalidValue struct {
+	Details string
+}
+
+func (*ErrInvalidValue) Error() string {
+	return "invalid value"
+}

@@ -162,42 +162,27 @@ Resources:
       Domain: !Ref AuthDomainName
       CustomDomainConfig:
         CertificateArn: !Ref Certificate
-  KifuApi:
-    Type: AWS::Serverless::Api
+  KifuApiV2:
+    Type: AWS::Serverless::HttpApi
     Properties:
       StageName: !Ref Stage
-      Cors:
+      CorsConfiguration:
         AllowHeaders: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
         AllowMethods: "'POST'"
-        AllowOrigin: "'*'"
+        AllowOrigins: "'*'"
+      Domain:
+        DomainName: !Ref ApiDomainName
+        CertificateArn: !Ref Certificate
+        SecurityPolicy: TLS_1_2
+        EndpointConfiguration: REGIONAL
       Auth:
-        AddDefaultAuthorizerToCorsPreflight: false
-        DefaultAuthorizer: CognitoAuthorizer
         Authorizers:
-          CognitoAuthorizer:
-            UserPoolArn: !GetAtt CognitoUserPool.Arn
-  ApiGatewayResponse4XX:
-    Type: AWS::ApiGateway::GatewayResponse
-    Properties:
-      RestApiId: !Ref KifuApi
-      ResponseType: DEFAULT_4XX
-      ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-  ApiGatewayResponse401:
-    Type: AWS::ApiGateway::GatewayResponse
-    Properties:
-      RestApiId: !Ref KifuApi
-      ResponseType: UNAUTHORIZED
-      StatusCode: 401
-      ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
-  ApiGatewayResponse5XX:
-    Type: AWS::ApiGateway::GatewayResponse
-    Properties:
-      RestApiId: !Ref KifuApi
-      ResponseType: DEFAULT_5XX
-      ResponseParameters:
-        gatewayresponse.header.Access-Control-Allow-Origin: "'*'"
+          OAuth2Authorizer:
+            IdentitySource: '$request.header.Authorization'
+            JwtConfiguration:
+              audience: !Ref CognitoUserPoolClient
+              issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}"
+        DefaultAuthorizer: OAuth2Authorizer
   KifuApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -218,17 +203,17 @@ Resources:
           CONFIG_URL: !Sub "https://${SiteDomainName}/config.json"
       Events:
         KifuApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /v1/kifu
             Method: POST
-            RestApiId: !Ref KifuApi
+            ApiId: !Ref KifuApiV2
         KifuRecentApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /v1/recent-kifu
             Method: POST
-            RestApiId: !Ref KifuApi
+            ApiId: !Ref KifuApiV2
   HealthApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -242,29 +227,13 @@ Resources:
           TABLE_NAME: !Ref KansousenTable
       Events:
         HealthApiEvent:
-          Type: Api
+          Type: HttpApi
           Properties:
             Path: /v1/ok
             Method: GET
-            RestApiId: !Ref KifuApi
+            ApiId: !Ref KifuApiV2
             Auth:
               Authorizer: NONE
-  ApiDomain:
-    Type: AWS::ApiGatewayV2::DomainName
-    Properties:
-      DomainName: !Ref ApiDomainName
-      DomainNameConfigurations:
-        - EndpointType: REGIONAL
-          CertificateArn: !Ref Certificate
-          SecurityPolicy: TLS_1_2
-  ApiDomainMapping:
-    Type: AWS::ApiGatewayV2::ApiMapping
-    DependsOn:
-      - KifuApiStage
-    Properties:
-      ApiId: !Ref KifuApi
-      DomainName: !Ref ApiDomainName
-      Stage: !Ref Stage
   StaticBucket:
     Type: AWS::S3::Bucket
   StaticBucketPolicy:
@@ -336,13 +305,13 @@ Outputs:
     Value: !Ref CognitoUserPoolClient
   RestApiID:
     Description: "REST API ID"
-    Value: !Ref KifuApi
-  Endpoint:
-    Description: "API Endpoint"
-    Value: !Sub "https://${ApiDomain}/"
-  RegionalDomainName:
-    Description: "Set CNAME record"
-    Value: !GetAtt ApiDomain.RegionalDomainName
+    Value: !Ref KifuApiV2
+#  Endpoint:
+#    Description: "API Endpoint"
+#    Value: !Sub "https://${ApiDomain}/"
+#  RegionalDomainName:
+#    Description: "Set CNAME record"
+#    Value: !GetAtt ApiDomain.RegionalDomainName
   StaticBucket:
     Description: "S3 Bucket for static resources"
     Value: !Ref StaticBucket

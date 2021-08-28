@@ -139,23 +139,6 @@ func KifToSteps(userId, kifuId string, k *ptypes.Kif) ([]*document.Step, error) 
 	return steps, nil
 }
 
-func StepsToPositions(steps []*document.Step) []*document.Position {
-	var positions []*document.Position
-	for _, step := range steps {
-		if step.Seq == 0 {
-			continue
-		}
-		positions = append(positions, &document.Position{
-			UserId:   step.UserId,
-			Position: step.Position,
-			KifuId:   step.KifuId,
-			Seq:      step.Seq,
-		})
-	}
-
-	return positions
-}
-
 var handicapString = []string{
 	"平手",
 	"香落ち",
