@@ -13,11 +13,13 @@ import (
 )
 
 var (
-	ErrNoLambdaContext   = errors.New("no lambda context")
-	ErrNoClientContext   = errors.New("no client context")
-	ErrUnauthenticated   = errors.New("unauthenticated")
-	ErrNoMethodSpecified = errors.New("no method name in context")
-	ErrMethodNotFound    = errors.New("method not found")
+	ErrNoLambdaContext     = errors.New("no lambda context")
+	ErrNoClientContext     = errors.New("no client context")
+	ErrUnauthenticated     = errors.New("unauthenticated")
+	ErrNoMethodSpecified   = errors.New("no method name in context")
+	ErrMethodNotFound      = errors.New("method not found")
+	ErrNoValidMethodExists = errors.New("no valid method exists")
+	ErrUninitialized       = errors.New("uninitialized")
 )
 
 type ErrInvalidMethod struct {
@@ -33,6 +35,7 @@ type Handler struct {
 	service interface{}
 
 	serviceType reflect.Type
+	methods     map[string]reflect.Method
 }
 
 var _ lambda.Handler = (*Handler)(nil)
@@ -112,7 +115,31 @@ func validMethod(svcType reflect.Type, m reflect.Method) error {
 	return nil
 }
 
+func (h *Handler) Init() error {
+	methods := make(map[string]reflect.Method)
+
+	for i := 0; i < h.serviceType.NumMethod(); i++ {
+		m := h.serviceType.Method(i)
+		if err := validMethod(h.serviceType, m); err != nil {
+			continue
+		}
+
+		methods[m.Name] = m
+	}
+
+	if len(methods) == 0 {
+		return ErrNoValidMethodExists
+	}
+	h.methods = methods
+
+	return nil
+}
+
 func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
+	if h.methods == nil {
+		return nil, ErrUninitialized
+	}
+
 	lc, ok := lambdacontext.FromContext(ctx)
 	if !ok {
 		return nil, ErrNoLambdaContext
@@ -138,13 +165,9 @@ func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 		return nil, ErrNoMethodSpecified
 	}
 
-	m, ok := h.serviceType.MethodByName(methodName)
+	m, ok := h.methods[methodName]
 	if !ok {
 		return nil, ErrMethodNotFound
-	}
-
-	if err := validMethod(h.serviceType, m); err != nil {
-		return nil, err
 	}
 
 	reqType := m.Type.In(3)
