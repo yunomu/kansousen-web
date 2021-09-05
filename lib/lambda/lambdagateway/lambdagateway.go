@@ -12,12 +12,6 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/lambda"
-
-	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
-)
-
-const (
-	APIRequestIdField = "api_request_id"
 )
 
 type Request events.APIGatewayProxyRequest
@@ -105,7 +99,7 @@ func (*defaultLogger) Error(msg string, err error) {}
 
 type function struct {
 	lambdaArn string
-	method    string
+	id        string
 }
 
 type Gateway struct {
@@ -118,7 +112,7 @@ type Gateway struct {
 
 type GatewayOption func(*Gateway)
 
-func AddFunction(path, method, lambdaArn string, fn string) GatewayOption {
+func AddFunction(path, method, lambdaArn string, id string) GatewayOption {
 	return func(s *Gateway) {
 		p, ok := s.functions[path]
 		if !ok {
@@ -127,7 +121,7 @@ func AddFunction(path, method, lambdaArn string, fn string) GatewayOption {
 
 		p[method] = function{
 			lambdaArn: lambdaArn,
-			method:    fn,
+			id:        id,
 		}
 		s.functions[path] = p
 	}
@@ -142,7 +136,7 @@ func SetFunctionErrorHandler(h func(*LambdaError) error) GatewayOption {
 	}
 }
 
-func WithAPIRequestID() GatewayOption {
+func WithAPIRequestID(apiRequestIdField string) GatewayOption {
 	return func(s *Gateway) {
 		s.contextModifiers = append(s.contextModifiers, func(cc *lambdacontext.ClientContext, req *Request) error {
 			if cc == nil {
@@ -153,7 +147,7 @@ func WithAPIRequestID() GatewayOption {
 				cc.Custom = make(map[string]string)
 			}
 
-			cc.Custom[lambdarpc.ApiRequestIdField] = req.RequestContext.RequestID
+			cc.Custom[apiRequestIdField] = req.RequestContext.RequestID
 
 			return nil
 		})
@@ -169,7 +163,7 @@ func (e *AuthorizerError) Error() string {
 	return e.Message
 }
 
-func WithClaimSubID() GatewayOption {
+func WithClaimSubID(field string) GatewayOption {
 	return func(s *Gateway) {
 		s.contextModifiers = append(s.contextModifiers, func(cc *lambdacontext.ClientContext, req *Request) error {
 			if cc == nil {
@@ -198,7 +192,7 @@ func WithClaimSubID() GatewayOption {
 				}
 			}
 
-			userIdVal, ok := claims["sub"]
+			subIdVal, ok := claims["sub"]
 			if !ok {
 				return &AuthorizerError{
 					Message:        "claims sub not found",
@@ -206,7 +200,7 @@ func WithClaimSubID() GatewayOption {
 				}
 			}
 
-			userId, ok := userIdVal.(string)
+			subId, ok := subIdVal.(string)
 			if !ok {
 				return &AuthorizerError{
 					Message:        "unknown claims sub format",
@@ -214,7 +208,7 @@ func WithClaimSubID() GatewayOption {
 				}
 			}
 
-			cc.Custom[lambdarpc.UserIdField] = userId
+			cc.Custom[field] = subId
 
 			return nil
 		})
@@ -331,7 +325,7 @@ func (s *Gateway) Serve(ctx context.Context, req *Request) (*Response, error) {
 
 	clientContext := lambdacontext.ClientContext{
 		Custom: map[string]string{
-			lambdarpc.MethodField: function.method,
+			"function-id": function.id,
 		},
 	}
 	for _, f := range s.contextModifiers {

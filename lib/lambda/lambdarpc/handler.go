@@ -2,11 +2,9 @@ package lambdarpc
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"reflect"
-
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
@@ -41,10 +39,8 @@ type Handler struct {
 var _ lambda.Handler = (*Handler)(nil)
 
 var (
-	contextType        = reflect.TypeOf((*context.Context)(nil)).Elem()
-	requestContextType = reflect.TypeOf((*Context)(nil))
-	errorType          = reflect.TypeOf((*error)(nil)).Elem()
-	messageType        = reflect.TypeOf((*proto.Message)(nil)).Elem()
+	contextType = reflect.TypeOf((*context.Context)(nil)).Elem()
+	errorType   = reflect.TypeOf((*error)(nil)).Elem()
 )
 
 func NewHandler(service interface{}) *Handler {
@@ -56,7 +52,7 @@ func NewHandler(service interface{}) *Handler {
 }
 
 func validMethod(svcType reflect.Type, m reflect.Method) error {
-	if m.Type.NumIn() != 4 {
+	if m.Type.NumIn() != 3 {
 		return &ErrInvalidMethod{
 			details:  "invalid parameter number",
 			errParam: m.Type.NumIn(),
@@ -77,31 +73,10 @@ func validMethod(svcType reflect.Type, m reflect.Method) error {
 		}
 	}
 
-	if m.Type.In(2).String() != requestContextType.String() {
-		return &ErrInvalidMethod{
-			details:  "2nd param is not Context",
-			errParam: m.Type.In(2),
-		}
-	}
-
-	if !m.Type.In(3).Implements(messageType) {
-		return &ErrInvalidMethod{
-			details:  "3rd param don't implement proto.Message",
-			errParam: m.Type.In(3),
-		}
-	}
-
 	if m.Type.NumOut() != 2 {
 		return &ErrInvalidMethod{
 			details:  "invalid number of return value",
 			errParam: m.Type.NumOut(),
-		}
-	}
-
-	if !m.Type.Out(0).Implements(messageType) {
-		return &ErrInvalidMethod{
-			details:  "1st return value don't implement proto.Message",
-			errParam: m.Type.Out(0),
 		}
 	}
 
@@ -145,50 +120,46 @@ func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 		return nil, ErrNoLambdaContext
 	}
 
-	reqCtx := &Context{
-		RequestId: lc.AwsRequestID,
-	}
+	ctx = context.WithValue(ctx, RequestIdField, lc.AwsRequestID)
 
 	custom := lc.ClientContext.Custom
 	if custom == nil {
 		return nil, ErrNoClientContext
 	}
 
-	reqCtx.ApiRequestId = custom[ApiRequestIdField]
-	reqCtx.UserId, ok = custom[UserIdField]
-	if !ok {
-		return nil, ErrUnauthenticated
+	apiRequestId, ok := custom[ApiRequestIdField]
+	if ok {
+		ctx = context.WithValue(ctx, ApiRequestIdField, apiRequestId)
 	}
 
-	methodName, ok := custom[MethodField]
+	userId, ok := custom[UserIdField]
+	if ok {
+		ctx = context.WithValue(ctx, UserIdField, userId)
+	}
+
+	functionId, ok := custom[FunctionIdField]
 	if !ok {
 		return nil, ErrNoMethodSpecified
 	}
 
-	m, ok := h.methods[methodName]
+	m, ok := h.methods[functionId]
 	if !ok {
 		return nil, ErrMethodNotFound
 	}
 
-	reqType := m.Type.In(3)
+	reqType := m.Type.In(2)
 	if reqType.Kind() == reflect.Ptr {
 		reqType = reqType.Elem()
 	}
 
 	reqVal := reflect.New(reqType)
-	reqMsg, ok := reqVal.Interface().(proto.Message)
-	if !ok {
-		panic("request value is not implement proto.Message")
-	}
-
-	if err := protojson.Unmarshal(payload, reqMsg); err != nil {
+	if err := json.Unmarshal(payload, reqVal.Interface()); err != nil {
 		return nil, err
 	}
 
 	rets := m.Func.Call([]reflect.Value{
 		reflect.ValueOf(h.service),
 		reflect.ValueOf(ctx),
-		reflect.ValueOf(reqCtx),
 		reqVal,
 	})
 
@@ -196,23 +167,17 @@ func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 		panic("invalid number of return values")
 	}
 
-	err, ok := rets[1].Interface().(error)
-	if !ok {
-		panic("2nd return value is not error")
-	}
+	resMsg := rets[0].Interface()
+	bs, err := json.Marshal(resMsg)
 	if err != nil {
 		return nil, err
 	}
 
-	resMsg, ok := rets[0].Interface().(proto.Message)
-	if !ok {
-		panic("1st return value don't implement proto.Message")
+	if e := rets[1].Interface(); e == nil {
+		err = nil
+	} else {
+		err = e.(error)
 	}
 
-	bs, err := proto.Marshal(resMsg)
-	if err != nil {
-		return nil, err
-	}
-
-	return bs, nil
+	return bs, err
 }

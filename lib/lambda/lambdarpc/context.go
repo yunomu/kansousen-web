@@ -1,24 +1,27 @@
 package lambdarpc
 
-type Context struct {
-	ApiRequestId string
-	RequestId    string
-	UserId       string
-}
+import (
+	"context"
+)
 
 const (
 	ApiRequestIdField = "api-request-id"
+	RequestIdField    = "request-id"
 	UserIdField       = "user-id"
-	MethodField       = "method"
+	FunctionIdField   = "function-id"
 )
 
-func FromCustomMap(custom map[string]string) *Context {
-	if custom == nil {
-		return &Context{}
-	}
+func GetApiRequestId(ctx context.Context) string {
+	v := ctx.Value(ApiRequestIdField)
+	return v.(string)
+}
 
-	return &Context{
-		ApiRequestId: custom[ApiRequestIdField],
-		UserId:       custom[UserIdField],
-	}
+func GetRequestId(ctx context.Context) string {
+	v := ctx.Value(RequestIdField)
+	return v.(string)
+}
+
+func GetUserId(ctx context.Context) string {
+	v := ctx.Value(UserIdField)
+	return v.(string)
 }
