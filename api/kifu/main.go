@@ -14,6 +14,7 @@ import (
 
 	"github.com/yunomu/kansousen/lib/config"
 	"github.com/yunomu/kansousen/lib/lambda/lambdagateway"
+	"github.com/yunomu/kansousen/lib/lambda/lambdarpc"
 )
 
 func init() {
@@ -43,32 +44,23 @@ func (*apiLogger) Error(msg string, err error) {
 func main() {
 	ctx := context.Background()
 
-	kifuFuncArn := os.Getenv("KIFU_FUNC_ARN")
-	if kifuFuncArn == "" {
-		zap.L().Fatal("env KIFU_FUNC_ARN is not found")
-	}
-
-	region := os.Getenv("REGION")
-
 	configURL := os.Getenv("CONFIG_URL")
 	cfg, err := config.Load(configURL)
 	if err != nil {
 		zap.L().Fatal("Load config error", zap.Error(err), zap.String("configURL", configURL))
 	}
 
-	kifuRecentFunc, ok := cfg["RecentKifuFunction"]
-	if !ok {
-		zap.L().Fatal("RecentKifuFunction not found in config", zap.Any("config", cfg))
-	}
-
 	session := session.New()
-	lambdaClient := lambda.New(session, aws.NewConfig().WithRegion(region))
+	lambdaClient := lambda.New(session, aws.NewConfig().WithRegion(cfg["Region"]))
 
 	gw := lambdagateway.NewLambdaGateway(lambdaClient,
-		lambdagateway.WithAPIRequestID(),
-		lambdagateway.WithClaimSubID(),
-		lambdagateway.AddFunction("/v1/kifu", "POST", kifuFuncArn, ""),
-		lambdagateway.AddFunction("/v1/recent-kifu", "POST", kifuRecentFunc, "RecentKifu"),
+		lambdagateway.WithAPIRequestID(lambdarpc.ApiRequestIdField),
+		lambdagateway.WithClaimSubID(lambdarpc.UserIdField),
+		lambdagateway.AddFunction("/v1/post-kifu", "POST", cfg["KifuFunction"], "PostKifu"),
+		lambdagateway.AddFunction("/v1/get-kifu", "POST", cfg["KifuFunction"], "GetKifu"),
+		lambdagateway.AddFunction("/v1/delete-kifu", "POST", cfg["KifuFunction"], "DeleteKifu"),
+		lambdagateway.AddFunction("/v1/recent-kifu", "POST", cfg["KifuFunction"], "RecentKifu"),
+		lambdagateway.AddFunction("/v1/same-positions", "POST", cfg["KifuFunction"], "GetSamePositions"),
 		lambdagateway.SetLogger(&apiLogger{}),
 		lambdagateway.SetFunctionErrorHandler(func(e *lambdagateway.LambdaError) error {
 			switch e.ErrorType {

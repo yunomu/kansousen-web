@@ -241,20 +241,12 @@ Resources:
               Resource: !GetAtt KifuFunction.Arn
       Environment:
         Variables:
-          KIFU_FUNC_ARN: !GetAtt KifuFunction.Arn
-          REGION: !Ref AWS::Region
           CONFIG_URL: !Sub "https://${SiteDomainName}/config.json"
       Events:
         KifuApiEvent:
           Type: HttpApi
           Properties:
-            Path: /v1/kifu
-            Method: POST
-            ApiId: !Ref KifuApiV2
-        KifuRecentApiEvent:
-          Type: HttpApi
-          Properties:
-            Path: /v1/recent-kifu
+            Path: /v1/{proxy+}
             Method: POST
             ApiId: !Ref KifuApiV2
 
@@ -344,21 +336,12 @@ Outputs:
   KifuFunction:
     Description: "KifuFunction Arn"
     Value: !GetAtt KifuFunction.Arn
-  RecentKifuFunction:
-    Description: "RecentKifuFunction Arn"
-    Value: !GetAtt RecentKifuFunction.Arn
   UserPoolClientID:
     Description: "User Pool Client ID"
     Value: !Ref CognitoUserPoolClient
-  RestApiID:
-    Description: "REST API ID"
+  ApiID:
+    Description: "API ID"
     Value: !Ref KifuApiV2
-#  Endpoint:
-#    Description: "API Endpoint"
-#    Value: !Sub "https://${ApiDomain}/"
-#  RegionalDomainName:
-#    Description: "Set CNAME record"
-#    Value: !GetAtt ApiDomain.RegionalDomainName
   StaticBucket:
     Description: "S3 Bucket for static resources"
     Value: !Ref StaticBucket
