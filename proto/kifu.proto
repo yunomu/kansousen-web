@@ -19,6 +19,7 @@ message RecentKifuResponse {
     repeated string first_players = 6;
     repeated string second_players = 7;
     string note = 8;
+    int64 version = 9;
   }
   repeated Kifu kifus = 1;
 }
@@ -38,11 +39,7 @@ message PostKifuRequest {
 
 message PostKifuResponse {
   string kifu_id = 1;
-  message Kifu {
-    string user_id = 1;
-    string kifu_id = 2;
-  }
-  repeated Kifu duplicated = 2;
+  int64 version = 2;
 }
 
 message DeleteKifuRequest {
@@ -133,6 +130,7 @@ message GetKifuResponse {
   }
   repeated Step steps = 12;
   string note = 13;
+  int64 version = 14;
 }
 
 message GetSamePositionsRequest {

@@ -59,6 +59,7 @@ type alias RecentKifuResponse_Kifu =
     , firstPlayers : List String -- 6
     , secondPlayers : List String -- 7
     , note : String -- 8
+    , version : Int -- 9
     }
 
 
@@ -73,6 +74,7 @@ recentKifuResponse_KifuDecoder =
         |> repeated "firstPlayers" JD.string
         |> repeated "secondPlayers" JD.string
         |> required "note" JD.string ""
+        |> required "version" intDecoder 0
 
 
 recentKifuResponse_KifuEncoder : RecentKifuResponse_Kifu -> JE.Value
@@ -86,6 +88,7 @@ recentKifuResponse_KifuEncoder v =
         , (repeatedFieldEncoder "firstPlayers" JE.string v.firstPlayers)
         , (repeatedFieldEncoder "secondPlayers" JE.string v.secondPlayers)
         , (requiredFieldEncoder "note" JE.string "" v.note)
+        , (requiredFieldEncoder "version" numericStringEncoder 0 v.version)
         ]
 
 
@@ -115,7 +118,7 @@ postKifuRequestEncoder v =
 
 type alias PostKifuResponse =
     { kifuId : String -- 1
-    , duplicated : List PostKifuResponse_Kifu -- 2
+    , version : Int -- 2
     }
 
 
@@ -123,35 +126,14 @@ postKifuResponseDecoder : JD.Decoder PostKifuResponse
 postKifuResponseDecoder =
     JD.lazy <| \_ -> decode PostKifuResponse
         |> required "kifuId" JD.string ""
-        |> repeated "duplicated" postKifuResponse_KifuDecoder
+        |> required "version" intDecoder 0
 
 
 postKifuResponseEncoder : PostKifuResponse -> JE.Value
 postKifuResponseEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
-        , (repeatedFieldEncoder "duplicated" postKifuResponse_KifuEncoder v.duplicated)
-        ]
-
-
-type alias PostKifuResponse_Kifu =
-    { userId : String -- 1
-    , kifuId : String -- 2
-    }
-
-
-postKifuResponse_KifuDecoder : JD.Decoder PostKifuResponse_Kifu
-postKifuResponse_KifuDecoder =
-    JD.lazy <| \_ -> decode PostKifuResponse_Kifu
-        |> required "userId" JD.string ""
-        |> required "kifuId" JD.string ""
-
-
-postKifuResponse_KifuEncoder : PostKifuResponse_Kifu -> JE.Value
-postKifuResponse_KifuEncoder v =
-    JE.object <| List.filterMap identity <|
-        [ (requiredFieldEncoder "userId" JE.string "" v.userId)
-        , (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
+        , (requiredFieldEncoder "version" numericStringEncoder 0 v.version)
         ]
 
 
@@ -527,6 +509,7 @@ type alias GetKifuResponse =
     , createdTs : Int -- 11
     , steps : List GetKifuResponse_Step -- 12
     , note : String -- 13
+    , version : Int -- 14
     }
 
 
@@ -546,6 +529,7 @@ getKifuResponseDecoder =
         |> required "createdTs" intDecoder 0
         |> repeated "steps" getKifuResponse_StepDecoder
         |> required "note" JD.string ""
+        |> required "version" intDecoder 0
 
 
 getKifuResponseEncoder : GetKifuResponse -> JE.Value
@@ -564,6 +548,7 @@ getKifuResponseEncoder v =
         , (requiredFieldEncoder "createdTs" numericStringEncoder 0 v.createdTs)
         , (repeatedFieldEncoder "steps" getKifuResponse_StepEncoder v.steps)
         , (requiredFieldEncoder "note" JE.string "" v.note)
+        , (requiredFieldEncoder "version" numericStringEncoder 0 v.version)
         ]
 
 

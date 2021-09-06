@@ -103,6 +103,7 @@ Resources:
             ProjectionType: INCLUDE
             NonKeyAttributes:
               - userId
+
   KansousenTablePolicy:
     Type: AWS::IAM::ManagedPolicy
     Properties:
@@ -123,6 +124,7 @@ Resources:
               - !Sub
                 - "${TableARN}/index/*"
                 - { TableARN: !GetAtt KansousenTable.Arn }
+
   KifuFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -134,17 +136,7 @@ Resources:
         Variables:
           REGION: !Ref AWS::Region
           TABLE_NAME: !Ref KansousenTable
-  RecentKifuFunction:
-    Type: AWS::Serverless::Function
-    Properties:
-      CodeUri: lambda/kifu/recent
-      Handler: kifu
-      Runtime: go1.x
-      Policies: !Ref KansousenTablePolicy
-      Environment:
-        Variables:
-          REGION: !Ref AWS::Region
-          TABLE_NAME: !Ref KansousenTable
+
   CognitoUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
@@ -170,6 +162,7 @@ Resources:
         - email
       EmailConfiguration:
         EmailSendingAccount: COGNITO_DEFAULT
+
   CognitoUserPoolClient:
     Type: AWS::Cognito::UserPoolClient
     Properties:
@@ -202,6 +195,7 @@ Resources:
       IdTokenValidity: 1
       AccessTokenValidity: 1
       RefreshTokenValidity: 30
+
   CognitoUserPoolDomain:
     Type: AWS::Cognito::UserPoolDomain
     Properties:
@@ -209,6 +203,7 @@ Resources:
       Domain: !Ref AuthDomainName
       CustomDomainConfig:
         CertificateArn: !Ref Certificate
+
   KifuApiV2:
     Type: AWS::Serverless::HttpApi
     Properties:
@@ -230,6 +225,7 @@ Resources:
               audience: !Ref CognitoUserPoolClient
               issuer: !Sub "https://cognito-idp.${AWS::Region}.amazonaws.com/${CognitoUserPool}"
         DefaultAuthorizer: OAuth2Authorizer
+
   KifuApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -261,6 +257,7 @@ Resources:
             Path: /v1/recent-kifu
             Method: POST
             ApiId: !Ref KifuApiV2
+
   HealthApiFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -281,6 +278,7 @@ Resources:
             ApiId: !Ref KifuApiV2
             Auth:
               Authorizer: NONE
+
   StaticBucket:
     Type: AWS::S3::Bucket
   StaticBucketPolicy:
@@ -293,11 +291,13 @@ Resources:
             Principal: '*'
             Action: s3:GetObject
             Resource: !Sub "arn:aws:s3:::${StaticBucket}/*"
+
   CloudFrontOriginAccessIdentity:
     Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
     Properties:
       CloudFrontOriginAccessIdentityConfig:
         Comment: !Sub "access-identity-${StaticBucket}"
+
   StaticCDN:
     Type: AWS::CloudFront::Distribution
     Properties:
