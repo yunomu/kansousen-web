@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
 	documentpb "github.com/yunomu/kansousen/proto/document"
 )
@@ -31,6 +31,19 @@ const (
 
 	BatchUnit = 25
 )
+
+type DynamoDBKifuRecord struct {
+	UserId    string `dynamodbav:"userId,omitempty"`
+	KifuId    string `dynamodbav:"kifuId"`
+	CreatedTs int64  `dynamodbav:"createdTs,omitempty"`
+	StartTs   int64  `dynamodbav:"startTs,omitempty"`
+	Sfen      string `dynamodbav:"sfen,omitempty"`
+	Seq       int32  `dynamodbav:"seq"`
+	Pos       string `dynamodbav:"pos,omitempty"`
+	Kifu      []byte `dynamodbav:"kifu,omitempty"`
+	Step      []byte `dynamodbav:"step,omitempty"`
+	Version   int64  `dynamodbav:"version,omitempty"`
+}
 
 type DynamoDB struct {
 	client    *dynamodb.DynamoDB
@@ -73,7 +86,20 @@ func (db *DynamoDB) PutKifu(ctx context.Context,
 		return err
 	}
 	newVersion := time.Now().UnixNano()
-	ckKifuIdSeq := fmt.Sprintf("%s#0", kifu.GetKifuId())
+	kifuAv, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+		UserId:    kifu.GetUserId(),
+		KifuId:    kifu.GetKifuId(),
+		CreatedTs: kifu.GetCreatedTs(),
+		StartTs:   kifu.GetStartTs(),
+		Sfen:      kifu.GetSfen(),
+		Seq:       0,
+		Kifu:      bs,
+		Version:   newVersion,
+	})
+	if err != nil {
+		return err
+	}
+
 	out, err := db.client.TransactWriteItemsWithContext(ctx, &dynamodb.TransactWriteItemsInput{
 		TransactItems: []*dynamodb.TransactWriteItem{
 			{
@@ -87,17 +113,7 @@ func (db *DynamoDB) PutKifu(ctx context.Context,
 							N: aws.String(fmt.Sprintf("%d", version)),
 						},
 					},
-					Item: map[string]*dynamodb.AttributeValue{
-						userIdAttr:    &dynamodb.AttributeValue{S: aws.String(kifu.GetUserId())},
-						kifuIdAttr:    &dynamodb.AttributeValue{S: aws.String(kifu.GetKifuId())},
-						"createdTs":   &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", kifu.GetCreatedTs()))},
-						"startTs":     &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", kifu.GetStartTs()))},
-						"sfen":        &dynamodb.AttributeValue{S: aws.String(kifu.GetSfen())},
-						seqAttr:       &dynamodb.AttributeValue{N: aws.String("0")},
-						"ckKifuIdSeq": &dynamodb.AttributeValue{S: aws.String(ckKifuIdSeq)},
-						kifuAttr:      &dynamodb.AttributeValue{B: bs},
-						versionAttr:   &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", newVersion))},
-					},
+					Item: kifuAv,
 				},
 			},
 		},
@@ -119,18 +135,15 @@ func (db *DynamoDB) PutKifu(ctx context.Context,
 			if err != nil {
 				return err
 			}
-			ckKifuIdSeq := fmt.Sprintf("%s#%d", step.GetKifuId(), step.GetSeq())
+			av, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+				UserId: step.GetUserId(),
+				KifuId: step.GetKifuId(),
+				Seq:    step.GetSeq(),
+				Step:   bs,
+			})
 
 			reqs = append(reqs, &dynamodb.WriteRequest{
-				PutRequest: &dynamodb.PutRequest{
-					Item: map[string]*dynamodb.AttributeValue{
-						userIdAttr:    &dynamodb.AttributeValue{S: aws.String(step.GetUserId())},
-						kifuIdAttr:    &dynamodb.AttributeValue{S: aws.String(step.GetKifuId())},
-						seqAttr:       &dynamodb.AttributeValue{N: aws.String(fmt.Sprintf("%d", step.GetSeq()))},
-						"ckKifuIdSeq": &dynamodb.AttributeValue{S: aws.String(ckKifuIdSeq)},
-						stepAttr:      &dynamodb.AttributeValue{B: bs},
-					},
-				},
+				PutRequest: &dynamodb.PutRequest{Item: av},
 			})
 
 			if len(reqs) == BatchUnit {
@@ -174,122 +187,39 @@ func (db *DynamoDB) PutKifu(ctx context.Context,
 	return g.Wait()
 }
 
-func kifuFromItem(item map[string]*dynamodb.AttributeValue) (*documentpb.Kifu, int64, error) {
-	attr, ok := item[kifuAttr]
-	if !ok {
-		return nil, 0, &ErrInvalidValue{
-			Details: "kifu field not found",
-		}
-	} else if attr.B == nil {
-		return nil, 0, &ErrInvalidValue{
-			Details: "kifu field is not bytes",
-		}
-	}
-
-	attrVer, ok := item[versionAttr]
-	if !ok {
-		return nil, 0, &ErrInvalidValue{
-			Details: "version field not found",
-		}
-	} else if attrVer.N == nil {
-		return nil, 0, &ErrInvalidValue{
-			Details: "version field is not string",
-		}
-	}
-
-	var kifu documentpb.Kifu
-	if err := proto.Unmarshal(attr.B, &kifu); err != nil {
-		return nil, 0, &ErrInvalidValue{
-			Details: err.Error(),
-		}
-	}
-
-	ver, err := strconv.ParseInt(aws.StringValue(attrVer.N), 10, 64)
-	if err != nil {
-		return nil, 0, &ErrInvalidValue{
-			Details: err.Error(),
-		}
-	}
-
-	return &kifu, ver, nil
-}
-
-func stepFromItem(item map[string]*dynamodb.AttributeValue) (*documentpb.Step, error) {
-	attr, ok := item[stepAttr]
-	if !ok {
-		return nil, &ErrInvalidValue{
-			Details: "step field not found",
-		}
-	} else if attr.B == nil {
-		return nil, &ErrInvalidValue{
-			Details: "step field is not number",
-		}
-	}
-
-	var step documentpb.Step
-	if err := proto.Unmarshal(attr.B, &step); err != nil {
-		return nil, &ErrInvalidValue{
-			Details: err.Error(),
-		}
-	}
-
-	return &step, nil
-}
-
-func stringFromItem(name string, item map[string]*dynamodb.AttributeValue) (string, error) {
-	attr, ok := item[name]
-	if !ok {
-		return "", &ErrInvalidValue{
-			Details: fmt.Sprintf("%s field not found", name),
-		}
-	} else if attr.S == nil {
-		return "", &ErrInvalidValue{
-			Details: fmt.Sprintf("%s field is not string", name),
-		}
-	}
-
-	return aws.StringValue(attr.S), nil
-}
-
-func intFromItem(name string, item map[string]*dynamodb.AttributeValue) (int64, error) {
-	attr, ok := item[name]
-	if !ok {
-		return 0, &ErrInvalidValue{
-			Details: fmt.Sprintf("%s field not found", name),
-		}
-	} else if attr.N == nil {
-		return 0, &ErrInvalidValue{
-			Details: fmt.Sprintf("%s field is not number", name),
-		}
-	}
-
-	i, err := strconv.ParseInt(aws.StringValue(attr.N), 10, 64)
-	if err != nil {
-		return 0, &ErrInvalidValue{
-			Details: err.Error(),
-		}
-	}
-
-	return i, nil
-}
-
 func (db *DynamoDB) GetKifu(
 	ctx context.Context,
 	kifuId string,
 ) (*documentpb.Kifu, int64, error) {
+	key, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+		KifuId: kifuId,
+		Seq:    0,
+	})
+	if err != nil {
+		return nil, 0, err
+	}
 	out, err := db.client.GetItemWithContext(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(db.tableName),
-		Key: map[string]*dynamodb.AttributeValue{
-			kifuIdAttr: &dynamodb.AttributeValue{S: aws.String(kifuId)},
-			seqAttr:    &dynamodb.AttributeValue{N: aws.String("0")},
-		},
+		TableName:            aws.String(db.tableName),
+		Key:                  key,
 		ProjectionExpression: aws.String(strings.Join([]string{kifuAttr, versionAttr}, ",")),
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 
-	return kifuFromItem(out.Item)
+	record := DynamoDBKifuRecord{}
+	if err := dynamodbattribute.UnmarshalMap(out.Item, &record); err != nil {
+		return nil, 0, err
+	}
+
+	var kifu documentpb.Kifu
+	if err := proto.Unmarshal(record.Kifu, &kifu); err != nil {
+		return nil, 0, &ErrInvalidValue{
+			Details: err.Error(),
+		}
+	}
+
+	return &kifu, record.Version, nil
 }
 
 type StepSlice []*documentpb.Step
@@ -342,27 +272,33 @@ func (db *DynamoDB) GetKifuAndSteps(
 	for i := 0; i < db.parallelism; i++ {
 		g.Go(func() error {
 			for items := range itemsCh {
-				var steps []*documentpb.Step
-				for _, item := range items {
-					seq, err := intFromItem(seqAttr, item)
-					if err != nil {
-						return err
-					}
+				recs := []DynamoDBKifuRecord{}
+				if err := dynamodbattribute.UnmarshalListOfMaps(items, &recs); err != nil {
+					return err
+				}
 
-					switch seq {
+				var steps []*documentpb.Step
+				for _, rec := range recs {
+					switch rec.Seq {
 					case 0: // Kifu
-						k, v, err := kifuFromItem(item)
-						if err != nil {
-							return err
+						var k documentpb.Kifu
+						if err := proto.Unmarshal(rec.Kifu, &k); err != nil {
+							return &ErrInvalidValue{
+								Details: err.Error(),
+							}
 						}
-						kifu = k
-						version = v
+
+						kifu = &k
+						version = rec.Version
 					default: // Step
-						s, err := stepFromItem(item)
-						if err != nil {
-							return err
+						var s documentpb.Step
+						if err := proto.Unmarshal(rec.Step, &s); err != nil {
+							return &ErrInvalidValue{
+								Details: err.Error(),
+							}
 						}
-						steps = append(steps, s)
+
+						steps = append(steps, &s)
 					}
 				}
 
@@ -441,14 +377,21 @@ func (db *DynamoDB) ListKifu(ctx context.Context, userId string, f func(kifu *do
 	for i := 0; i < db.parallelism; i++ {
 		g.Go(func() error {
 			for items := range itemsCh {
-				for _, item := range items {
-					kifu, version, err := kifuFromItem(item)
-					if err != nil {
-						return err
+				recs := []DynamoDBKifuRecord{}
+				if err := dynamodbattribute.UnmarshalListOfMaps(items, &recs); err != nil {
+					return err
+				}
+
+				for _, rec := range recs {
+					var kifu documentpb.Kifu
+					if err := proto.Unmarshal(rec.Kifu, &kifu); err != nil {
+						return &ErrInvalidValue{
+							Details: err.Error(),
+						}
 					}
 
 					select {
-					case ch <- &versionedKifu{kifu: kifu, version: version}:
+					case ch <- &versionedKifu{kifu: &kifu, version: rec.Version}:
 					case <-ctx.Done():
 					}
 				}
@@ -492,22 +435,16 @@ func (db *DynamoDB) GetKifuIdsBySfen(ctx context.Context, sfen string) ([]*UserK
 		default:
 		}
 
-		for _, item := range out.Items {
-			kifuId, err := stringFromItem(kifuIdAttr, item)
-			if err != nil {
-				rerr = err
-				return false
-			}
+		var records []DynamoDBKifuRecord
+		if err := dynamodbattribute.UnmarshalListOfMaps(out.Items, &records); err != nil {
+			rerr = err
+			return false
+		}
 
-			userId, err := stringFromItem(userIdAttr, item)
-			if err != nil {
-				rerr = err
-				return false
-			}
-
+		for _, r := range records {
 			ret = append(ret, &UserKifu{
-				UserId: userId,
-				KifuId: kifuId,
+				UserId: r.UserId,
+				KifuId: r.KifuId,
 			})
 		}
 
@@ -524,16 +461,7 @@ func (db *DynamoDB) GetKifuIdsBySfen(ctx context.Context, sfen string) ([]*UserK
 type stepKey struct {
 	kifuId string
 	userId string
-	seq    int64
-}
-
-func strInclude(ss []string, t string) bool {
-	for _, s := range ss {
-		if s == t {
-			return true
-		}
-	}
-	return false
+	seq    int32
 }
 
 func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*Position, error) {
@@ -570,37 +498,21 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 			default:
 			}
 
-			for _, item := range out.Items {
-				kifuId, err := stringFromItem(kifuIdAttr, item)
-				if err != nil {
-					rerr = err
-					return false
-				}
+			var records []DynamoDBKifuRecord
+			if err := dynamodbattribute.UnmarshalListOfMaps(out.Items, &records); err != nil {
+				rerr = err
+				return false
+			}
 
-				if strInclude(opts.excludeKifuIds, kifuId) {
-					return true
-				}
-
-				userId, err := stringFromItem(userIdAttr, item)
-				if err != nil {
-					rerr = err
-					return false
-				}
-
-				seq, err := intFromItem(seqAttr, item)
-				if err != nil {
-					rerr = err
-					return false
-				}
-
+			for _, r := range records {
 				select {
 				case stepKeyCh <- &stepKey{
-					kifuId: kifuId,
-					userId: userId,
-					seq:    seq,
+					kifuId: r.KifuId,
+					userId: r.UserId,
+					seq:    r.Seq,
 				}:
 				case <-ctx.Done():
-					rerr = err
+					rerr = ctx.Err()
 					return false
 				}
 			}
@@ -640,14 +552,19 @@ func (db *DynamoDB) GetSamePositions(ctx context.Context, userIds []string, pos 
 					default:
 					}
 
-					for _, item := range out.Items {
-						step, err := stepFromItem(item)
-						if err != nil {
+					var records []DynamoDBKifuRecord
+					if err := dynamodbattribute.UnmarshalListOfMaps(out.Items, &records); err != nil {
+						rerr = err
+						return false
+					}
+					for _, r := range records {
+						var step documentpb.Step
+						if err := proto.Unmarshal(r.Step, &step); err != nil {
 							rerr = err
 							return false
 						}
 
-						steps = append(steps, step)
+						steps = append(steps, &step)
 					}
 
 					return true
@@ -713,14 +630,19 @@ func (db *DynamoDB) GetRecentKifu(ctx context.Context, userId string, limit int)
 		default:
 		}
 
-		for _, item := range out.Items {
-			kifu, _, err := kifuFromItem(item)
-			if err != nil {
+		var records []DynamoDBKifuRecord
+		if err := dynamodbattribute.UnmarshalListOfMaps(out.Items, &records); err != nil {
+			rerr = err
+			return false
+		}
+		for _, rec := range records {
+			var kifu documentpb.Kifu
+			if err := proto.Unmarshal(rec.Kifu, &kifu); err != nil {
 				rerr = err
 				return false
 			}
 
-			ret = append(ret, kifu)
+			ret = append(ret, &kifu)
 		}
 
 		return true
@@ -733,7 +655,6 @@ func (db *DynamoDB) GetRecentKifu(ctx context.Context, userId string, limit int)
 	return ret, nil
 }
 
-func (db *DynamoDB) DeleteKifu(ctx context.Context, userId, kifuId string) error {
-	// TODO
+func (db *DynamoDB) DeleteKifu(ctx context.Context, kifuId string) error {
 	return fmt.Errorf("not implemented")
 }

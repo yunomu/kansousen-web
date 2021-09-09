@@ -71,7 +71,7 @@ type DB interface {
 	GetKifuIdsBySfen(ctx context.Context, sfen string) ([]*UserKifu, error)
 	GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*Position, error)
 	GetRecentKifu(ctx context.Context, userId string, limit int) ([]*documentpb.Kifu, error)
-	DeleteKifu(ctx context.Context, userId, kifuId string) error
+	DeleteKifu(ctx context.Context, kifuId string) error
 }
 
 var (
