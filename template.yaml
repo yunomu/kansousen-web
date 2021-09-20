@@ -38,8 +38,8 @@ Resources:
       AttributeDefinitions:
         - AttributeName: kifuId
           AttributeType: S
-        - AttributeName: seq
-          AttributeType: N
+        - AttributeName: type
+          AttributeType: S
         - AttributeName: userId
           AttributeType: S
         - AttributeName: createdTs
@@ -53,20 +53,9 @@ Resources:
       KeySchema:
         - AttributeName: kifuId
           KeyType: HASH
-        - AttributeName: seq
+        - AttributeName: type
           KeyType: RANGE
       GlobalSecondaryIndexes:
-        - IndexName: User
-          KeySchema:
-            - AttributeName: userId
-              KeyType: HASH
-            - AttributeName: seq
-              KeyType: RANGE
-          Projection:
-            ProjectionType: INCLUDE
-            NonKeyAttributes:
-              - kifu
-              - version
         - IndexName: Created
           KeySchema:
             - AttributeName: userId
@@ -77,6 +66,7 @@ Resources:
             ProjectionType: INCLUDE
             NonKeyAttributes:
               - kifu
+              - version
         - IndexName: Start
           KeySchema:
             - AttributeName: userId
@@ -87,6 +77,7 @@ Resources:
             ProjectionType: INCLUDE
             NonKeyAttributes:
               - kifu
+              - version
         - IndexName: Sfen
           KeySchema:
             - AttributeName: sfen
@@ -103,6 +94,7 @@ Resources:
             ProjectionType: INCLUDE
             NonKeyAttributes:
               - userId
+              - seq
 
   KansousenTablePolicy:
     Type: AWS::IAM::ManagedPolicy

@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/dynamodb"
 	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
 
@@ -29,20 +30,28 @@ const (
 	sfenAttr      = "sfen"
 	posAttr       = "pos"
 
+	kifuType = "KIFU"
+
 	BatchUnit = 25
 )
+
+func stepType(seq int32) string {
+	return fmt.Sprintf("STEP:%d", seq)
+}
 
 type DynamoDBKifuRecord struct {
 	UserId    string `dynamodbav:"userId,omitempty"`
 	KifuId    string `dynamodbav:"kifuId"`
+	Type      string `dynamodbav:"type"`
 	CreatedTs int64  `dynamodbav:"createdTs,omitempty"`
 	StartTs   int64  `dynamodbav:"startTs,omitempty"`
 	Sfen      string `dynamodbav:"sfen,omitempty"`
-	Seq       int32  `dynamodbav:"seq"`
+	Seq       int32  `dynamodbav:"seq,omitempty"`
 	Pos       string `dynamodbav:"pos,omitempty"`
 	Kifu      []byte `dynamodbav:"kifu,omitempty"`
 	Step      []byte `dynamodbav:"step,omitempty"`
 	Version   int64  `dynamodbav:"version,omitempty"`
+	StepNum   int32  `dynamodbav:"stepNum,omitempty"`
 }
 
 type DynamoDB struct {
@@ -76,83 +85,25 @@ func NewDynamoDB(client *dynamodb.DynamoDB, tableName string, ops ...DynamoDBOpt
 	return db
 }
 
-func (db *DynamoDB) PutKifu(ctx context.Context,
-	kifu *documentpb.Kifu,
-	steps []*documentpb.Step,
-	version int64,
+func (db *DynamoDB) batchWrite(
+	ctx context.Context,
+	g *errgroup.Group,
+	reqCh chan *dynamodb.WriteRequest,
 ) error {
-	bs, err := proto.Marshal(kifu)
-	if err != nil {
-		return err
-	}
-	newVersion := time.Now().UnixNano()
-	kifuAv, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
-		UserId:    kifu.GetUserId(),
-		KifuId:    kifu.GetKifuId(),
-		CreatedTs: kifu.GetCreatedTs(),
-		StartTs:   kifu.GetStartTs(),
-		Sfen:      kifu.GetSfen(),
-		Seq:       0,
-		Kifu:      bs,
-		Version:   newVersion,
-	})
-	if err != nil {
-		return err
-	}
-
-	out, err := db.client.TransactWriteItemsWithContext(ctx, &dynamodb.TransactWriteItemsInput{
-		TransactItems: []*dynamodb.TransactWriteItem{
-			{
-				Put: &dynamodb.Put{
-					ConditionExpression: aws.String("attribute_not_exists(#version) OR #version = :version"),
-					ExpressionAttributeNames: map[string]*string{
-						"#version": aws.String(versionAttr),
-					},
-					ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
-						":version": &dynamodb.AttributeValue{
-							N: aws.String(fmt.Sprintf("%d", version)),
-						},
-					},
-					Item: kifuAv,
-				},
-			},
-		},
-	})
-	if err != nil {
-		return err
-	}
-	var _ = out
-
-	g, ctx := errgroup.WithContext(ctx)
-
 	reqsCh := make(chan []*dynamodb.WriteRequest, db.parallelism)
 	g.Go(func() error {
 		defer close(reqsCh)
 
 		var reqs []*dynamodb.WriteRequest
-		for _, step := range steps {
-			bs, err := proto.Marshal(kifu)
-			if err != nil {
-				return err
-			}
-			av, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
-				UserId: step.GetUserId(),
-				KifuId: step.GetKifuId(),
-				Seq:    step.GetSeq(),
-				Step:   bs,
-			})
-
-			reqs = append(reqs, &dynamodb.WriteRequest{
-				PutRequest: &dynamodb.PutRequest{Item: av},
-			})
-
+		for req := range reqCh {
+			reqs = append(reqs, req)
 			if len(reqs) == BatchUnit {
 				select {
 				case reqsCh <- reqs:
-					reqs = nil
 				case <-ctx.Done():
 					return ctx.Err()
 				}
+				reqs = nil
 			}
 		}
 
@@ -187,13 +138,130 @@ func (db *DynamoDB) PutKifu(ctx context.Context,
 	return g.Wait()
 }
 
+func (db *DynamoDB) PutKifu(
+	ctx context.Context,
+	kifu *documentpb.Kifu,
+	steps []*documentpb.Step,
+	version int64,
+) (int64, error) {
+	stepNum := int32(len(steps))
+	bs, err := proto.Marshal(kifu)
+	if err != nil {
+		return 0, err
+	}
+	newVersion := time.Now().UnixNano()
+	kifuAv, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+		UserId:    kifu.GetUserId(),
+		KifuId:    kifu.GetKifuId(),
+		Type:      kifuType,
+		CreatedTs: kifu.GetCreatedTs(),
+		StartTs:   kifu.GetStartTs(),
+		Sfen:      kifu.GetSfen(),
+		Kifu:      bs,
+		Version:   newVersion,
+		StepNum:   stepNum,
+	})
+	if err != nil {
+		return 0, err
+	}
+
+	out, err := db.client.PutItemWithContext(ctx, &dynamodb.PutItemInput{
+		TableName: aws.String(db.tableName),
+
+		ConditionExpression: aws.String("attribute_not_exists(#version) OR #version = :version"),
+		ExpressionAttributeNames: map[string]*string{
+			"#version": aws.String(versionAttr),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":version": &dynamodb.AttributeValue{
+				N: aws.String(fmt.Sprintf("%d", version)),
+			},
+		},
+		Item: kifuAv,
+
+		ReturnValues: aws.String("ALL_OLD"),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case dynamodb.ErrCodeConditionalCheckFailedException:
+				return 0, ErrLockError
+			}
+		}
+		return 0, err
+	}
+
+	var old DynamoDBKifuRecord
+	if out.Attributes != nil {
+		if err := dynamodbattribute.UnmarshalMap(out.Attributes, &old); err != nil {
+			return 0, err
+		}
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	reqCh := make(chan *dynamodb.WriteRequest)
+	g.Go(func() error {
+		defer close(reqCh)
+
+		for _, step := range steps {
+			bs, err := proto.Marshal(kifu)
+			if err != nil {
+				return err
+			}
+			av, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+				UserId: step.GetUserId(),
+				KifuId: step.GetKifuId(),
+				Type:   stepType(step.GetSeq()),
+				Seq:    step.GetSeq(),
+				Pos:    step.GetPosition(),
+				Step:   bs,
+			})
+
+			select {
+			case reqCh <- &dynamodb.WriteRequest{
+				PutRequest: &dynamodb.PutRequest{Item: av},
+			}:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+
+		for i := stepNum + 1; i <= old.StepNum; i++ {
+			av, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+				KifuId: old.KifuId,
+				Type:   stepType(i),
+			})
+			if err != nil {
+				return err
+			}
+
+			select {
+			case reqCh <- &dynamodb.WriteRequest{
+				DeleteRequest: &dynamodb.DeleteRequest{Key: av},
+			}:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+		}
+
+		return nil
+	})
+
+	if err := db.batchWrite(ctx, g, reqCh); err != nil {
+		return 0, err
+	}
+
+	return newVersion, err
+}
+
 func (db *DynamoDB) GetKifu(
 	ctx context.Context,
 	kifuId string,
 ) (*documentpb.Kifu, int64, error) {
 	key, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
 		KifuId: kifuId,
-		Seq:    0,
+		Type:   kifuType,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -241,16 +309,14 @@ func (db *DynamoDB) GetKifuAndSteps(
 		var rerr error
 		if err := db.client.QueryPagesWithContext(ctx, &dynamodb.QueryInput{
 			TableName:              aws.String(db.tableName),
-			KeyConditionExpression: aws.String("#kifuId = :kifuId AND #seq = :seq"),
+			KeyConditionExpression: aws.String("#kifuId = :kifuId"),
 			ExpressionAttributeNames: map[string]*string{
 				"#kifuId": aws.String(kifuIdAttr),
-				"#seq":    aws.String(seqAttr),
 			},
 			ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
 				":kifuId": &dynamodb.AttributeValue{S: aws.String(kifuId)},
-				":seq":    &dynamodb.AttributeValue{N: aws.String("0")},
 			},
-			ProjectionExpression: aws.String(strings.Join([]string{kifuAttr, versionAttr, stepAttr}, ",")),
+			ProjectionExpression: aws.String(strings.Join([]string{kifuAttr, versionAttr, stepAttr, seqAttr}, ",")),
 		}, func(out *dynamodb.QueryOutput, lastPage bool) bool {
 			select {
 			case <-ctx.Done():
@@ -279,8 +345,8 @@ func (db *DynamoDB) GetKifuAndSteps(
 
 				var steps []*documentpb.Step
 				for _, rec := range recs {
-					switch rec.Seq {
-					case 0: // Kifu
+					switch {
+					case rec.Type == kifuType: // Kifu
 						var k documentpb.Kifu
 						if err := proto.Unmarshal(rec.Kifu, &k); err != nil {
 							return &ErrInvalidValue{
@@ -290,7 +356,7 @@ func (db *DynamoDB) GetKifuAndSteps(
 
 						kifu = &k
 						version = rec.Version
-					default: // Step
+					case strings.HasPrefix(rec.Type, "STEP"): // Step
 						var s documentpb.Step
 						if err := proto.Unmarshal(rec.Step, &s); err != nil {
 							return &ErrInvalidValue{
@@ -299,6 +365,8 @@ func (db *DynamoDB) GetKifuAndSteps(
 						}
 
 						steps = append(steps, &s)
+					default:
+						return fmt.Errorf("")
 					}
 				}
 
@@ -655,6 +723,67 @@ func (db *DynamoDB) GetRecentKifu(ctx context.Context, userId string, limit int)
 	return ret, nil
 }
 
-func (db *DynamoDB) DeleteKifu(ctx context.Context, kifuId string) error {
-	return fmt.Errorf("not implemented")
+func (db *DynamoDB) DeleteKifu(ctx context.Context, kifuId string, version int64) error {
+	key, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+		KifuId: kifuId,
+		Type:   kifuType,
+	})
+	if err != nil {
+		return err
+	}
+
+	out, err := db.client.DeleteItemWithContext(ctx, &dynamodb.DeleteItemInput{
+		TableName: aws.String(db.tableName),
+
+		ConditionExpression: aws.String("#version == :version"),
+		ExpressionAttributeNames: map[string]*string{
+			"#version": aws.String(versionAttr),
+		},
+		ExpressionAttributeValues: map[string]*dynamodb.AttributeValue{
+			":version": &dynamodb.AttributeValue{
+				N: aws.String(fmt.Sprintf("%d", version)),
+			},
+		},
+		Key: key,
+
+		ReturnValues: aws.String("ALL_OLD"),
+	})
+	if err != nil {
+		return err
+	}
+
+	var old DynamoDBKifuRecord
+	if err := dynamodbattribute.UnmarshalMap(out.Attributes, &old); err != nil {
+		return err
+	}
+
+	g, ctx := errgroup.WithContext(ctx)
+
+	reqCh := make(chan *dynamodb.WriteRequest)
+	g.Go(func() error {
+		defer close(reqCh)
+
+		for i := int32(1); i <= old.StepNum; i++ {
+			key, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
+				KifuId: kifuId,
+				Type:   kifuType,
+			})
+			if err != nil {
+				return err
+			}
+
+			select {
+			case reqCh <- &dynamodb.WriteRequest{
+				DeleteRequest: &dynamodb.DeleteRequest{Key: key},
+			}:
+			case <-ctx.Done():
+				return ctx.Err()
+			}
+
+		}
+
+		return nil
+	})
+
+	return db.batchWrite(ctx, g, reqCh)
 }

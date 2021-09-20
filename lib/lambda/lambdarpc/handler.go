@@ -3,29 +3,18 @@ package lambdarpc
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"reflect"
 
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
 )
 
-var (
-	ErrNoLambdaContext     = errors.New("no lambda context")
-	ErrNoClientContext     = errors.New("no client context")
-	ErrUnauthenticated     = errors.New("unauthenticated")
-	ErrNoMethodSpecified   = errors.New("no method name in context")
-	ErrMethodNotFound      = errors.New("method not found")
-	ErrNoValidMethodExists = errors.New("no valid method exists")
-	ErrUninitialized       = errors.New("uninitialized")
-)
-
-type ErrInvalidMethod struct {
-	details  string
-	errParam interface{}
+type InvalidMethodError struct {
+	Details      string
+	InvalidParam interface{}
 }
 
-func (e *ErrInvalidMethod) Error() string {
+func (e *InvalidMethodError) Error() string {
 	return "invalid method signature: func (obj) (context.Context, *Context, proto.Message) (proto.Message, errors)"
 }
 
@@ -34,6 +23,7 @@ type Handler struct {
 
 	serviceType reflect.Type
 	methods     map[string]reflect.Method
+	initialized bool
 }
 
 var _ lambda.Handler = (*Handler)(nil)
@@ -53,37 +43,37 @@ func NewHandler(service interface{}) *Handler {
 
 func validMethod(svcType reflect.Type, m reflect.Method) error {
 	if m.Type.NumIn() != 3 {
-		return &ErrInvalidMethod{
-			details:  "invalid parameter number",
-			errParam: m.Type.NumIn(),
+		return &InvalidMethodError{
+			Details:      "invalid parameter number",
+			InvalidParam: m.Type.NumIn(),
 		}
 	}
 
 	if m.Type.In(0).String() != svcType.String() {
-		return &ErrInvalidMethod{
-			details:  "invalid service type",
-			errParam: m.Type.In(0),
+		return &InvalidMethodError{
+			Details:      "invalid service type",
+			InvalidParam: m.Type.In(0),
 		}
 	}
 
 	if m.Type.In(1).String() != contextType.String() {
-		return &ErrInvalidMethod{
-			details:  "1st param is not context.Context",
-			errParam: m.Type.In(1),
+		return &InvalidMethodError{
+			Details:      "1st param is not context.Context",
+			InvalidParam: m.Type.In(1),
 		}
 	}
 
 	if m.Type.NumOut() != 2 {
-		return &ErrInvalidMethod{
-			details:  "invalid number of return value",
-			errParam: m.Type.NumOut(),
+		return &InvalidMethodError{
+			Details:      "invalid number of return value",
+			InvalidParam: m.Type.NumOut(),
 		}
 	}
 
 	if m.Type.Out(1).String() != errorType.String() {
-		return &ErrInvalidMethod{
-			details:  "2nd return value is not error",
-			errParam: m.Type.Out(1),
+		return &InvalidMethodError{
+			Details:      "2nd return value is not error",
+			InvalidParam: m.Type.Out(1),
 		}
 	}
 
@@ -91,6 +81,10 @@ func validMethod(svcType reflect.Type, m reflect.Method) error {
 }
 
 func (h *Handler) Init() error {
+	if h.initialized {
+		return nil
+	}
+
 	methods := make(map[string]reflect.Method)
 
 	for i := 0; i < h.serviceType.NumMethod(); i++ {
@@ -103,28 +97,36 @@ func (h *Handler) Init() error {
 	}
 
 	if len(methods) == 0 {
-		return ErrNoValidMethodExists
+		return &InvalidMethodError{
+			Details: "no valid method exists",
+		}
 	}
 	h.methods = methods
+
+	h.initialized = true
 
 	return nil
 }
 
 func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
-	if h.methods == nil {
-		return nil, ErrUninitialized
+	if err := h.Init(); err != nil {
+		return nil, err
 	}
 
 	lc, ok := lambdacontext.FromContext(ctx)
 	if !ok {
-		return nil, ErrNoLambdaContext
+		return nil, &InternalError{
+			Message: "No lambda context",
+		}
 	}
 
 	ctx = context.WithValue(ctx, RequestIdField, lc.AwsRequestID)
 
 	custom := lc.ClientContext.Custom
 	if custom == nil {
-		return nil, ErrNoClientContext
+		return nil, &InternalError{
+			Message: "No client context",
+		}
 	}
 
 	apiRequestId, ok := custom[ApiRequestIdField]
@@ -139,12 +141,16 @@ func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 
 	functionId, ok := custom[FunctionIdField]
 	if !ok {
-		return nil, ErrNoMethodSpecified
+		return nil, &ClientError{
+			Message: "No method specified",
+		}
 	}
 
 	m, ok := h.methods[functionId]
 	if !ok {
-		return nil, ErrMethodNotFound
+		return nil, &ClientError{
+			Message: "method not found",
+		}
 	}
 
 	reqType := m.Type.In(2)
@@ -154,7 +160,10 @@ func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 
 	reqVal := reflect.New(reqType)
 	if err := json.Unmarshal(payload, reqVal.Interface()); err != nil {
-		return nil, err
+		return nil, &InternalError{
+			Message: "json.Unmarshal(req)",
+			Err:     err,
+		}
 	}
 
 	rets := m.Func.Call([]reflect.Value{
@@ -164,20 +173,28 @@ func (h *Handler) Invoke(ctx context.Context, payload []byte) ([]byte, error) {
 	})
 
 	if len(rets) != 2 {
-		panic("invalid number of return values")
+		return nil, &InternalError{
+			Message: "invalid number of return values",
+		}
 	}
 
 	resMsg := rets[0].Interface()
 	bs, err := json.Marshal(resMsg)
 	if err != nil {
-		return nil, err
+		return nil, &InternalError{
+			Message: "json.Marshal(res)",
+			Err:     err,
+		}
 	}
 
-	if e := rets[1].Interface(); e == nil {
-		err = nil
-	} else {
-		err = e.(error)
+	if e := rets[1].Interface(); e != nil {
+		if err, ok := e.(lambdarpcError); ok {
+			return nil, err
+		}
+		return nil, &InternalError{
+			Err: e.(error),
+		}
 	}
 
-	return bs, err
+	return bs, nil
 }

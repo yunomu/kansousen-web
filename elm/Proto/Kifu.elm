@@ -139,6 +139,7 @@ postKifuResponseEncoder v =
 
 type alias DeleteKifuRequest =
     { kifuId : String -- 1
+    , version : Int -- 2
     }
 
 
@@ -146,12 +147,14 @@ deleteKifuRequestDecoder : JD.Decoder DeleteKifuRequest
 deleteKifuRequestDecoder =
     JD.lazy <| \_ -> decode DeleteKifuRequest
         |> required "kifuId" JD.string ""
+        |> required "version" intDecoder 0
 
 
 deleteKifuRequestEncoder : DeleteKifuRequest -> JE.Value
 deleteKifuRequestEncoder v =
     JE.object <| List.filterMap identity <|
         [ (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
+        , (requiredFieldEncoder "version" numericStringEncoder 0 v.version)
         ]
 
 
@@ -723,116 +726,4 @@ getSamePositionsResponse_KifuEncoder v =
         , (requiredFieldEncoder "kifuId" JE.string "" v.kifuId)
         , (requiredFieldEncoder "seq" JE.int 0 v.seq)
         , (repeatedFieldEncoder "steps" getSamePositionsResponse_StepEncoder v.steps)
-        ]
-
-
-type alias KifuRequest =
-    { kifuRequestSelect : KifuRequestSelect
-    }
-
-
-type KifuRequestSelect
-    = KifuRequestSelectUnspecified
-    | RequestRecentKifu RecentKifuRequest
-    | RequestPostKifu PostKifuRequest
-    | RequestDeleteKifu DeleteKifuRequest
-    | RequestGetKifu GetKifuRequest
-    | RequestGetSamePositions GetSamePositionsRequest
-
-
-kifuRequestSelectDecoder : JD.Decoder KifuRequestSelect
-kifuRequestSelectDecoder =
-    JD.lazy <| \_ -> JD.oneOf
-        [ JD.map RequestRecentKifu (JD.field "requestRecentKifu" recentKifuRequestDecoder)
-        , JD.map RequestPostKifu (JD.field "requestPostKifu" postKifuRequestDecoder)
-        , JD.map RequestDeleteKifu (JD.field "requestDeleteKifu" deleteKifuRequestDecoder)
-        , JD.map RequestGetKifu (JD.field "requestGetKifu" getKifuRequestDecoder)
-        , JD.map RequestGetSamePositions (JD.field "requestGetSamePositions" getSamePositionsRequestDecoder)
-        , JD.succeed KifuRequestSelectUnspecified
-        ]
-
-
-kifuRequestSelectEncoder : KifuRequestSelect -> Maybe ( String, JE.Value )
-kifuRequestSelectEncoder v =
-    case v of
-        KifuRequestSelectUnspecified ->
-            Nothing
-        RequestRecentKifu x ->
-            Just ( "requestRecentKifu", recentKifuRequestEncoder x )
-        RequestPostKifu x ->
-            Just ( "requestPostKifu", postKifuRequestEncoder x )
-        RequestDeleteKifu x ->
-            Just ( "requestDeleteKifu", deleteKifuRequestEncoder x )
-        RequestGetKifu x ->
-            Just ( "requestGetKifu", getKifuRequestEncoder x )
-        RequestGetSamePositions x ->
-            Just ( "requestGetSamePositions", getSamePositionsRequestEncoder x )
-
-
-kifuRequestDecoder : JD.Decoder KifuRequest
-kifuRequestDecoder =
-    JD.lazy <| \_ -> decode KifuRequest
-        |> field kifuRequestSelectDecoder
-
-
-kifuRequestEncoder : KifuRequest -> JE.Value
-kifuRequestEncoder v =
-    JE.object <| List.filterMap identity <|
-        [ (kifuRequestSelectEncoder v.kifuRequestSelect)
-        ]
-
-
-type alias KifuResponse =
-    { kifuResponseSelect : KifuResponseSelect
-    }
-
-
-type KifuResponseSelect
-    = KifuResponseSelectUnspecified
-    | ResponseRecentKifu RecentKifuResponse
-    | ResponsePostKifu PostKifuResponse
-    | ResponseDeleteKifu DeleteKifuResponse
-    | ResponseGetKifu GetKifuResponse
-    | ResponseGetSamePositions GetSamePositionsResponse
-
-
-kifuResponseSelectDecoder : JD.Decoder KifuResponseSelect
-kifuResponseSelectDecoder =
-    JD.lazy <| \_ -> JD.oneOf
-        [ JD.map ResponseRecentKifu (JD.field "responseRecentKifu" recentKifuResponseDecoder)
-        , JD.map ResponsePostKifu (JD.field "responsePostKifu" postKifuResponseDecoder)
-        , JD.map ResponseDeleteKifu (JD.field "responseDeleteKifu" deleteKifuResponseDecoder)
-        , JD.map ResponseGetKifu (JD.field "responseGetKifu" getKifuResponseDecoder)
-        , JD.map ResponseGetSamePositions (JD.field "responseGetSamePositions" getSamePositionsResponseDecoder)
-        , JD.succeed KifuResponseSelectUnspecified
-        ]
-
-
-kifuResponseSelectEncoder : KifuResponseSelect -> Maybe ( String, JE.Value )
-kifuResponseSelectEncoder v =
-    case v of
-        KifuResponseSelectUnspecified ->
-            Nothing
-        ResponseRecentKifu x ->
-            Just ( "responseRecentKifu", recentKifuResponseEncoder x )
-        ResponsePostKifu x ->
-            Just ( "responsePostKifu", postKifuResponseEncoder x )
-        ResponseDeleteKifu x ->
-            Just ( "responseDeleteKifu", deleteKifuResponseEncoder x )
-        ResponseGetKifu x ->
-            Just ( "responseGetKifu", getKifuResponseEncoder x )
-        ResponseGetSamePositions x ->
-            Just ( "responseGetSamePositions", getSamePositionsResponseEncoder x )
-
-
-kifuResponseDecoder : JD.Decoder KifuResponse
-kifuResponseDecoder =
-    JD.lazy <| \_ -> decode KifuResponse
-        |> field kifuResponseSelectDecoder
-
-
-kifuResponseEncoder : KifuResponse -> JE.Value
-kifuResponseEncoder v =
-    JE.object <| List.filterMap identity <|
-        [ (kifuResponseSelectEncoder v.kifuResponseSelect)
         ]

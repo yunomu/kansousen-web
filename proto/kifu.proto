@@ -44,6 +44,7 @@ message PostKifuResponse {
 
 message DeleteKifuRequest {
   string kifu_id = 1;
+  int64 version = 2;
 }
 
 message DeleteKifuResponse {
@@ -158,25 +159,4 @@ message GetSamePositionsResponse {
     repeated Step steps = 4;
   }
   repeated Kifu kifus = 2;
-}
-
-message KifuRequest {
-  oneof kifu_request_select {
-    RecentKifuRequest request_recent_kifu = 1;
-    PostKifuRequest request_post_kifu = 2;
-    DeleteKifuRequest request_delete_kifu = 3;
-    GetKifuRequest request_get_kifu = 4;
-    GetSamePositionsRequest request_get_same_positions = 5;
-  }
-}
-
-
-message KifuResponse {
-  oneof kifu_response_select {
-    RecentKifuResponse response_recent_kifu = 1;
-    PostKifuResponse response_post_kifu = 2;
-    DeleteKifuResponse response_delete_kifu = 3;
-    GetKifuResponse response_get_kifu = 4;
-    GetSamePositionsResponse response_get_same_positions = 5;
-  }
 }

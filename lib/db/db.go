@@ -11,6 +11,7 @@ var (
 	ErrUserIdIsEmpty   = errors.New("user_id is empty")
 	ErrKifuIdIsEmpty   = errors.New("kifu_id is empty")
 	ErrPositionIsEmpty = errors.New("position is empty")
+	ErrLockError       = errors.New("optimistic locking error")
 )
 
 type getStepsOptions struct {
@@ -64,14 +65,14 @@ type UserKifu struct {
 }
 
 type DB interface {
-	PutKifu(ctx context.Context, kifu *documentpb.Kifu, steps []*documentpb.Step, version int64) error
+	PutKifu(ctx context.Context, kifu *documentpb.Kifu, steps []*documentpb.Step, version int64) (int64, error)
 	GetKifu(ctx context.Context, kifuId string) (*documentpb.Kifu, int64, error)
 	GetKifuAndSteps(ctx context.Context, kifuId string) (*documentpb.Kifu, []*documentpb.Step, int64, error)
 	ListKifu(ctx context.Context, userId string, f func(*documentpb.Kifu, int64)) error
 	GetKifuIdsBySfen(ctx context.Context, sfen string) ([]*UserKifu, error)
 	GetSamePositions(ctx context.Context, userIds []string, pos string, options ...GetSamePositionsOption) ([]*Position, error)
 	GetRecentKifu(ctx context.Context, userId string, limit int) ([]*documentpb.Kifu, error)
-	DeleteKifu(ctx context.Context, kifuId string) error
+	DeleteKifu(ctx context.Context, kifuId string, version int64) error
 }
 
 var (

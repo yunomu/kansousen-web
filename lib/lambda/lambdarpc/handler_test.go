@@ -37,10 +37,10 @@ func TestValidMethod_valid(t *testing.T) {
 	}
 
 	if err := validMethod(svcType, method); err != nil {
-		if e, ok := err.(*ErrInvalidMethod); !ok {
+		if e, ok := err.(*InvalidMethodError); !ok {
 			t.Errorf("validMethod unknown error: %v", err)
 		} else {
-			t.Errorf("InvalidMethod: %s value=`%v`", e.details, e.errParam)
+			t.Errorf("InvalidMethod: %s value=`%v`", e.Details, e.InvalidParam)
 		}
 	}
 }

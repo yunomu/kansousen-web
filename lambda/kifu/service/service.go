@@ -2,12 +2,8 @@ package service
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
-
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 
 	"github.com/google/uuid"
 
@@ -21,7 +17,7 @@ import (
 )
 
 type KifuServiceError interface {
-	Error() string
+	error
 	Type() string
 }
 
@@ -40,7 +36,10 @@ func (s *Service) RecentKifu(ctx context.Context, req *kifupb.RecentKifuRequest)
 
 	kifus, err := s.table.GetRecentKifu(ctx, userId, int(req.GetLimit()))
 	if err != nil {
-		return nil, err
+		return nil, &lambdarpc.InternalError{
+			Message: "db.GetRecentKifu",
+			Err:     err,
+		}
 	}
 
 	var ret []*kifupb.RecentKifuResponse_Kifu
@@ -91,19 +90,21 @@ func (e *InvalidArgumentError) Type() string {
 func (s *Service) PostKifu(
 	ctx context.Context,
 	req *kifupb.PostKifuRequest,
-) (string, error) {
+) (*kifupb.PostKifuResponse, error) {
 	userId := lambdarpc.GetUserId(ctx)
 	if userId == "" {
-		return "", &InvalidArgumentError{
-			typ: "UnauthorizedError",
-			msg: "User id is empty",
+		return nil, &lambdarpc.ClientError{
+			Message: "UnauthorizedError",
 		}
 	}
 
 	// XXX from request
 	loc, err := time.LoadLocation("Asia/Tokyo")
 	if err != nil {
-		return "", err
+		return nil, &lambdarpc.ClientError{
+			Message: "LoadLocation Asia/Tokyo",
+			Err:     err,
+		}
 	}
 
 	var parseOptions []kif.ParseOption
@@ -113,51 +114,69 @@ func (s *Service) PostKifu(
 	case "Shift_JIS":
 		parseOptions = append(parseOptions, kif.ParseEncodingSJIS())
 	default:
-		return "", &InvalidArgumentError{
-			typ: "UnknownEncodingError",
-			msg: "unknown encoding error",
+		return nil, &lambdarpc.ClientError{
+			Message: "UnknownEncodingError",
 		}
 	}
 
 	switch req.Format {
 	case "KIF":
 	default:
-		return "", &InvalidArgumentError{
-			typ: "UnknownFormatError",
-			msg: "unknown format error",
+		return nil, &lambdarpc.ClientError{
+			Message: "UnknownFormatError",
 		}
 	}
 
 	kifuUUID, err := uuid.NewRandom()
 	if err != nil {
-		return "", err
+		return nil, &lambdarpc.InternalError{
+			Message: "uuid.NewRandom",
+			Err:     err,
+		}
 	}
 
 	parser := libkifu.NewParser(kif.NewParser(parseOptions...), loc)
 
 	kifu, steps, err := parser.Parse(strings.NewReader(req.Payload), userId, kifuUUID.String())
 	if err != nil {
-		return "", err
+		return nil, &lambdarpc.ClientError{
+			Message: "kif parse error",
+			Err:     err,
+		}
 	}
 
-	// XXX version
-	if err := s.table.PutKifu(ctx, kifu, steps, 0); err != nil {
-		return "", err
+	version, err := s.table.PutKifu(ctx, kifu, steps, 0)
+	if err != nil {
+		return nil, &lambdarpc.InternalError{
+			Message: "db.PutKifu",
+			Err:     err,
+		}
 	}
 
-	return kifuUUID.String(), nil
+	return &kifupb.PostKifuResponse{
+		KifuId:  kifuUUID.String(),
+		Version: version,
+	}, nil
 }
 
 func (s *Service) DeleteKifu(ctx context.Context, req *kifupb.DeleteKifuRequest) (*kifupb.DeleteKifuResponse, error) {
-	//return nil, s.table.DeleteKifu(ctx, kifuId)
-	// TODO
-	return nil, fmt.Errorf("unimplemented")
+	if err := s.table.DeleteKifu(ctx, req.GetKifuId(), req.GetVersion()); err != nil {
+		return nil, &lambdarpc.InternalError{
+			Message: "db.DeleteKifu",
+			Err:     err,
+		}
+	}
+
+	return &kifupb.DeleteKifuResponse{}, nil
 }
 
 func (s *Service) GetKifu(ctx context.Context, req *kifupb.GetKifuRequest) (*kifupb.GetKifuResponse, error) {
 	kifu, steps, version, err := s.table.GetKifuAndSteps(ctx, req.GetKifuId())
 	if err != nil {
-		return nil, err
+		return nil, &lambdarpc.InternalError{
+			Message: "db.GetKifuAndSteps",
+			Err:     err,
+		}
 	}
 
 	var resSteps []*kifupb.GetKifuResponse_Step
@@ -237,7 +256,9 @@ func (s *Service) GetKifu(ctx context.Context, req *kifupb.GetKifuRequest) (*kif
 func (s *Service) GetSamePositions(ctx context.Context, req *kifupb.GetSamePositionsRequest) (*kifupb.GetSamePositionsResponse, error) {
 	userId := lambdarpc.GetUserId(ctx)
 	if userId == "" {
-		return nil, nil // XXX
+		return nil, &lambdarpc.ClientError{
+			Message: "user-id is not found",
+		}
 	}
 
 	pss, err := s.table.GetSamePositions(ctx,
@@ -247,7 +268,10 @@ func (s *Service) GetSamePositions(ctx context.Context, req *kifupb.GetSamePosit
 		db.GetSamePositionsAddExcludeKifuIds(req.GetExcludeKifuIds()),
 	)
 	if err != nil {
-		return nil, status.Errorf(codes.Internal, "GetSamePositions: %v", err)
+		return nil, &lambdarpc.InternalError{
+			Message: "GetSamePositions",
+			Err:     err,
+		}
 	}
 
 	var kifus []*kifupb.GetSamePositionsResponse_Kifu
