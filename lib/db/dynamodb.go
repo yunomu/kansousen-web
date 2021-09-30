@@ -192,7 +192,7 @@ func (db *DynamoDB) PutKifu(
 	}
 
 	var old DynamoDBKifuRecord
-	if out.Attributes != nil {
+	if len(out.Attributes) != 0 {
 		if err := dynamodbattribute.UnmarshalMap(out.Attributes, &old); err != nil {
 			return 0, err
 		}
@@ -461,6 +461,7 @@ func (db *DynamoDB) ListKifu(ctx context.Context, userId string, f func(kifu *do
 					select {
 					case ch <- &versionedKifu{kifu: &kifu, version: rec.Version}:
 					case <-ctx.Done():
+						return ctx.Err()
 					}
 				}
 			}
@@ -475,7 +476,12 @@ func (db *DynamoDB) ListKifu(ctx context.Context, userId string, f func(kifu *do
 	}()
 
 	for vk := range ch {
-		f(vk.kifu, vk.version)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			f(vk.kifu, vk.version)
+		}
 	}
 
 	return g.Wait()

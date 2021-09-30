@@ -178,64 +178,56 @@ func ParseHandicap(s string) document.Handicap_Id {
 	return document.Handicap_OTHER
 }
 
-func ParseDateTime(s string) (*document.DateTime, error) {
+func ParseDateTime(s string, loc *time.Location) (int64, error) {
 	r, err := regexp.Compile(
 		`(\d{4})(?:[/年])(\d{2})(?:[/月])(\d{2})日?(?:\([日月火水木金土]\))?( (\d{2})[:：](\d{2})[:：](\d{2}))?`,
 	)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	ss := r.FindStringSubmatch(s)
 	l := len(ss)
 	if l < 4 {
-		return nil, fmt.Errorf("parse error: field number is mismatch: len=%v", l)
+		return 0, fmt.Errorf("parse error: field number is mismatch: len=%v", l)
 	}
 
 	year, err := strconv.ParseInt(ss[1], 10, 32)
 	if err != nil {
-		return nil, fmt.Errorf("parse error: year")
+		return 0, fmt.Errorf("parse error: year")
 	}
 	month, err := strconv.ParseInt(ss[2], 10, 32)
 	if err != nil {
-		return nil, fmt.Errorf("parse error: month")
+		return 0, fmt.Errorf("parse error: month")
 	}
 	day, err := strconv.ParseInt(ss[3], 10, 32)
 	if err != nil {
-		return nil, fmt.Errorf("parse error: day")
+		return 0, fmt.Errorf("parse error: day")
 	}
 
-	ret := &document.DateTime{
-		Date: &document.Date{
-			Year:  int32(year),
-			Month: int32(month),
-			Day:   int32(day),
-		},
+	var hour, min, sec int
+	if len(ss[4]) != 0 {
+		h, err := strconv.ParseInt(ss[5], 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("parse error: hour")
+		}
+		m, err := strconv.ParseInt(ss[6], 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("parse error: minute")
+		}
+		s, err := strconv.ParseInt(ss[7], 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("parse error: second")
+		}
+		hour, min, sec = int(h), int(m), int(s)
 	}
 
-	if len(ss[4]) == 0 {
-		return ret, nil
-	}
+	t := time.Date(int(year), time.Month(month), int(day), hour, min, sec, 0, loc)
 
-	hour, err := strconv.ParseInt(ss[5], 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("parse error: hour")
-	}
-	min, err := strconv.ParseInt(ss[6], 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("parse error: minute")
-	}
-	sec, err := strconv.ParseInt(ss[7], 10, 32)
-	if err != nil {
-		return nil, fmt.Errorf("parse error: second")
-	}
-
-	ret.TimeSec = int32(hour*60*60 + min*60 + sec)
-
-	return ret, nil
+	return t.Unix(), nil
 }
 
-func ReadHeader(hs []*ptypes.Header, out *document.Kifu) error {
+func ReadHeader(hs []*ptypes.Header, loc *time.Location, out *document.Kifu) error {
 	header := map[string]string{}
 	used := map[string]struct{}{}
 	for _, h := range hs {
@@ -253,12 +245,12 @@ func ReadHeader(hs []*ptypes.Header, out *document.Kifu) error {
 					return nil
 				}
 
-				start, err := ParseDateTime(v)
+				start, err := ParseDateTime(v, loc)
 				if err != nil {
 					return err
 				}
 
-				out.Start = start
+				out.StartTs = start
 				return nil
 			},
 		},
@@ -269,12 +261,12 @@ func ReadHeader(hs []*ptypes.Header, out *document.Kifu) error {
 					return nil
 				}
 
-				start, err := ParseDateTime(v)
+				start, err := ParseDateTime(v, loc)
 				if err != nil {
 					return err
 				}
 
-				out.Start = start
+				out.StartTs = start
 				return nil
 			},
 		},
@@ -285,12 +277,12 @@ func ReadHeader(hs []*ptypes.Header, out *document.Kifu) error {
 					return nil
 				}
 
-				start, err := ParseDateTime(v)
+				start, err := ParseDateTime(v, loc)
 				if err != nil {
 					return err
 				}
 
-				out.End = start
+				out.EndTs = start
 				return nil
 			},
 		},
@@ -379,18 +371,4 @@ func ReadHeader(hs []*ptypes.Header, out *document.Kifu) error {
 	}
 
 	return nil
-}
-
-func DateTimeToTS(dt *document.DateTime, loc *time.Location) int64 {
-	return DateTimeToTime(dt, loc).Unix()
-}
-
-func DateTimeToTime(dt *document.DateTime, loc *time.Location) time.Time {
-	d := dt.GetDate()
-	tsec := int(dt.GetTimeSec())
-	sec := tsec % 60
-	tmin := tsec / 60
-	min := tmin % 60
-	hour := tmin / 60
-	return time.Date(int(d.GetYear()), time.Month(d.GetMonth()), int(d.GetDay()), hour, min, sec, 0, loc)
 }

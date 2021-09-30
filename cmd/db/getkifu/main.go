@@ -31,14 +31,10 @@ func (c *Command) Usage() string {
 func (c *Command) SetFlags(f *flag.FlagSet) {
 	f.SetOutput(os.Stderr)
 
-	c.userId = f.String("user-id", "", "User ID")
 	c.kifuId = f.String("kifu-id", "", "Kifu ID")
 }
 
 func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interface{}) subcommands.ExitStatus {
-	if *c.userId == "" {
-		log.Fatalf("user-id is required")
-	}
 	if *c.kifuId == "" {
 		log.Fatalf("kifu-id is required")
 	}
@@ -47,9 +43,9 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 
 	out := os.Stdout
 
-	kifu, err := db.GetKifu(ctx, *c.userId, *c.kifuId)
+	kifu, _, err := db.GetKifu(ctx, *c.kifuId)
 	if err != nil {
-		log.Fatalf("ListKifu: %v", err)
+		log.Fatalf("GetKifu: %v", err)
 	}
 
 	enc := json.NewEncoder(out)

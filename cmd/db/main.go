@@ -10,14 +10,12 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
-	awsdynamodb "github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
 
 	"github.com/yunomu/kansousen/lib/db"
-	"github.com/yunomu/kansousen/lib/dynamodb"
 
 	"github.com/yunomu/kansousen/cmd/db/deletekifu"
 	"github.com/yunomu/kansousen/cmd/db/getkifu"
-	"github.com/yunomu/kansousen/cmd/db/getsteps"
 	"github.com/yunomu/kansousen/cmd/db/listkifu"
 	"github.com/yunomu/kansousen/cmd/db/putkifu"
 	"github.com/yunomu/kansousen/cmd/db/recentkifu"
@@ -63,8 +61,6 @@ func (c *Command) SetFlags(f *flag.FlagSet) {
 	commander.Register(deletekifu.NewCommand(), "kifu")
 	commander.Register(recentkifu.NewCommand(), "kifu")
 
-	commander.Register(getsteps.NewCommand(), "step")
-
 	commander.Register(samepos.NewCommand(), "pos")
 
 	c.commander = commander
@@ -90,21 +86,9 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 			config.WithEndpoint(*c.endpoint)
 		}
 
-		var opts []dynamodb.DynamoDBTableOption
-		if *c.log {
-			opts = append(opts, dynamodb.SetLogger(&logger{}))
-		}
-
-		table := cfg["KifuTable"]
-		if *c.table != "" {
-			table = *c.table
-		}
-		tab := dynamodb.NewDynamoDBTable(
-			awsdynamodb.New(session.New(), config),
-			table,
-			opts...,
+		return db.NewDynamoDB(
+			dynamodb.New(session.New(), config),
+			*c.table,
 		)
-
-		return db.NewDynamoDB(tab)
 	})
 }

@@ -45,16 +45,15 @@ func (c *Command) Execute(ctx context.Context, f *flag.FlagSet, args ...interfac
 
 	ctx, cancel := context.WithCancel(ctx)
 	var rerr error
-	if err := db.ListKifu(ctx, *c.userId, func(kifu *documentpb.Kifu) {
-		if _, err := fmt.Fprintln(out, kifu.KifuId, kifu.Version); err != nil {
+	if err := db.ListKifu(ctx, *c.userId, func(kifu *documentpb.Kifu, version int64) {
+		if _, err := fmt.Fprintln(out, kifu.KifuId, version); err != nil {
 			rerr = err
 			cancel()
 		}
 	}); err != nil {
-		if rerr != nil {
-			err = rerr
-		}
 		log.Fatalf("ListKifu: %v", err)
+	} else if rerr != nil {
+		log.Fatalf("ListKifu(inner): %v", rerr)
 	}
 
 	return subcommands.ExitSuccess
