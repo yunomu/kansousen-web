@@ -48,6 +48,7 @@ init =
         , createdTs = 0
         , steps = []
         , note = ""
+        , version = 0
         }
     , curStep = initStep
     , len = 0

@@ -1,63 +1,90 @@
-module Api exposing (Error(..), Request(..), Response(..), errorToString, request, requestAsync)
+module Api exposing
+    ( Request(..)
+    , Response(..)
+    , request
+    , requestAsync
+    )
 
 import Http
 import Json.Decode as Decode exposing (Decoder)
 import Json.Encode as Encode
 import Proto.Kifu as PB
-import Task
+import Task exposing (Task)
 
 
 type Request
-    = KifuRequest PB.KifuRequest
+    = GetKifuRequest PB.GetKifuRequest
+    | PostKifuRequest PB.PostKifuRequest
+    | DeleteKifuRequest PB.DeleteKifuRequest
+    | RecentKifuRequest PB.RecentKifuRequest
+    | GetSamePositionsRequest PB.GetSamePositionsRequest
+
+
+requestEncoder : Request -> Encode.Value
+requestEncoder req =
+    case req of
+        GetKifuRequest r ->
+            PB.getKifuRequestEncoder r
+
+        PostKifuRequest r ->
+            PB.postKifuRequestEncoder r
+
+        DeleteKifuRequest r ->
+            PB.deleteKifuRequestEncoder r
+
+        RecentKifuRequest r ->
+            PB.recentKifuRequestEncoder r
+
+        GetSamePositionsRequest r ->
+            PB.getSamePositionsRequestEncoder r
+
+
+requestPath : Request -> String
+requestPath req =
+    case req of
+        GetKifuRequest _ ->
+            "/get-kifu"
+
+        PostKifuRequest _ ->
+            "/post-kifu"
+
+        DeleteKifuRequest _ ->
+            "/delete-kifu"
+
+        RecentKifuRequest _ ->
+            "/recent-kifu"
+
+        GetSamePositionsRequest _ ->
+            "/same-positions"
 
 
 type Response
-    = KifuResponse (Result Error PB.KifuResponse)
-
-
-type Error
-    = ErrorResponse (Http.Response String)
+    = GetKifuResponse PB.GetKifuResponse
+    | PostKifuResponse PB.PostKifuResponse
+    | DeleteKifuResponse PB.DeleteKifuResponse
+    | RecentKifuResponse PB.RecentKifuResponse
+    | GetSamePositionsResponse PB.GetSamePositionsResponse
     | ErrorJsonDecode Decode.Error
-    | ErrorUnauthorized
+    | Unauthenticated Request
 
 
-errorToString : Error -> String
-errorToString err =
-    case err of
-        ErrorResponse res ->
-            case res of
-                Http.BadUrl_ str ->
-                    "BadUrl: " ++ str
+responseDecoder : Request -> Decoder Response
+responseDecoder req =
+    case req of
+        GetKifuRequest _ ->
+            Decode.map GetKifuResponse PB.getKifuResponseDecoder
 
-                Http.Timeout_ ->
-                    "Timeout"
+        PostKifuRequest _ ->
+            Decode.map PostKifuResponse PB.postKifuResponseDecoder
 
-                Http.NetworkError_ ->
-                    "NetworkError"
+        DeleteKifuRequest _ ->
+            Decode.map DeleteKifuResponse PB.deleteKifuResponseDecoder
 
-                Http.BadStatus_ meta body ->
-                    String.concat
-                        [ "BadStatus { status = "
-                        , String.fromInt meta.statusCode
-                        , ", body = "
-                        , body
-                        , "}"
-                        ]
+        RecentKifuRequest _ ->
+            Decode.map RecentKifuResponse PB.recentKifuResponseDecoder
 
-                Http.GoodStatus_ meta body ->
-                    String.concat
-                        [ "GoodStatus { status = "
-                        , String.fromInt meta.statusCode
-                        , ", body = "
-                        , body
-                        , "}"
-                        ]
-
-        ErrorJsonDecode e ->
-            Decode.errorToString e
-
-        ErrorUnauthorized ->
-            "Unauthorized"
+        GetSamePositionsRequest _ ->
+            Decode.map GetSamePositionsResponse PB.getSamePositionsResponseDecoder
 
 
 endpoint : String
@@ -70,93 +97,70 @@ headers =
     []
 
 
-resultJson : Decoder a -> Http.Response String -> Result Error a
-resultJson decoder res =
+jsonResponse : Request -> Http.Response String -> Result Http.Error Response
+jsonResponse req res =
     case res of
-        Http.BadStatus_ meta _ ->
-            if meta.statusCode == 401 then
-                Err ErrorUnauthorized
-
-            else
-                Err <| ErrorResponse res
-
         Http.GoodStatus_ _ body ->
-            case Decode.decodeString decoder body of
+            case Decode.decodeString (responseDecoder req) body of
                 Ok v ->
                     Ok v
 
                 Err err ->
-                    Err <| ErrorJsonDecode err
+                    Ok <| ErrorJsonDecode err
 
-        _ ->
-            Err <| ErrorResponse res
+        Http.BadUrl_ url ->
+            Err <| Http.BadUrl url
+
+        Http.Timeout_ ->
+            Err Http.Timeout
+
+        Http.NetworkError_ ->
+            Err Http.Timeout
+
+        Http.BadStatus_ meta _ ->
+            if meta.statusCode == 401 then
+                Ok <| Unauthenticated req
+
+            else
+                Err <| Http.BadStatus meta.statusCode
 
 
-request : (Request -> Response -> msg) -> Maybe String -> Request -> Cmd msg
+request : (Request -> Result Http.Error Response -> msg) -> Maybe String -> Request -> Cmd msg
 request msg token req =
-    case req of
-        KifuRequest kifuReq ->
-            Http.request
-                { method = "POST"
-                , headers =
-                    case token of
-                        Just t ->
-                            Http.header "Authorization" t :: headers
+    Http.request
+        { method = "POST"
+        , headers =
+            case token of
+                Just t ->
+                    Http.header "Authorization" t :: headers
 
-                        Nothing ->
-                            headers
-                , url = endpoint ++ "/kifu"
-                , body = Http.jsonBody <| PB.kifuRequestEncoder kifuReq
-                , expect =
-                    Http.expectStringResponse
-                        (msg req << KifuResponse)
-                        (resultJson PB.kifuResponseDecoder)
-                , timeout = Nothing
-                , tracker = Nothing
-                }
+                Nothing ->
+                    headers
+        , url = endpoint ++ requestPath req
+        , body = Http.jsonBody <| requestEncoder req
+        , expect =
+            Http.expectStringResponse
+                (msg req)
+                (jsonResponse req)
+        , timeout = Nothing
+        , tracker = Nothing
+        }
 
 
-resolverJson : Decoder a -> Http.Resolver Error a
-resolverJson decoder =
-    Http.stringResolver <|
-        \res ->
-            case res of
-                Http.BadStatus_ meta _ ->
-                    if meta.statusCode == 401 then
-                        Err ErrorUnauthorized
+requestAsync : Maybe String -> Request -> Task Http.Error Response
+requestAsync token req =
+    Http.task
+        { method = "POST"
+        , headers =
+            case token of
+                Just t ->
+                    Http.header "Authorization" t :: headers
 
-                    else
-                        Err <| ErrorResponse res
-
-                Http.GoodStatus_ _ body ->
-                    case Decode.decodeString decoder body of
-                        Ok v ->
-                            Ok v
-
-                        Err err ->
-                            Err <| ErrorJsonDecode err
-
-                _ ->
-                    Err <| ErrorResponse res
-
-
-requestAsync : (Request -> Response -> msg) -> Maybe String -> Request -> Cmd msg
-requestAsync msg token req =
-    Cmd.map (msg req) <|
-        case req of
-            KifuRequest kifuReq ->
-                Task.attempt KifuResponse <|
-                    Http.task
-                        { method = "POST"
-                        , headers =
-                            case token of
-                                Just t ->
-                                    Http.header "Authorization" t :: headers
-
-                                Nothing ->
-                                    headers
-                        , url = endpoint ++ "/kifu"
-                        , body = Http.jsonBody <| PB.kifuRequestEncoder kifuReq
-                        , resolver = resolverJson PB.kifuResponseDecoder
-                        , timeout = Nothing
-                        }
+                Nothing ->
+                    headers
+        , url = endpoint ++ requestPath req
+        , body = Http.jsonBody <| requestEncoder req
+        , resolver =
+            Http.stringResolver <| jsonResponse req
+        , timeout = Nothing
+        }
