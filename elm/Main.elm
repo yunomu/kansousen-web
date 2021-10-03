@@ -19,6 +19,7 @@ import Page.Upload as Upload
 import Proto.Kifu as PB
 import Route exposing (Route)
 import Style
+import Task
 import Url exposing (Url)
 
 
@@ -53,7 +54,7 @@ type Msg
     = UrlRequest Browser.UrlRequest
     | UrlChanged Url
     | OnResize Int Int
-    | ApiResponse Api.Request Api.Response
+    | ApiResponse (Result Http.Error Api.Response)
     | UploadMsg Upload.Msg
     | KifuMsg Kifu.Msg
     | Logout
@@ -247,33 +248,6 @@ authorizationRequest model code =
         AuthTokenMsg
 
 
-authorizedResponse :
-    Model
-    -> Api.Request
-    -> Result Api.Error a
-    -> (a -> ( Model, Cmd Msg ))
-    -> ( Model, Cmd Msg )
-authorizedResponse model req result f =
-    case result of
-        Ok r ->
-            f r
-
-        Err Api.ErrorUnauthorized ->
-            case model.authToken of
-                Just t ->
-                    ( { model | prevState = PrevRequest req }
-                    , tokenRefreshRequest model t.refreshToken
-                    )
-
-                Nothing ->
-                    ( { model | prevState = PrevRequest req }
-                    , Nav.load model.loginFormURL
-                    )
-
-        Err err ->
-            ( model, Cmd.none )
-
-
 elem : List a -> Int -> Maybe a
 elem list n =
     List.head <| List.drop n list
@@ -287,80 +261,94 @@ updateKifuPage authToken kifuModel =
     in
     Cmd.batch
         [ updateBoard ( "shogi", position )
-        , Api.requestAsync ApiResponse authToken <|
-            Api.KifuRequest <|
-                PB.KifuRequest <|
-                    PB.RequestGetSamePositions
-                        { position = position
-                        , steps = 5
-                        , excludeKifuIds = [ kifuModel.kifu.kifuId ]
-                        }
+        , Task.attempt ApiResponse <|
+            Api.requestAsync authToken <|
+                Api.GetSamePositionsRequest
+                    { position = position
+                    , steps = 5
+                    , excludeKifuIds = [ kifuModel.kifu.kifuId ]
+                    }
         ]
 
 
-apiResponse : Model -> Api.Request -> Api.Response -> ( Model, Cmd Msg )
-apiResponse model req res =
-    case res of
-        Api.KifuResponse result ->
-            authorizedResponse model req result <|
-                \kifuRes ->
-                    case kifuRes.kifuResponseSelect of
-                        PB.ResponseRecentKifu r ->
-                            ( { model | recentKifu = r.kifus }
-                            , Cmd.none
-                            )
+apiResponse : Model -> Result Http.Error Api.Response -> ( Model, Cmd Msg )
+apiResponse model result =
+    case result of
+        Ok (Api.Unauthorized req) ->
+            case model.authToken of
+                Just t ->
+                    ( { model | prevState = PrevRequest req }
+                    , tokenRefreshRequest model t.refreshToken
+                    )
 
-                        PB.ResponsePostKifu r ->
-                            ( model
-                            , Nav.pushUrl model.key <|
-                                Route.path <|
-                                    if model.uploadModel.repeat then
-                                        Route.Upload
+                Nothing ->
+                    ( { model | prevState = PrevRequest req }
+                    , Nav.load model.loginFormURL
+                    )
 
-                                    else
-                                        Route.Index
-                            )
+        Ok (Api.RecentKifuResponse res) ->
+            ( { model | recentKifu = res.kifus }
+            , Cmd.none
+            )
 
-                        PB.ResponseGetKifu r ->
-                            let
-                                curSeq =
-                                    case model.route of
-                                        Route.Kifu _ seq ->
-                                            seq
+        Ok (Api.PostKifuResponse res) ->
+            ( model
+            , Nav.pushUrl model.key <|
+                Route.path <|
+                    if model.uploadModel.repeat then
+                        Route.Upload
 
-                                        _ ->
-                                            0
+                    else
+                        Route.Index
+            )
 
-                                kifuModel =
-                                    { kifu = r
-                                    , curStep =
-                                        Maybe.withDefault Kifu.initStep <|
-                                            elem r.steps curSeq
-                                    , len = List.length r.steps
-                                    , samePos = []
-                                    }
-
-                                model_ =
-                                    { model | kifuModel = kifuModel }
-
-                                authToken =
-                                    Maybe.map (\at -> at.token) model.authToken
-                            in
-                            ( model_
-                            , updateKifuPage authToken kifuModel
-                            )
-
-                        PB.ResponseGetSamePositions r ->
-                            let
-                                kifuModel =
-                                    model.kifuModel
-                            in
-                            ( { model | kifuModel = { kifuModel | samePos = r.kifus } }
-                            , Cmd.none
-                            )
+        Ok (Api.GetKifuResponse res) ->
+            let
+                curSeq =
+                    case model.route of
+                        Route.Kifu _ seq ->
+                            seq
 
                         _ ->
-                            ( model, Cmd.none )
+                            0
+
+                kifuModel =
+                    { kifu = res
+                    , curStep =
+                        Maybe.withDefault Kifu.initStep <|
+                            elem res.steps curSeq
+                    , len = List.length res.steps
+                    , samePos = []
+                    }
+
+                model_ =
+                    { model | kifuModel = kifuModel }
+
+                authToken =
+                    Maybe.map (\at -> at.token) model.authToken
+            in
+            ( model_
+            , updateKifuPage authToken kifuModel
+            )
+
+        Ok (Api.GetSamePositionsResponse res) ->
+            let
+                kifuModel =
+                    model.kifuModel
+            in
+            ( { model | kifuModel = { kifuModel | samePos = res.kifus } }
+            , Cmd.none
+            )
+
+        Ok (Api.DeleteKifuResponse _) ->
+            -- TODO
+            ( model, Cmd.none )
+
+        Ok (Api.ErrorJsonDecode _) ->
+            ( model, Cmd.none )
+
+        Err _ ->
+            ( model, Cmd.none )
 
 
 tokenResponse : Model -> Cmd Msg -> ( Model, Cmd Msg )
@@ -454,11 +442,9 @@ update msg model =
                 Route.MyPage ->
                     ( model_
                     , Api.request ApiResponse authToken <|
-                        Api.KifuRequest <|
-                            PB.KifuRequest <|
-                                PB.RequestRecentKifu
-                                    { limit = 10
-                                    }
+                        Api.RecentKifuRequest
+                            { limit = 10
+                            }
                     )
 
                 Route.Kifu kifuId seq ->
@@ -479,11 +465,9 @@ update msg model =
                     else
                         ( model_
                         , Api.request ApiResponse authToken <|
-                            Api.KifuRequest <|
-                                PB.KifuRequest <|
-                                    PB.RequestGetKifu
-                                        { kifuId = kifuId
-                                        }
+                            Api.GetKifuRequest
+                                { kifuId = kifuId
+                                }
                         )
 
                 Route.Upload ->
@@ -504,17 +488,15 @@ update msg model =
                 _ ->
                     ( model_, Cmd.none )
 
-        ApiResponse req res ->
-            apiResponse model req res
+        ApiResponse result ->
+            apiResponse model result
 
         UploadMsg uploadMsg ->
             case uploadMsg of
                 Upload.Submit ->
                     ( model
                     , Api.request ApiResponse authToken <|
-                        Api.KifuRequest <|
-                            PB.KifuRequest <|
-                                PB.RequestPostKifu model.uploadModel.request
+                        Api.PostKifuRequest model.uploadModel.request
                     )
 
                 _ ->

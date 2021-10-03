@@ -65,7 +65,7 @@ type Response
     | RecentKifuResponse PB.RecentKifuResponse
     | GetSamePositionsResponse PB.GetSamePositionsResponse
     | ErrorJsonDecode Decode.Error
-    | Unauthenticated Request
+    | Unauthorized Request
 
 
 responseDecoder : Request -> Decoder Response
@@ -119,13 +119,13 @@ jsonResponse req res =
 
         Http.BadStatus_ meta _ ->
             if meta.statusCode == 401 then
-                Ok <| Unauthenticated req
+                Ok <| Unauthorized req
 
             else
                 Err <| Http.BadStatus meta.statusCode
 
 
-request : (Request -> Result Http.Error Response -> msg) -> Maybe String -> Request -> Cmd msg
+request : (Result Http.Error Response -> msg) -> Maybe String -> Request -> Cmd msg
 request msg token req =
     Http.request
         { method = "POST"
@@ -138,10 +138,7 @@ request msg token req =
                     headers
         , url = endpoint ++ requestPath req
         , body = Http.jsonBody <| requestEncoder req
-        , expect =
-            Http.expectStringResponse
-                (msg req)
-                (jsonResponse req)
+        , expect = Http.expectStringResponse msg (jsonResponse req)
         , timeout = Nothing
         , tracker = Nothing
         }
