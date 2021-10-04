@@ -26,9 +26,6 @@ Parameters:
   Certificate:
     Type: String
     Default: "arn:aws:acm:us-east-1:970194315034:certificate/22878dcd-b96c-4529-bc08-eddaa1d90324"
-  CloudfrontManagedCachePolicy:
-    Type: String
-    Default: "658327ea-f89d-4fab-a63d-7e88639e58f6"
 
 Resources:
   KansousenTable:
@@ -263,57 +260,164 @@ Resources:
             Auth:
               Authorizer: NONE
 
-  StaticBucket:
+  UIBucket:
     Type: AWS::S3::Bucket
-  StaticBucketPolicy:
-    Type: AWS::S3::BucketPolicy
     Properties:
-      Bucket: !Ref StaticBucket
-      PolicyDocument:
+      AccessControl: Private
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+  UIApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: !Sub "${AWS::StackName}-UI"
+
+  UIApiRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
         Statement:
           - Effect: Allow
-            Principal: '*'
-            Action: s3:GetObject
-            Resource: !Sub "arn:aws:s3:::${StaticBucket}/*"
+            Action:
+              - sts:AssumeRole
+            Principal:
+              Service: apigateway.amazonaws.com
+      Policies:
+        - PolicyName: GetObject
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                Resource: !Sub "${UIBucket.Arn}/*"
 
-  CloudFrontOriginAccessIdentity:
-    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+  UIMethodRootGET:
+    Type: AWS::ApiGateway::Method
     Properties:
-      CloudFrontOriginAccessIdentityConfig:
-        Comment: !Sub "access-identity-${StaticBucket}"
+      RestApiId: !Ref UIApi
+      ResourceId: !GetAtt UIApi.RootResourceId
+      AuthorizationType: NONE
+      HttpMethod: GET
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Content-Type: true
+          ResponseModels:
+            text/html: Empty
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: GET
+        Uri: !Join
+          - ":"
+          - - arn
+            - !Ref AWS::Partition
+            - apigateway
+            - !Ref AWS::Region
+            - s3
+            - !Join
+              - "/"
+              - - path
+                - !Ref UIBucket
+                - index.html
+        Credentials: !GetAtt UIApiRole.Arn
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Content-Type: integration.response.header.Content-Type
 
-  StaticCDN:
-    Type: AWS::CloudFront::Distribution
+  UIResourceItem:
+    Type: AWS::ApiGateway::Resource
     Properties:
-      DistributionConfig:
-        Enabled: true
-        DefaultRootObject: index.html
-        Aliases:
-          - !Ref SiteDomainName
-        ViewerCertificate:
-          AcmCertificateArn: !Ref Certificate
-          MinimumProtocolVersion: TLSv1.2_2019
-          SslSupportMethod: sni-only
-        Origins:
-          - DomainName: !GetAtt StaticBucket.DomainName
-            Id: !Sub "S3-${StaticBucket}"
-            S3OriginConfig:
-              OriginAccessIdentity: !Sub "origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}"
-        DefaultCacheBehavior:
-          CachePolicyId: !Ref CloudfrontManagedCachePolicy
-          TargetOriginId: !Sub "S3-${StaticBucket}"
-          ViewerProtocolPolicy: https-only
-          AllowedMethods:
-            - GET
-            - HEAD
-        HttpVersion: http2
-        CustomErrorResponses:
-          - ErrorCode: 403
-            ResponseCode: 200
-            ResponsePagePath: /index.html
-          - ErrorCode: 404
-            ResponseCode: 200
-            ResponsePagePath: /index.html
+      RestApiId: !Ref UIApi
+      ParentId: !GetAtt UIApi.RootResourceId
+      PathPart: "{item+}"
+
+  UIMethodItemGET:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      RestApiId: !Ref UIApi
+      ResourceId: !Ref UIResourceItem
+      AuthorizationType: NONE
+      HttpMethod: GET
+      RequestParameters:
+        method.request.path.item: true
+      MethodResponses:
+        - StatusCode: 200
+          ResponseParameters:
+            method.response.header.Content-Type: true
+          ResponseModels:
+            application/octet-stream: Empty
+            application/json: Empty
+            text/plain: Empty
+            text/html: Empty
+            text/css: Empty
+            text/javascript: Empty
+            image/png: Empty
+            image/jpeg: Empty
+            image/svg+xml: Empty
+            image/vnd.microsoft.icon: Empty
+      Integration:
+        Type: AWS
+        IntegrationHttpMethod: GET
+        Uri: !Join
+          - ":"
+          - - arn
+            - !Ref AWS::Partition
+            - apigateway
+            - !Ref AWS::Region
+            - s3
+            - !Join
+              - "/"
+              - - path
+                - !Ref UIBucket
+                - "{item}"
+        Credentials: !GetAtt UIApiRole.Arn
+        RequestParameters:
+          integration.request.path.item: method.request.path.item
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Content-Type: integration.response.header.Content-Type
+
+  UIDomain:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: !Ref SiteDomainName
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      RegionalCertificateArn: !Ref Certificate
+      SecurityPolicy: TLS_1_2
+
+  UIDeployment2021100401:
+    Type: AWS::ApiGateway::Deployment
+    DependsOn:
+      - UIMethodRootGET
+      - UIResourceItem
+      - UIMethodItemGET
+    Properties:
+      RestApiId: !Ref UIApi
+
+  UIApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      StageName: !Ref Stage
+      RestApiId: !Ref UIApi
+      DeploymentId: !Ref UIDeployment2021100401
+
+  UIDomainMapping:
+    Type: AWS::ApiGateway::BasePathMapping
+    DependsOn:
+      - UIDomain
+    Properties:
+      RestApiId: !Ref UIApi
+      DomainName: !Ref SiteDomainName
+      Stage: !Ref UIApiStage
 
 Outputs:
   Region:
@@ -334,12 +438,12 @@ Outputs:
   ApiID:
     Description: "API ID"
     Value: !Ref KifuApiV2
-  StaticBucket:
-    Description: "S3 Bucket for static resources"
-    Value: !Ref StaticBucket
   Host:
     Description: "Host URL"
     Value: !Sub "https://${SiteDomainName}/"
   IDP:
     Description: "IDP URL"
     Value: !Sub "https://${AuthDomainName}/"
+  UIBucket:
+    Description: "Bucket"
+    Value: !Ref UIBucket
