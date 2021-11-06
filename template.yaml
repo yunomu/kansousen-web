@@ -13,7 +13,7 @@ Globals:
 Parameters:
   Stage:
     Type: String
-    Default: Prod
+    Default: prod
   ApiDomainName:
     Type: String
     Default: kansousenapi.wagahai.info
@@ -25,7 +25,10 @@ Parameters:
     Default: kansousenauth.wagahai.info
   Certificate:
     Type: String
-    Default: "arn:aws:acm:us-east-1:970194315034:certificate/22878dcd-b96c-4529-bc08-eddaa1d90324"
+    Default: arn:aws:acm:ap-northeast-1:970194315034:certificate/9229a51d-db63-4f16-beff-411b864be18f
+  CognitoCertificate:
+    Type: String
+    Default: arn:aws:acm:us-east-1:970194315034:certificate/22878dcd-b96c-4529-bc08-eddaa1d90324
 
 Resources:
   KansousenTable:
@@ -191,7 +194,7 @@ Resources:
       UserPoolId: !Ref CognitoUserPool
       Domain: !Ref AuthDomainName
       CustomDomainConfig:
-        CertificateArn: !Ref Certificate
+        CertificateArn: !Ref CognitoCertificate
 
   KifuApiV2:
     Type: AWS::Serverless::HttpApi
@@ -274,6 +277,9 @@ Resources:
     Type: AWS::ApiGateway::RestApi
     Properties:
       Name: !Sub "${AWS::StackName}-UI"
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
 
   UIApiRole:
     Type: AWS::IAM::Role
