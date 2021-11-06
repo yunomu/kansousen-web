@@ -38,7 +38,7 @@ Resources:
       AttributeDefinitions:
         - AttributeName: kifuId
           AttributeType: S
-        - AttributeName: type
+        - AttributeName: var
           AttributeType: S
         - AttributeName: userId
           AttributeType: S
@@ -53,7 +53,7 @@ Resources:
       KeySchema:
         - AttributeName: kifuId
           KeyType: HASH
-        - AttributeName: type
+        - AttributeName: var
           KeyType: RANGE
       GlobalSecondaryIndexes:
         - IndexName: Created

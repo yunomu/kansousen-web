@@ -30,19 +30,24 @@ const (
 	sfenAttr      = "sfen"
 	posAttr       = "pos"
 
-	kifuType = "KIFU"
+	kifuVar       = "KIFU"
+	stepVarPrefix = "STEP:"
 
 	BatchUnit = 25
 )
 
-func stepType(seq int32) string {
-	return fmt.Sprintf("STEP:%d", seq)
+func stepVar(seq int32) string {
+	return fmt.Sprintf("%s%d", stepVarPrefix, seq)
+}
+
+func isStepVar(s string) bool {
+	return strings.HasPrefix(s, stepVarPrefix)
 }
 
 type DynamoDBKifuRecord struct {
 	UserId    string `dynamodbav:"userId,omitempty"`
 	KifuId    string `dynamodbav:"kifuId"`
-	Type      string `dynamodbav:"type"`
+	Var       string `dynamodbav:"var"`
 	CreatedTs int64  `dynamodbav:"createdTs,omitempty"`
 	StartTs   int64  `dynamodbav:"startTs,omitempty"`
 	Sfen      string `dynamodbav:"sfen,omitempty"`
@@ -153,7 +158,7 @@ func (db *DynamoDB) PutKifu(
 	kifuAv, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
 		UserId:    kifu.GetUserId(),
 		KifuId:    kifu.GetKifuId(),
-		Type:      kifuType,
+		Var:       kifuVar,
 		CreatedTs: kifu.GetCreatedTs(),
 		StartTs:   kifu.GetStartTs(),
 		Sfen:      kifu.GetSfen(),
@@ -212,7 +217,7 @@ func (db *DynamoDB) PutKifu(
 			av, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
 				UserId: step.GetUserId(),
 				KifuId: step.GetKifuId(),
-				Type:   stepType(step.GetSeq()),
+				Var:    stepVar(step.GetSeq()),
 				Seq:    step.GetSeq(),
 				Pos:    step.GetPosition(),
 				Step:   bs,
@@ -230,7 +235,7 @@ func (db *DynamoDB) PutKifu(
 		for i := stepNum + 1; i <= old.StepNum; i++ {
 			av, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
 				KifuId: old.KifuId,
-				Type:   stepType(i),
+				Var:    stepVar(i),
 			})
 			if err != nil {
 				return err
@@ -261,7 +266,7 @@ func (db *DynamoDB) GetKifu(
 ) (*documentpb.Kifu, int64, error) {
 	key, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
 		KifuId: kifuId,
-		Type:   kifuType,
+		Var:    kifuVar,
 	})
 	if err != nil {
 		return nil, 0, err
@@ -346,7 +351,7 @@ func (db *DynamoDB) GetKifuAndSteps(
 				var steps []*documentpb.Step
 				for _, rec := range recs {
 					switch {
-					case rec.Type == kifuType: // Kifu
+					case rec.Var == kifuVar: // Kifu
 						var k documentpb.Kifu
 						if err := proto.Unmarshal(rec.Kifu, &k); err != nil {
 							return &ErrInvalidValue{
@@ -356,7 +361,7 @@ func (db *DynamoDB) GetKifuAndSteps(
 
 						kifu = &k
 						version = rec.Version
-					case strings.HasPrefix(rec.Type, "STEP"): // Step
+					case isStepVar(rec.Var): // Step
 						var s documentpb.Step
 						if err := proto.Unmarshal(rec.Step, &s); err != nil {
 							return &ErrInvalidValue{
@@ -732,7 +737,7 @@ func (db *DynamoDB) GetRecentKifu(ctx context.Context, userId string, limit int)
 func (db *DynamoDB) DeleteKifu(ctx context.Context, kifuId string, version int64) error {
 	key, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
 		KifuId: kifuId,
-		Type:   kifuType,
+		Var:    kifuVar,
 	})
 	if err != nil {
 		return err
@@ -772,7 +777,7 @@ func (db *DynamoDB) DeleteKifu(ctx context.Context, kifuId string, version int64
 		for i := int32(1); i <= old.StepNum; i++ {
 			key, err := dynamodbattribute.MarshalMap(DynamoDBKifuRecord{
 				KifuId: kifuId,
-				Type:   kifuType,
+				Var:    kifuVar,
 			})
 			if err != nil {
 				return err
