@@ -19,7 +19,7 @@ func TestAttributeValue(t *testing.T) {
 		t.Fatalf("Marshal: %v", err)
 	}
 
-	if len(av) != 2 || av["kifuId"] == nil || av["type"] == nil {
+	if len(av) != 2 || av["kifuId"] == nil || av["var"] == nil {
 		t.Fatalf("av: %#v", av)
 	}
 }
