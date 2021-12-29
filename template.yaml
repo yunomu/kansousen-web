@@ -2,10 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
   kansousen
-  
-  SAM Template for kansousen
 
-# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 5
@@ -16,19 +13,14 @@ Parameters:
     Default: prod
   ApiDomainName:
     Type: String
-    Default: kansousenapi.wagahai.info
   SiteDomainName:
     Type: String
-    Default: kansousen.wagahai.info
   AuthDomainName:
     Type: String
-    Default: kansousenauth.wagahai.info
   Certificate:
     Type: String
-    Default: arn:aws:acm:ap-northeast-1:970194315034:certificate/9229a51d-db63-4f16-beff-411b864be18f
   CognitoCertificate:
     Type: String
-    Default: arn:aws:acm:us-east-1:970194315034:certificate/22878dcd-b96c-4529-bc08-eddaa1d90324
 
 Resources:
   KansousenTable:
