@@ -15,4 +15,5 @@ phases:
         AuthDomainName=$AUTH_DOMAIN_NAME \
         Certificate=$CERTIFICATE \
         CognitoCertificate=$COGNITO_CERTIFICATE \
-        --resolve-s3 --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
+        --s3-bucket $SAM_S3_BUCKET \
+        --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
