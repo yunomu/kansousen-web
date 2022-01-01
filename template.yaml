@@ -189,3 +189,6 @@ Outputs:
   UIBucket:
     Description: "Bucket"
     Value: !Ref UIBucket
+  RegionalDomainName:
+    Description: "Set this DNS name as a CNAME record"
+    Value: !GetAtt UIDomain.RegionalDomainName
