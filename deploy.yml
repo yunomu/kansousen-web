@@ -1,5 +1,10 @@
 version: 0.2
 
+env:
+  parameter-store:
+    SITE_DOMAIN_NAME: /kansousen/prod/siteDomainName
+    CERTIFICATE: /kansousen/prod/certificate
+
 phases:
   pre_build:
     commands:
@@ -8,4 +13,4 @@ phases:
   build:
     commands:
       - sam build
-      - sam deploy --stack-name $STACK_NAME --region $REGION --parameter-overrides ApiDomainName=$API_DOMAIN_NAME SiteDomainName=$SITE_DOMAIN_NAME AuthDomainName=$AUTH_DOMAIN_NAME Certificate=$CERTIFICATE CognitoCertificate=$COGNITO_CERTIFICATE --resolve-s3 --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
+      - sam deploy --stack-name $STACK_NAME --region $REGION --parameter-overrides SiteDomainName=$SITE_DOMAIN_NAME Certificate=$CERTIFICATE --resolve-s3 --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
