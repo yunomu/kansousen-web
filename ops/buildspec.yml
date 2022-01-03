@@ -5,7 +5,6 @@ env:
     SITE_DOMAIN_NAME: /kansousen/prod/siteDomainName
     AUTH_DOMAIN_NAME: /kansousen/prod/authDomainName
     USER_POOL_CLIENT_ID: /kansousen/prod/userPoolClientId
-    BUCKET: /kansousen/prod/uiBucket
 
 phases:
   install:
