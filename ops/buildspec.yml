@@ -22,4 +22,4 @@ phases:
       - cp -r static public
       - elm make src/Main.elm --output=static/main.opt.js --optimize
       - uglifyjs --compress --mangle -- static/main.opt.js > public/main.js
-      - jq --null-input --monochrome-output --compact-output --arg host https://$SITE_DOMAIN_NAME/ --arg clientId $USER_POOL_CLIENT_ID --arg idp https://$AUTH_DOMAIN_NAME/ {Host:$host,UserPoolClientID:$clientId,IDP:$idp} > public/config.json
+      - jq --null-input --monochrome-output --compact-output --arg host https://$SITE_DOMAIN_NAME/ --arg clientId $USER_POOL_CLIENT_ID --arg idp https://$AUTH_DOMAIN_NAME/ '{Host:$host,UserPoolClientID:$clientId,IDP:$idp}' > public/config.json
