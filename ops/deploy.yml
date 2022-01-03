@@ -4,6 +4,7 @@ env:
   parameter-store:
     SITE_DOMAIN_NAME: /kansousen/prod/siteDomainName
     CERTIFICATE: /kansousen/prod/certificate
+    BUCKET: /kansousen/prod/uiBucket
 
 phases:
   pre_build:
@@ -12,5 +13,5 @@ phases:
 
   build:
     commands:
-      - sam build
       - sam deploy --stack-name $STACK_NAME --region $REGION --parameter-overrides SiteDomainName=$SITE_DOMAIN_NAME Certificate=$CERTIFICATE --resolve-s3 --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
+      - aws s3 sync public/ s3://$BUCKET/
