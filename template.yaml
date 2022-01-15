@@ -121,6 +121,8 @@ Resources:
             image/jpeg: Empty
             image/svg+xml: Empty
             image/vnd.microsoft.icon: Empty
+        - StatusCode: 400
+        - StatusCode: 500
       Integration:
         Type: AWS
         IntegrationHttpMethod: GET
@@ -143,6 +145,10 @@ Resources:
           - StatusCode: 200
             ResponseParameters:
               method.response.header.Content-Type: integration.response.header.Content-Type
+          - StatusCode: 400
+            SelectionPattern: '4\d{2}'
+          - StatusCode: 500
+            SelectionPattern: '5\d{2}'
 
   UIDomain:
     Type: AWS::ApiGateway::DomainName
@@ -154,7 +160,7 @@ Resources:
       RegionalCertificateArn: !Ref Certificate
       SecurityPolicy: TLS_1_2
 
-  UIDeployment2021100401:
+  UIDeployment2022011503:
     Type: AWS::ApiGateway::Deployment
     DependsOn:
       - UIMethodRootGET
@@ -168,7 +174,7 @@ Resources:
     Properties:
       StageName: !Ref Stage
       RestApiId: !Ref UIApi
-      DeploymentId: !Ref UIDeployment2021100401
+      DeploymentId: !Ref UIDeployment2022011503
 
   UIDomainMapping:
     Type: AWS::ApiGateway::BasePathMapping
