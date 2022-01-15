@@ -13,4 +13,6 @@ phases:
   build:
     commands:
       - sam deploy --stack-name $STACK_NAME --region $REGION --parameter-overrides SiteDomainName=$SITE_DOMAIN_NAME Certificate=$CERTIFICATE --resolve-s3 --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
-      - aws s3 sync public/ s3://`aws cloudformation describe-stacks --stack-name $STACK_NAME | jq -r '.Stacks[].Outputs[]|select(.OutputKey=="UIBucket").OutputValue'`/
+      - aws cloudformation describe-stacks --stack-name $STACK_NAME | jq '.Stacks[].Outputs' > outputs.json
+      - aws s3 sync public/ s3://`jq -r '.[]|select(.OutputKey=="UIBucket").OutputValue' outputs.json`/
+      - aws cloudfront create-invalidation --distribution-id `jq -r '.[]|select(.OutputKey=="DistributionId").OutputValue' outputs.json` --paths '/*'
