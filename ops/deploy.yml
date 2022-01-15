@@ -3,7 +3,6 @@ version: 0.2
 env:
   parameter-store:
     SITE_DOMAIN_NAME: /kansousen/prod/siteDomainName
-    CERTIFICATE: /kansousen/prod/certificate
 
 phases:
   pre_build:
@@ -12,7 +11,7 @@ phases:
 
   build:
     commands:
-      - sam deploy --stack-name $STACK_NAME --region $REGION --parameter-overrides SiteDomainName=$SITE_DOMAIN_NAME Certificate=$CERTIFICATE --resolve-s3 --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
+      - sam deploy --stack-name $STACK_NAME --region $REGION --parameter-overrides SiteDomainName=$SITE_DOMAIN_NAME Certificate=arn:aws:acm:us-east-1:970194315034:certificate/22878dcd-b96c-4529-bc08-eddaa1d90324 --resolve-s3 --capabilities CAPABILITY_IAM --no-fail-on-empty-changeset --no-progressbar --debug
       - aws cloudformation describe-stacks --stack-name $STACK_NAME | jq '.Stacks[].Outputs' > outputs.json
       - aws s3 sync public/ s3://`jq -r '.[]|select(.OutputKey=="UIBucket").OutputValue' outputs.json`/
       - aws cloudfront create-invalidation --distribution-id `jq -r '.[]|select(.OutputKey=="DistributionId").OutputValue' outputs.json` --paths '/*'
